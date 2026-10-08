@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Stars Casino</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="bal"><span id="balance">0</span> ⭐</div>
+  <button id="btn-deposit" class="small">Пополнить</button>
+  <button id="btn-withdraw" class="small ghost">Вывод</button>
+</header>
+<nav id="tabs">
+  <button data-g="rocket" class="on">🚀 Ракета</button>
+  <button data-g="mines">💣 Мины</button>
+  <button data-g="tower">🏗 Башня</button>
+  <button data-g="seagull">🕊 Чайка</button>
+</nav>
+
+<main>
+  <section class="bet">
+    <label>Ставка</label>
+    <div class="row">
+      <button class="small ghost" id="bet-minus">−</button>
+      <input id="bet" type="number" inputmode="numeric" value="10" min="1">
+      <button class="small ghost" id="bet-plus">+</button>
+      <button class="small ghost" id="bet-x2">x2</button>
+    </div>
+    <div id="opts"></div>
+  </section>
+
+  <section id="stage"></section>
+
+  <div class="row actions">
+    <button id="go" class="primary">Играть</button>
+    <button id="cash" class="cash" hidden>Забрать</button>
+  </div>
+  <p id="msg"></p>
+  <details><summary>Честная игра</summary><div id="fair"></div></details>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
