@@ -152,7 +152,6 @@
   class RocketCardScene extends Scene {
     constructor(c, label) {
       super(c); this.label = label; this.img = load('rocket.svg'); this.parts = []; this.pieces = []; this.T = 7.6; this.climb = 4.6; this.loop = -1; this.tc = 0;
-      this.crashes = [11.2, 19.6, 7.8, 24.1, 14.3, 9.5, 17.2];
       this.stars = Array.from({ length: 26 }, () => ({ x: Math.random(), y: Math.random() * 0.7, p: Math.random() * 6 }));
     }
     layout() { this.px0 = 16; this.pw = this.w - 32; this.base = this.h - 72; this.top = 46; this.ph = this.base - this.top; }
@@ -176,7 +175,7 @@
     draw(g, now, dt) {
       if (this.cs === undefined || now - this.cs > this.tc + 1.45) { this.cs = now; this.loop++; this.newCycle = true; }
       const tt = now - this.cs;
-      if (this.newCycle) { this.newCycle = false; const li = this.loop; this.parts = []; this.pieces = []; this.exploded = false; this.crashM = this.crashes[li % this.crashes.length]; const f = (this.crashM - 1) / 24; this.pc = Math.log(1 + f * (Math.exp(3.2) - 1)) / 3.2; this.tc = this.pc * this.climb; }
+      if (this.newCycle) { this.newCycle = false; const li = this.loop; this.parts = []; this.pieces = []; this.exploded = false; { let m = 0.97 / (1 - Math.random()); if (m < 1.6) m = 1.6 + Math.random() * 1.2; this.crashM = Math.round(Math.min(m, 25) * 100) / 100; } const f = (this.crashM - 1) / 24; this.pc = Math.log(1 + f * (Math.exp(3.2) - 1)) / 3.2; this.tc = this.pc * this.climb; }
       const crashed = tt >= this.tc, p = crashed ? this.pc : clamp(tt / this.climb), [hx, hy, m] = this.pt(p);
       const [x2, y2] = this.pt(Math.min(1, p + 0.01)), ang = Math.atan2(x2 - hx, -(y2 - hy)) || 0.6, rh = 46, rw = 23;
       if (crashed && !this.exploded) { this.exploded = true; this.flash = 1; this.hx = hx; this.hy = hy; this.explode(hx, hy, ang, rh, rw); }
