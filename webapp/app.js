@@ -83,7 +83,7 @@ R.mines = (round) => {
   let h = '<div class="grid">';
   for (let i = 0; i < size; i++) {
     let cls = '', txt = '', dis = !round || round.status !== 'active';
-    if (v?.revealed.includes(i)) { const mine = v.mines?.includes(i) || (round.status === 'lost' && v.revealed.at(-1) === i); cls = mine ? 'mine' : 'safe'; txt = mine ? '💣' : '💎'; dis = true; }
+    if (v?.revealed.includes(i)) { const mine = v.mines?.includes(i) || (round.status === 'lost' && v.revealed.at(-1) === i); cls = mine ? 'mine' : 'safe'; txt = mine ? '💣' : '⭐'; dis = true; }
     else if (v?.mines?.includes(i)) { cls = 'mine ghost'; txt = '💣'; }
     h += `<button class="tile ${cls}" data-i="${i}" ${dis ? 'disabled' : ''}>${txt}</button>`;
   }

@@ -48,9 +48,9 @@
     }
     pos(i) { const c = i % this.cols, r = Math.floor(i / this.cols); return [this.x0 + c * (this.s + this.gap), this.y0 + r * (this.s + this.gap)]; }
     tile(g, x, y, s, o) {
-      const r = s * 0.24, cx = x + s / 2 + (o.dx || 0), cy = y + s / 2 + (o.dy || 0) + (o.press || 0) * 2;
+      const r = s * 0.27, cx = x + s / 2 + (o.dx || 0), cy = y + s / 2 + (o.dy || 0) + (o.press || 0) * 2;
       const glow = o.glow || 0, burnt = o.burnt || 0;
-      const top = rgb(mixa(mixa(hex('#565b68'), hex('#37e6ff'), glow), hex('#25272f'), burnt)), bot = rgb(mixa(mixa(hex('#23262e'), hex('#0a8fd0'), glow), hex('#0d0e12'), burnt));
+      const top = rgb(mixa(mixa(hex('#39393d'), hex('#37e6ff'), glow), hex('#1c1c1f'), burnt)), bot = rgb(mixa(mixa(hex('#17171a'), hex('#0a8fd0'), glow), hex('#09090b'), burnt));
       g.save(); g.globalAlpha = o.alpha ?? 1; g.translate(cx, cy); const sc = 1 - (o.press || 0) * 0.08 + glow * 0.04; g.scale(sc, sc);
       if (glow > 0.02) { g.shadowColor = `rgba(60,225,255,${0.9 * glow})`; g.shadowBlur = 22 * glow; } else { g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 8; g.shadowOffsetY = 3 - (o.press || 0) * 2; }
       const gr = g.createLinearGradient(0, -s / 2, 0, s / 2); gr.addColorStop(0, top); gr.addColorStop(1, bot);
@@ -60,21 +60,26 @@
       rr(g, -s / 2 + 2, -s / 2 + 2, s - 4, s / 2 - 2, r - 2); g.fillStyle = gl; g.fill();
       if (burnt > 0) { const cr = g.createRadialGradient(0, 0, 1, 0, 0, s * 0.62); cr.addColorStop(0, `rgba(0,0,0,${0.65 * burnt})`); cr.addColorStop(1, 'rgba(0,0,0,0)'); rr(g, -s / 2, -s / 2, s, s, r); g.fillStyle = cr; g.fill(); }
       if (o.shimmer) { g.save(); rr(g, -s / 2, -s / 2, s, s, r); g.clip(); const sh = g.createLinearGradient(-s, -s, s, s); const p = o.shimmer; sh.addColorStop(clamp(p - 0.12), 'rgba(255,255,255,0)'); sh.addColorStop(clamp(p), 'rgba(255,255,255,.35)'); sh.addColorStop(clamp(p + 0.12), 'rgba(255,255,255,0)'); g.fillStyle = sh; g.fillRect(-s, -s, s * 2, s * 2); g.restore(); }
+      if (!(o.gem > 0) && !(o.x > 0)) this.idleStar(g, s, 1 - burnt);
       if (o.gem > 0) this.gem(g, s, o.gem);
       if (o.x > 0) this.cross(g, s, o.x);
       g.restore();
     }
-    gem(g, s, p) {
-      const k = s * 0.5 * E.back(clamp(p)), a = clamp(p * 2);
-      g.save(); g.globalAlpha *= a; g.shadowColor = '#4fe6ff'; g.shadowBlur = 12; g.translate(0, -k * 0.04);
-      const crown = g.createLinearGradient(0, -k * 0.5, 0, 0); crown.addColorStop(0, '#d9fbff'); crown.addColorStop(1, '#5fdcff');
-      const pav = g.createLinearGradient(0, -k * 0.1, 0, k * 0.55); pav.addColorStop(0, '#31bdf5'); pav.addColorStop(1, '#0b6fc0');
-      g.beginPath(); g.moveTo(-k * 0.5, -k * 0.12); g.lineTo(-k * 0.3, -k * 0.5); g.lineTo(k * 0.3, -k * 0.5); g.lineTo(k * 0.5, -k * 0.12); g.closePath(); g.fillStyle = crown; g.fill();
-      g.beginPath(); g.moveTo(-k * 0.5, -k * 0.12); g.lineTo(k * 0.5, -k * 0.12); g.lineTo(0, k * 0.62); g.closePath(); g.fillStyle = pav; g.fill();
-      g.shadowBlur = 0; g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 0.8;
-      g.beginPath(); g.moveTo(-k * 0.5, -k * 0.12); g.lineTo(-k * 0.12, -k * 0.5); g.moveTo(-k * 0.12, -k * 0.12); g.lineTo(0, k * 0.62); g.moveTo(k * 0.12, -k * 0.5); g.lineTo(k * 0.12, -k * 0.12); g.moveTo(-k * 0.3, -k * 0.5); g.lineTo(-k * 0.12, -k * 0.12); g.stroke();
-      const sp = Math.sin(clamp((p - 0.4) * 2.2) * Math.PI); if (sp > 0.01) { g.fillStyle = `rgba(255,255,255,${sp})`; g.beginPath(); const R = s * 0.28 * sp; g.moveTo(k * 0.25, -k * 0.5 - R); g.lineTo(k * 0.25 + R * 0.2, -k * 0.5 - R * 0.2); g.lineTo(k * 0.25 + R, -k * 0.5); g.lineTo(k * 0.25 + R * 0.2, -k * 0.5 + R * 0.2); g.lineTo(k * 0.25, -k * 0.5 + R); g.lineTo(k * 0.25 - R * 0.2, -k * 0.5 + R * 0.2); g.lineTo(k * 0.25 - R, -k * 0.5); g.lineTo(k * 0.25 - R * 0.2, -k * 0.5 - R * 0.2); g.fill(); }
+    starPath(g, R, r) { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r : R; i ? g.lineTo(Math.cos(a) * rad, Math.sin(a) * rad) : g.moveTo(Math.cos(a) * rad, Math.sin(a) * rad); } g.closePath(); }
+    idleStar(g, s, alpha) {            // debossed grey star, like on a real "stars" tile
+      const R = s * 0.3; g.save(); g.globalAlpha *= alpha; g.lineJoin = 'round'; g.lineWidth = s * 0.07;
+      g.translate(0, s * 0.015); this.starPath(g, R, R * 0.48); g.strokeStyle = 'rgba(0,0,0,.55)'; g.fillStyle = 'rgba(0,0,0,.55)'; g.fill(); g.stroke();
+      g.translate(0, -s * 0.03); this.starPath(g, R, R * 0.48);
+      const gr = g.createLinearGradient(0, -R, 0, R); gr.addColorStop(0, '#74767d'); gr.addColorStop(1, '#46484e'); g.fillStyle = gr; g.strokeStyle = gr; g.fill(); g.stroke();
       g.restore();
+    }
+    gem(g, s, p) {                     // revealed safe tile: golden star pops out and sparkles
+      const k = E.back(clamp(p)), R = s * 0.34 * k;
+      g.save(); g.globalAlpha *= clamp(p * 2); g.lineJoin = 'round'; g.lineWidth = s * 0.07; g.shadowColor = '#ffc933'; g.shadowBlur = 14;
+      this.starPath(g, R, R * 0.48); const gr = g.createLinearGradient(0, -R, 0, R); gr.addColorStop(0, '#fff3a8'); gr.addColorStop(0.55, '#ffcf3f'); gr.addColorStop(1, '#f29a00'); g.fillStyle = gr; g.strokeStyle = '#ffd84d'; g.fill(); g.stroke();
+      g.shadowBlur = 0; this.starPath(g, R * 0.5, R * 0.24); g.fillStyle = 'rgba(255,255,255,.45)'; g.translate(-R * 0.1, -R * 0.12); g.fill();
+      g.restore();
+      const sp = Math.sin(clamp((p - 0.4) * 2.2) * Math.PI); if (sp > 0.01) { g.save(); g.fillStyle = `rgba(255,255,255,${sp})`; g.beginPath(); const Q = s * 0.26 * sp, cx = s * 0.22, cy = -s * 0.24; g.moveTo(cx, cy - Q); g.lineTo(cx + Q * 0.2, cy - Q * 0.2); g.lineTo(cx + Q, cy); g.lineTo(cx + Q * 0.2, cy + Q * 0.2); g.lineTo(cx, cy + Q); g.lineTo(cx - Q * 0.2, cy + Q * 0.2); g.lineTo(cx - Q, cy); g.lineTo(cx - Q * 0.2, cy - Q * 0.2); g.fill(); g.restore(); }
     }
     cross(g, s, p) {
       const k = s * 0.3 * E.back(clamp(p));
@@ -103,7 +108,7 @@
           if (tap.i !== i) continue;
           const u = tt - tap.t;
           if (u > 0 && u < 0.2) o.press = Math.sin((u / 0.2) * Math.PI);
-          if (tap.kind === 'gem') { o.gem = clamp((u - 0.1) / 0.5) * fade; if (u > 0.1) o.glow = 0.35 * (1 - clamp((u - 0.1) / 1.0)) * fade; }
+          if (tap.kind === 'gem') { o.gem = clamp((u - 0.1) / 0.5) * fade; }
           else {
             const gu = tt - (tap.t + 0.2);
             if (gu > 0 && tb < 0) { const ramp = clamp(gu / 0.3); o.glow = ramp * (0.65 + 0.35 * Math.sin(gu * 17)); o.press = 0.35; }
