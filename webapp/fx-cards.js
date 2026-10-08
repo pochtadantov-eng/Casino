@@ -51,8 +51,9 @@
     tile(g, x, y, s, o) {
       const r = s * 0.27, cx = x + s / 2 + (o.dx || 0), cy = y + s / 2 + (o.dy || 0) + (o.press || 0) * 2;
       const glow = o.glow || 0, burnt = o.burnt || 0;
-      const top = rgb(mixa(mixa(hex('#39393d'), hex('#37e6ff'), glow), hex('#1c1c1f'), burnt)), bot = rgb(mixa(mixa(hex('#17171a'), hex('#0a8fd0'), glow), hex('#09090b'), burnt));
-      g.save(); g.globalAlpha = o.alpha ?? 1; g.translate(cx, cy); const sc = 1 - (o.press || 0) * 0.08 + glow * 0.04; g.scale(sc, sc);
+      const fl = o.gem || 0, back = fl >= 0.5, sx = fl > 0 && fl < 1 ? Math.max(0.04, Math.abs(Math.cos(fl * Math.PI))) : 1;
+      const top = rgb(mixa(mixa(hex(back ? '#5a4510' : '#39393d'), hex('#37e6ff'), glow), hex('#1c1c1f'), burnt)), bot = rgb(mixa(mixa(hex(back ? '#241a07' : '#17171a'), hex('#0a8fd0'), glow), hex('#09090b'), burnt));
+      g.save(); g.globalAlpha = o.alpha ?? 1; g.translate(cx, cy); const sc = 1 - (o.press || 0) * 0.08 + glow * 0.04; g.scale(sc * sx, sc);
       if (glow > 0.02) { g.shadowColor = `rgba(60,225,255,${0.9 * glow})`; g.shadowBlur = 22 * glow; } else { g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 8; g.shadowOffsetY = 3 - (o.press || 0) * 2; }
       const gr = g.createLinearGradient(0, -s / 2, 0, s / 2); gr.addColorStop(0, top); gr.addColorStop(1, bot);
       rr(g, -s / 2, -s / 2, s, s, r); g.fillStyle = gr; g.fill(); g.shadowColor = 'transparent'; g.shadowBlur = 0;
@@ -61,22 +62,23 @@
       rr(g, -s / 2 + 2, -s / 2 + 2, s - 4, s / 2 - 2, r - 2); g.fillStyle = gl; g.fill();
       if (burnt > 0) { const cr = g.createRadialGradient(0, 0, 1, 0, 0, s * 0.62); cr.addColorStop(0, `rgba(0,0,0,${0.65 * burnt})`); cr.addColorStop(1, 'rgba(0,0,0,0)'); rr(g, -s / 2, -s / 2, s, s, r); g.fillStyle = cr; g.fill(); }
       if (o.shimmer) { g.save(); rr(g, -s / 2, -s / 2, s, s, r); g.clip(); const sh = g.createLinearGradient(-s, -s, s, s); const p = o.shimmer; sh.addColorStop(clamp(p - 0.12), 'rgba(255,255,255,0)'); sh.addColorStop(clamp(p), 'rgba(255,255,255,.35)'); sh.addColorStop(clamp(p + 0.12), 'rgba(255,255,255,0)'); g.fillStyle = sh; g.fillRect(-s, -s, s * 2, s * 2); g.restore(); }
-      if (!(o.gem > 0) && !(o.x > 0)) this.idleStar(g, s, 1 - burnt);
-      if (o.gem > 0) this.gem(g, s, o.gem);
+      if (!back && !(o.x > 0)) this.idleStar(g, s, 1 - burnt);
+      if (back) this.gem(g, s, clamp((fl - 0.5) * 2));
       if (o.x > 0) this.cross(g, s, o.x);
       g.restore();
     }
     starPath(g, R, r) { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r : R; i ? g.lineTo(Math.cos(a) * rad, Math.sin(a) * rad) : g.moveTo(Math.cos(a) * rad, Math.sin(a) * rad); } g.closePath(); }
-    idleStar(g, s, alpha) {            // debossed grey star, like on a real "stars" tile
-      const R = s * 0.3; g.save(); g.globalAlpha *= alpha; g.lineJoin = 'round'; g.lineWidth = s * 0.07;
-      g.translate(0, s * 0.015); this.starPath(g, R, R * 0.48); g.strokeStyle = 'rgba(0,0,0,.55)'; g.fillStyle = 'rgba(0,0,0,.55)'; g.fill(); g.stroke();
-      g.translate(0, -s * 0.03); this.starPath(g, R, R * 0.48);
-      const gr = g.createLinearGradient(0, -R, 0, R); gr.addColorStop(0, '#74767d'); gr.addColorStop(1, '#46484e'); g.fillStyle = gr; g.strokeStyle = gr; g.fill(); g.stroke();
+    idleStar(g, s, alpha) {            // closed tile: plain grey emblem (circle with a small gem mark)
+      const R = s * 0.27; g.save(); g.globalAlpha *= alpha; g.translate(0, s * 0.01);
+      g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 3; g.shadowOffsetY = 1.5;
+      const gr = g.createLinearGradient(0, -R, 0, R); gr.addColorStop(0, '#6d7078'); gr.addColorStop(1, '#46484f'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, R, 0, 6.283); g.fill();
+      g.shadowColor = 'transparent'; g.strokeStyle = '#212328'; g.lineWidth = s * 0.05; g.lineJoin = 'round'; g.lineCap = 'round';
+      const k = R * 0.62; g.beginPath(); g.moveTo(0, -k); g.lineTo(k * 0.95, -k * 0.1); g.lineTo(0, k); g.lineTo(-k * 0.95, -k * 0.1); g.closePath(); g.moveTo(-k * 0.95, -k * 0.1); g.lineTo(k * 0.95, -k * 0.1); g.stroke();
       g.restore();
     }
     gem(g, s, p) {                     // revealed safe tile: golden star pops out and sparkles
-      const k = E.back(clamp(p)), R = s * 0.34 * k;
-      g.save(); g.globalAlpha *= clamp(p * 2); g.lineJoin = 'round'; g.lineWidth = s * 0.07; g.shadowColor = '#ffc933'; g.shadowBlur = 14;
+      const k = E.back(clamp(p)), R = s * 0.38 * k;
+      g.save(); g.globalAlpha *= clamp(p * 2); g.lineJoin = 'round'; g.lineWidth = s * 0.07; g.shadowColor = '#ffc933'; g.shadowBlur = 14 + 8 * Math.sin((this.clock || 0) * 6);
       this.starPath(g, R, R * 0.48); const gr = g.createLinearGradient(0, -R, 0, R); gr.addColorStop(0, '#fff3a8'); gr.addColorStop(0.55, '#ffcf3f'); gr.addColorStop(1, '#f29a00'); g.fillStyle = gr; g.strokeStyle = '#ffd84d'; g.fill(); g.stroke();
       g.shadowBlur = 0; this.starPath(g, R * 0.5, R * 0.24); g.fillStyle = 'rgba(255,255,255,.45)'; g.translate(-R * 0.1, -R * 0.12); g.fill();
       g.restore();
@@ -95,7 +97,7 @@
       for (let i = 0; i < 8; i++) this.parts.push({ k: 'smoke', x: mx + rand(-8, 8), y: my + rand(-6, 6), vx: rand(-14, 14), vy: rand(-26, -8), life: rand(1.1, 1.6), max: 1.6, size: rand(8, 14) });
     }
     draw(g, now, dt) {
-      const SPEED = 1.3; now *= SPEED; dt *= SPEED;
+      const SPEED = 1.3; now *= SPEED; dt *= SPEED; this.clock = now;
       const tt = now % this.T;
       if (tt < this.prevTt) this.parts = [];
       const [mx0, my0] = this.pos(this.taps[2].i), mx = mx0 + this.s / 2, my = my0 + this.s / 2;
@@ -110,7 +112,7 @@
           if (tap.i !== i) continue;
           const u = tt - tap.t;
           if (u > 0 && u < 0.2) o.press = Math.sin((u / 0.2) * Math.PI);
-          if (tap.kind === 'gem') { o.gem = clamp((u - 0.1) / 0.5) * fade; }
+          if (tap.kind === 'gem') { o.gem = clamp((u - 0.12) / 0.55) * fade; }
           else {
             const gu = tt - (tap.t + 0.2);
             if (gu > 0 && tb < 0) { const ramp = clamp(gu / 0.3); o.glow = ramp * (0.65 + 0.35 * Math.sin(gu * 17)); o.press = 0.35; }

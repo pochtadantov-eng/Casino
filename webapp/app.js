@@ -4,14 +4,25 @@ tg?.ready(); tg?.expand();
 const $ = (s) => document.querySelector(s);
 const state = { game: 'rocket', round: null, balance: 0, limits: { minBet: 1, maxBet: 1000, minWithdraw: 100 }, busy: false, raf: 0 };
 
+const RU_ERR = {
+  'No active round': 'Раунд уже завершён', 'Insufficient balance': 'Недостаточно звёзд на балансе', 'Finish your current round first': 'Сначала завершите текущий раунд',
+  'Open at least one tile': 'Откройте хотя бы одну плитку', 'Make at least one move': 'Сделайте хотя бы один ход', 'Tile already open': 'Плитка уже открыта',
+  'Unknown game': 'Игра не найдена', 'Bad tile': 'Неверная плитка', 'Bad choice': 'Неверный выбор', 'Unknown variant': 'Неверная сложность', 'Bad auto cashout': 'Неверный авто-вывод',
+};
+function ruError(m) {
+  if (RU_ERR[m]) return RU_ERR[m];
+  const b = /^Bet must be (\d+)\.\.(\d+) Stars$/.exec(m); if (b) return `Ставка должна быть от ${b[1]} до ${b[2]} ⭐`;
+  const k = /^mines must be/.exec(m); if (k) return 'Количество мин: от 1 до 24';
+  return m;
+}
 async function api(path, body) {
-  if (window.__mockApi) return window.__mockApi(path, body);
+  if (window.__mockApi) { try { return await window.__mockApi(path, body); } catch (e) { throw new Error(ruError(e.message)); } }
   const headers = { 'Content-Type': 'application/json' };
   if (tg?.initData) headers.Authorization = 'tma ' + tg.initData;
   else headers['x-dev-user'] = new URLSearchParams(location.search).get('dev') || '1'; // works only if server has DEV_AUTH=1
   const r = await fetch('/api/' + path, { method: body === undefined ? 'GET' : 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body) });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || j.message || 'Ошибка ' + r.status);
+  if (!r.ok) throw new Error(ruError(j.error || j.message || 'Ошибка ' + r.status));
   return j;
 }
 
@@ -78,15 +89,21 @@ R.rocket = (round) => {
   }
 };
 
+const STAR_SVG = '<svg class="gstar" viewBox="0 0 24 24"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6b0"/><stop offset=".55" stop-color="#ffd23f"/><stop offset="1" stop-color="#ff9f0a"/></linearGradient></defs><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1 5.9 20.6l1.5-6.8L2.2 9.2l6.9-.7z" fill="url(#sg)" stroke="#ffe27a" stroke-width="1.2" stroke-linejoin="round"/></svg>';
 R.mines = (round) => {
   const v = round?.view; const size = 25;
+  const prev = (round && v.revealed.length) ? (state.prevOpen || new Set()) : new Set();   // a fresh round starts with nothing open
+  const open = new Set();
   let h = '<div class="grid">';
   for (let i = 0; i < size; i++) {
-    let cls = '', txt = '', dis = !round || round.status !== 'active';
-    if (v?.revealed.includes(i)) { const mine = v.mines?.includes(i) || (round.status === 'lost' && v.revealed.at(-1) === i); cls = mine ? 'mine' : 'safe'; txt = mine ? '💣' : '⭐'; dis = true; }
-    else if (v?.mines?.includes(i)) { cls = 'mine ghost'; txt = '💣'; }
-    h += `<button class="tile ${cls}" data-i="${i}" ${dis ? 'disabled' : ''}>${txt}</button>`;
+    const isRev = v?.revealed.includes(i), isGhost = !isRev && v?.mines?.includes(i);
+    const mine = isRev ? (v.mines?.includes(i) || (round.status === 'lost' && v.revealed.at(-1) === i)) : isGhost;
+    const isOpen = isRev || isGhost; if (isOpen) open.add(i);
+    const dis = !round || round.status !== 'active' || isOpen;
+    const cls = ['tile', isOpen ? 'open' : '', isOpen && !prev.has(i) ? 'anim' : '', isGhost ? 'ghost' : ''].join(' ');
+    h += `<button class="${cls}" data-i="${i}" ${dis ? 'disabled' : ''}><span class="inner"><span class="face front"></span><span class="face back ${mine ? 'mine' : 'safe'}">${mine ? '<span class="bomb">💣</span>' : STAR_SVG}</span></span></button>`;
   }
+  state.prevOpen = open;
   $('#stage').innerHTML = h + '</div>';
   document.querySelectorAll('.tile').forEach((b) => b.onclick = () => act({ tile: Number(b.dataset.i) }));
 };
@@ -137,7 +154,7 @@ function apply(j) {
 
 async function guard(fn) {
   if (state.busy) return; state.busy = true;
-  try { await fn(); } catch (e) { say(e.message, 'lose'); } finally { state.busy = false; }
+  try { await fn(); } catch (e) { say(e.message, 'lose'); try { apply(await api('games/' + state.game)); say(e.message, 'lose'); } catch {} } finally { state.busy = false; }
 }
 const act = (input) => guard(async () => apply(await api(`games/${state.game}/act`, input)));
 
