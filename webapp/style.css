@@ -247,3 +247,9 @@ button,input,select{font-size:inherit;letter-spacing:0}
 .ctrl input,.ctrl select{padding:11px}
 #stage{margin-top:4px;min-height:max(260px,calc(100dvh - 130px - var(--ctrl-h,250px)))}
 body.ingame{padding-bottom:0}
+
+/* Tower game: the whole stage is the construction-site canvas */
+#stage.towerstage{padding:0;overflow:hidden;align-items:stretch;justify-content:stretch;background:#eaf3fa;border-radius:18px}
+button.place{flex:1.15;border:0;border-radius:14px;padding:16px 10px;font-size:15px;font-weight:800;background:var(--accent);color:#000;box-shadow:0 6px 18px rgba(245,179,1,.3)}
+.ctrl .actions{gap:8px}
+.ctrl .actions button.cash:not([hidden]){flex:1}

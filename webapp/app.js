@@ -136,7 +136,16 @@ R.steps = (round) => {
   $('#stage').innerHTML = h + '</div>';
   document.querySelectorAll('.floor button').forEach((b) => b.onclick = () => act({ choice: Number(b.dataset.c) }));
 };
-R.tower = R.seagull = R.steps;
+R.seagull = R.steps;
+R.tower = (round) => {                       // construction-site scene; the server still decides every step
+  const st = $('#stage');
+  if (!state.tscene || !st.contains(state.tscene.c)) {
+    st.classList.add('towerstage'); st.innerHTML = '<canvas class="cv" id="cv-tgame"></canvas>';
+    state.tscene = new TowerGame($('#cv-tgame'));
+    state.tscene.onReady = (ok) => { $('#place').disabled = !ok; $('#cash').disabled = !ok; };
+  }
+  state.tscene.sync(round);
+};
 
 // ---------- flow ----------
 const RES_LOSS = { mines: 'ПРОИГРЫШ', tower: 'ПРОИГРЫШ', seagull: 'ПРОИГРЫШ', rocket: 'РАКЕТА УЛЕТЕЛА' };
@@ -164,13 +173,16 @@ function apply(j) {
   const r = j.round;
   R[state.game](r);
   const active = r?.status === 'active';
-  $('#go').hidden = active; $('#cash').hidden = !active;
+  const towerActive = active && state.game === 'tower';
+  $('#go').hidden = active; $('#cash').hidden = !active; $('#place').hidden = !towerActive;
+  $('#place').disabled = towerActive ? !state.tscene?._ready : false;      // the tower scene says when a house is ready to be placed
+  $('#cash').disabled = towerActive ? !state.tscene?._ready : false;
   $('#cash').textContent = active ? `Забрать ${Math.floor(r.bet * (state.game === 'rocket' ? 1 : r.multiplier))} ⭐` : 'Забрать';
   if (state.game === 'rocket') $('#cash').textContent = 'Забрать';
   if (r && !active && prev?.status === 'active') {
-    if (r.status === 'won') { showResult(r, 0.15, 'win'); tg?.HapticFeedback?.notificationOccurred('success'); }
+    if (r.status === 'won') { showResult(r, state.game === 'tower' ? 0.9 : 0.15, 'win'); tg?.HapticFeedback?.notificationOccurred('success'); }
     else {
-      const delay = state.game === 'mines' ? 1.15 : 0.15;                  // mines: wait for the flip and the blast
+      const delay = state.game === 'mines' ? 1.15 : state.game === 'tower' ? 1.7 : 0.15;                  // mines: wait for the flip and the blast
       showResult(r, delay, 'loss');
       setTimeout(() => tg?.HapticFeedback?.notificationOccurred('error'), delay * 1000);
     }
@@ -190,6 +202,7 @@ async function load() {
   try { apply(await api('games/' + state.game)); } catch (e) { say(e.message, 'lose'); }
 }
 
+$('#place').onclick = () => { if ($('#place').disabled) return; $('#place').disabled = true; $('#cash').disabled = true; act({ choice: 0 }); };
 $('#go').onclick = () => { if (Date.now() < (state.lockUntil || 0)) return; guard(async () => apply(await api(`games/${state.game}/start`, { bet: betValue(), ...startParams() }))); };
 $('#cash').onclick = () => guard(async () => apply(await api(`games/${state.game}/cashout`, {})));
 $('#bet-minus').onclick = () => $('#bet').value = Math.max(1, betValue() - 10);
