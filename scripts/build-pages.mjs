@@ -5,7 +5,8 @@ const out = process.argv[2] || 'pages';
 const src = (f) => new URL('../webapp/' + f, import.meta.url);
 mkdirSync(out, { recursive: true });
 for (const f of ['style.css', 'app.js', 'shell.js', 'mock-api.js', 'fx-rocket.js', 'fx-cards.js', 'rocket.svg']) copyFileSync(src(f), `${out}/${f}`);
-mkdirSync(`${out}/img`, { recursive: true });
+mkdirSync(`${out}/img`, { recursive: true }); mkdirSync(`${out}/fonts`, { recursive: true });
+for (const f of readdirSync(new URL('../webapp/fonts/', import.meta.url))) copyFileSync(src('fonts/' + f), `${out}/fonts/${f}`);
 for (const f of readdirSync(new URL('../webapp/img/', import.meta.url))) copyFileSync(src('img/' + f), `${out}/img/${f}`);
 // Cache busting: every asset URL carries the build id, and index.html checks version.json (never cached)
 // and reloads itself once if a newer build exists. Telegram keeps the hash (#tgWebAppData) intact on reload.

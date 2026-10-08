@@ -168,14 +168,13 @@ function apply(j) {
   $('#cash').textContent = active ? `Забрать ${Math.floor(r.bet * (state.game === 'rocket' ? 1 : r.multiplier))} ⭐` : 'Забрать';
   if (state.game === 'rocket') $('#cash').textContent = 'Забрать';
   if (r && !active && prev?.status === 'active') {
-    if (r.status === 'won') { showResult(r, 0.15, 'win'); say(`Выигрыш +${r.payout} ⭐ (x${r.multiplier.toFixed(2)})`, 'win'); tg?.HapticFeedback?.notificationOccurred('success'); }
+    if (r.status === 'won') { showResult(r, 0.15, 'win'); tg?.HapticFeedback?.notificationOccurred('success'); }
     else {
       const delay = state.game === 'mines' ? 1.15 : 0.15;                  // mines: wait for the flip and the blast
-      showResult(r, delay, 'loss'); say('Проигрыш', 'lose');
+      showResult(r, delay, 'loss');
       setTimeout(() => tg?.HapticFeedback?.notificationOccurred('error'), delay * 1000);
     }
   } else if (active) say('');
-  $('#fair').innerHTML = r ? `hash(serverSeed): ${r.serverSeedHash}<br>clientSeed: ${r.clientSeed}<br>nonce: ${r.nonce}<br>serverSeed: ${r.serverSeed ?? '— (откроется после раунда)'}` : '';
 }
 
 async function guard(fn) {
