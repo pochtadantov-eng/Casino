@@ -6,6 +6,7 @@
   const E = {
     out: (t) => 1 - Math.pow(1 - t, 3),
     in: (t) => t * t * t,
+    sm: (t) => t * t * t * (t * (t * 6 - 15) + 10),
     io: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
     back: (t) => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); },
   };
@@ -150,7 +151,7 @@
   // breaks into pieces that tumble down, and the loop restarts
   class RocketCardScene extends Scene {
     constructor(c, label) {
-      super(c); this.label = label; this.img = load('rocket.svg'); this.parts = []; this.pieces = []; this.T = 7.6; this.climb = 4.6; this.loop = -1;
+      super(c); this.label = label; this.img = load('rocket.svg'); this.parts = []; this.pieces = []; this.T = 7.6; this.climb = 4.6; this.loop = -1; this.tc = 0;
       this.crashes = [11.2, 19.6, 7.8, 24.1, 14.3, 9.5, 17.2];
       this.stars = Array.from({ length: 26 }, () => ({ x: Math.random(), y: Math.random() * 0.7, p: Math.random() * 6 }));
     }
@@ -173,12 +174,13 @@
       });
     }
     draw(g, now, dt) {
-      const li = Math.floor(now / this.T), tt = now % this.T;
-      if (li !== this.loop) { this.loop = li; this.parts = []; this.pieces = []; this.exploded = false; this.crashM = this.crashes[li % this.crashes.length]; const f = (this.crashM - 1) / 24; this.pc = Math.log(1 + f * (Math.exp(3.2) - 1)) / 3.2; this.tc = this.pc * this.climb; }
+      if (this.cs === undefined || now - this.cs > this.tc + 1.45) { this.cs = now; this.loop++; this.newCycle = true; }
+      const tt = now - this.cs;
+      if (this.newCycle) { this.newCycle = false; const li = this.loop; this.parts = []; this.pieces = []; this.exploded = false; this.crashM = this.crashes[li % this.crashes.length]; const f = (this.crashM - 1) / 24; this.pc = Math.log(1 + f * (Math.exp(3.2) - 1)) / 3.2; this.tc = this.pc * this.climb; }
       const crashed = tt >= this.tc, p = crashed ? this.pc : clamp(tt / this.climb), [hx, hy, m] = this.pt(p);
       const [x2, y2] = this.pt(Math.min(1, p + 0.01)), ang = Math.atan2(x2 - hx, -(y2 - hy)) || 0.6, rh = 46, rw = 23;
       if (crashed && !this.exploded) { this.exploded = true; this.flash = 1; this.hx = hx; this.hy = hy; this.explode(hx, hy, ang, rh, rw); }
-      const since = tt - this.tc, fadeOut = crashed ? clamp((tt - (this.T - 1.0)) / 0.9) : 0, alpha = 1 - fadeOut;
+      const since = tt - this.tc, fadeOut = crashed ? clamp((since - 0.8) / 0.55) : 0, alpha = 1 - fadeOut;
 
       for (const s of this.stars) { g.fillStyle = `rgba(255,255,255,${0.25 + 0.5 * Math.abs(Math.sin(now * 1.3 + s.p))})`; g.fillRect(s.x * this.w, s.y * this.h, 1.3, 1.3); }
       g.strokeStyle = 'rgba(160,200,255,.12)'; g.lineWidth = 1; for (let i = 0; i < 4; i++) { const y = this.top + (this.ph * i) / 3; g.beginPath(); g.moveTo(this.px0, y); g.lineTo(this.w - this.px0, y); g.stroke(); }
@@ -267,42 +269,42 @@
       return (this.tinted[i] = c);
     }
     drawHouse(g, i, ax, ay) { const c = this.tint(i); g.drawImage(c, ax - 183 * this.s, ay - 315 * this.s, c.width / DPR, c.height / DPR); }
-    posX(t) { const k = clamp(t / 1.6); return lerp(this.x0, this.cx, E.io(k)); }
+    posX(t) { const k = clamp(t / 1.25); return lerp(this.x0, this.cx, E.sm(k)); }
     draw(g, now, dt) {
       if (!this.house.complete || !this.house.naturalWidth || !this.hook.complete || !this.hook.naturalWidth) return;
       const s = this.s; this.u += dt;
       if (this.trolleyX === null) this.trolleyX = this.x0;
       const ropeGap = 18, hookH = this.hook.height * s * 1.55, hookW = this.hook.width * s * 1.55, Lhide = -(this.hh + ropeGap + hookH + 24);
-      const hoverBottom = this.yLand - 34, Lhover = hoverBottom - this.hh - ropeGap, ropeLen = 66, om2 = 21, damp = 1.5;
+      const hoverBottom = this.yLand - 34, Lhover = hoverBottom - this.hh - ropeGap, ropeLen = 66, om2 = 24, damp = 1.9;
       let L = this.hookL ?? Lhide, hasHouse = true, ax = 0;
       // ---------- phases
       if (this.phase === 'enter') {
-        const k = E.out(clamp(this.u / 1.0)); L = lerp(Lhide, Lhover, k); this.trolleyX = this.x0;
-        if (this.u >= 1.0) { this.phase = 'move'; this.u = 0; }
+        const k = E.sm(clamp(this.u / 0.85)); L = lerp(Lhide, Lhover, k); this.trolleyX = this.x0;
+        if (this.u >= 0.85) { this.phase = 'move'; this.u = 0; }
       } else if (this.phase === 'move') {
         L = Lhover; const h = 0.03; this.trolleyX = this.posX(this.u); ax = (this.posX(this.u + h) - 2 * this.posX(this.u) + this.posX(this.u - h)) / (h * h);
-        if (this.u >= 1.6) { this.phase = 'settle'; this.u = 0; }
+        if (this.u >= 1.25) { this.phase = 'settle'; this.u = 0; }
       } else if (this.phase === 'settle') {
         L = Lhover; this.trolleyX = this.cx;
-        if (this.u >= 1.1) { this.phase = 'fall'; this.u = 0; this.hookStart = L; const bx = this.trolleyX + Math.sin(this.th) * (L + ropeGap); this.fall = { x: bx, y: hoverBottom, vy: 0, rot: this.th, vr: this.thv * 0.6, ci: this.hand }; }
+        if (this.u >= 0.85) { this.phase = 'fall'; this.u = 0; this.hookStart = L; const bx = this.trolleyX + Math.sin(this.th) * (L + ropeGap); this.fall = { x: bx, y: hoverBottom, vy: 0, rot: this.th, vr: this.thv * 0.6, ci: this.hand }; }
       } else if (this.phase === 'fall') {
         hasHouse = false; const f = this.fall;
         if (f) {
           f.vy += 900 * dt; f.y += f.vy * dt; f.x = lerp(f.x, this.cx, clamp(dt * 10)); f.rot *= 0.94;
           if (f.y >= this.yLand) {
             this.floors.unshift({ ci: f.ci }); if (this.floors.length > 12) this.floors.pop(); this.fall = null; this.scrollT = 0; this.scrollFrom = this.inc; this.scroll = this.inc;
-            this.wv += 16; for (let i = 0; i < 8; i++) this.puffs.push({ x: this.cx + rand(-this.hw * 0.4, this.hw * 0.4), y: this.yLand + this.inc * 0.5, vx: rand(-22, 22), vy: rand(-14, -3), life: rand(0.35, 0.65), max: 0.65, size: rand(2.5, 5) });
+            this.wv += 20; for (let i = 0; i < 8; i++) this.puffs.push({ x: this.cx + rand(-this.hw * 0.4, this.hw * 0.4), y: this.yLand + this.inc * 0.5, vx: rand(-22, 22), vy: rand(-14, -3), life: rand(0.35, 0.65), max: 0.65, size: rand(2.5, 5) });
           }
         }
-        const k = clamp((this.u - 0.1) / 0.9); L = lerp(this.hookStart, Lhide, E.in(k));
-        if (this.u >= 1.1 && !this.fall) { this.phase = 'enter'; this.u = 0; this.hookL = null; this.hand = this.ci++; this.trolleyX = this.x0; this.th = 0.05; this.thv = 0; }
+        const k = clamp((this.u - 0.05) / 0.75); L = lerp(this.hookStart, Lhide, E.sm(k));
+        if (this.u >= 0.8 && !this.fall) { this.phase = 'enter'; this.u = 0; this.hookL = null; this.hand = this.ci++; this.trolleyX = this.x0; this.th = 0.05; this.thv = 0; }
       }
       if (this.phase === 'fall') this.hookL = L;
       // ---------- physics: damped pendulum driven by the trolley's acceleration, and a soft spring for the tower
       if (hasHouse) { const acc = -om2 * Math.sin(this.th) - 0.22 * (ax / ropeLen) * Math.cos(this.th) - damp * this.thv; this.thv += acc * dt; this.th += this.thv * dt; this.th = clamp(this.th, -0.22, 0.22); }
       else { this.thv *= 0.9; this.th *= 0.92; }
-      const wacc = -55 * this.wob - 4.2 * this.wv; this.wv += wacc * dt; this.wob += this.wv * dt;
-      if (this.scrollT < 1) { this.scrollT = Math.min(1, this.scrollT + dt / 0.75); this.scroll = this.scrollFrom * (1 - E.io(clamp((this.scrollT - 0.1) / 0.9))); }
+      const wacc = -70 * this.wob - 6.5 * this.wv; this.wv += wacc * dt; this.wob += this.wv * dt;
+      if (this.scrollT < 1) { this.scrollT = Math.min(1, this.scrollT + dt / 0.6); this.scroll = this.scrollFrom * (1 - E.sm(clamp((this.scrollT - 0.08) / 0.92))); }
       // ---------- draw the tower (oldest first so newer houses overlap the roof below)
       const tx = (k) => this.cx + this.wob * Math.max(0.2, 1 - k * 0.2);
       for (let k = this.floors.length - 1; k >= 0; k--) {
