@@ -19,7 +19,7 @@ function show(name) {
   if (name === 'profile') loadProfile();
 }
 function openGame(g) {
-  state.game = g; state.round = null;
+  state.game = g; state.round = null; unlockPlay();
   $('#gtitle').textContent = TITLES[g];
   show('game');
   load();

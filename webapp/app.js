@@ -148,7 +148,15 @@ function showResult(r, delay, kind) {          // "win" / "loss" plaque over the
     : `<b>${RES_LOSS[state.game] || 'ПРОИГРЫШ'}</b><span>−${r.bet} ⭐</span>`;
   $('#stage').append(el);
   setTimeout(() => el.remove(), (delay + 3.4) * 1000);
+  lockPlay((delay + 2.95) * 1000);               // no new round while the result animation is still playing
 }
+// Play button stays disabled until the animation has finished
+function lockPlay(ms) {
+  state.lockUntil = Date.now() + ms; $('#go').disabled = true;
+  clearTimeout(state.lockTimer);
+  state.lockTimer = setTimeout(() => { state.lockUntil = 0; $('#go').disabled = false; }, ms);
+}
+function unlockPlay() { clearTimeout(state.lockTimer); state.lockUntil = 0; $('#go').disabled = false; }
 function apply(j) {
   if (j.balance !== undefined) setBalance(j.balance);
   const prev = state.round;
@@ -183,7 +191,7 @@ async function load() {
   try { apply(await api('games/' + state.game)); } catch (e) { say(e.message, 'lose'); }
 }
 
-$('#go').onclick = () => guard(async () => apply(await api(`games/${state.game}/start`, { bet: betValue(), ...startParams() })));
+$('#go').onclick = () => { if (Date.now() < (state.lockUntil || 0)) return; guard(async () => apply(await api(`games/${state.game}/start`, { bet: betValue(), ...startParams() }))); };
 $('#cash').onclick = () => guard(async () => apply(await api(`games/${state.game}/cashout`, {})));
 $('#bet-minus').onclick = () => $('#bet').value = Math.max(1, betValue() - 10);
 $('#bet-plus').onclick = () => $('#bet').value = Math.min(state.limits.maxBet, betValue() + 10);
