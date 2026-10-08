@@ -11,6 +11,7 @@ const RU_ERR = {
 };
 function ruError(m) {
   if (RU_ERR[m]) return RU_ERR[m];
+  if (/undefined|is not|null|TypeError|Failed to fetch|NetworkError|JSON|Unexpected/i.test(String(m))) { console.error(m); return 'Что-то пошло не так, попробуйте ещё раз'; }
   const b = /^Bet must be (\d+)\.\.(\d+) Stars$/.exec(m); if (b) return `Ставка должна быть от ${b[1]} до ${b[2]} ⭐`;
   const k = /^mines must be/.exec(m); if (k) return 'Количество мин: от 1 до 24';
   return m;
@@ -102,10 +103,12 @@ R.mines = (round) => {
     const isOpen = isRev || isGhost; if (isOpen) open.add(i);
     const dis = !round || round.status !== 'active' || isOpen;
     const cls = ['tile', isOpen ? 'open' : '', isOpen && !prev.has(i) ? 'anim' : '', isGhost ? 'ghost' : ''].join(' ');
-    h += `<button class="${cls}" data-i="${i}" ${dis ? 'disabled' : ''}><span class="inner"><span class="face front"></span><span class="face back ${mine ? 'mine' : 'safe'}">${mine ? '<span class="bomb">💣</span>' : STAR_SVG}</span></span></button>`;
+    const boom = isRev && mine && !prev.has(i);                      // the bomb the player stepped on blows up after the flip
+    let fx = ''; if (boom) { for (let k = 0; k < 14; k++) { const a = (k / 14) * 6.283 + Math.random() * 0.4, d = 34 + Math.random() * 36; fx += `<i style="--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px"></i>`; } }
+    h += `<button class="${cls}${boom ? ' boom' : ''}" data-i="${i}" ${dis ? 'disabled' : ''}><span class="inner"><span class="face front"></span><span class="face back ${mine ? 'mine' : 'safe'}">${mine ? '<span class="bomb">💣</span>' : STAR_SVG}</span></span>${boom ? `<span class="fx">${fx}</span>` : ''}</button>`;
   }
   state.prevOpen = open;
-  $('#stage').innerHTML = h + '</div>';
+  $('#stage').innerHTML = h.replace('<div class="grid">', open.size && round?.status === 'lost' && [...open].some((i) => !prev.has(i) && v.revealed.includes(i)) ? '<div class="grid shake">' : '<div class="grid">') + '</div>';
   document.querySelectorAll('.tile').forEach((b) => b.onclick = () => act({ tile: Number(b.dataset.i) }));
 };
 
@@ -155,7 +158,7 @@ function apply(j) {
 
 async function guard(fn) {
   if (state.busy) return; state.busy = true;
-  try { await fn(); } catch (e) { say(e.message, 'lose'); try { apply(await api('games/' + state.game)); say(e.message, 'lose'); } catch {} } finally { state.busy = false; }
+  try { await fn(); } catch (e) { const m = ruError(e.message); say(m, 'lose'); try { apply(await api('games/' + state.game)); say(m, 'lose'); } catch {} } finally { state.busy = false; }
 }
 const act = (input) => guard(async () => apply(await api(`games/${state.game}/act`, input)));
 

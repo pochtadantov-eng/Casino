@@ -9,7 +9,13 @@
   const hex = () => [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, '0')).join('');
 
   let db = { balance: 1000, nonce: 0, id: 0, rounds: {}, hist: [], lastDaily: 0 };
-  try { const s = JSON.parse(localStorage.getItem('demo-casino') || 'null'); if (s) db = s; } catch {}
+  try {   // saved state from older versions may lack newer fields: merge with defaults instead of trusting it
+    const saved = JSON.parse(localStorage.getItem('demo-casino') || 'null');
+    if (saved && typeof saved === 'object') db = { ...db, ...saved };
+  } catch {}
+  if (!Array.isArray(db.hist)) db.hist = [];
+  if (!db.rounds || typeof db.rounds !== 'object') db.rounds = {};
+  if (!Number.isFinite(db.balance)) db.balance = 1000;
   const save = () => { try { localStorage.setItem('demo-casino', JSON.stringify(db)); } catch {} };
   const fail = (m) => { throw new Error(m); };
 
