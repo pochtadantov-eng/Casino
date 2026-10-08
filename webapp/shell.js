@@ -27,6 +27,7 @@ function openGame(g) {
 document.querySelectorAll('[data-game]').forEach((c) => c.onclick = () => openGame(c.dataset.game));
 document.querySelectorAll('[data-go]').forEach((c) => c.onclick = () => selectTab(c.dataset.go));
 $('#back').onclick = () => { show(tab); };
+if (window.Telegram?.WebApp?.initData) $('#back').hidden = true; // inside Telegram the native Back button is used instead
 window.Telegram?.WebApp?.BackButton?.onClick(() => show(tab));
 
 // ---------- liquid glass dock ----------
