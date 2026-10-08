@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 const f = (n) => new URL('../webapp/' + n, import.meta.url);
 const r = (n) => readFileSync(f(n), 'utf8');
-const mime = { png: 'image/png', jpg: 'image/jpeg' };
+const mime = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' };
 const body = r('index.html').match(/<body>([\s\S]*)<\/body>/)[1].replace(/<script src="[^"]+"><\/script>/g, '')
   .replace(/src="img\/([\w.]+)"/g, (_, n) => `src="data:${mime[n.split('.').pop()]};base64,${readFileSync(f('img/' + n)).toString('base64')}"`);
 const svg = readFileSync(f('rocket.svg')).toString('base64');
