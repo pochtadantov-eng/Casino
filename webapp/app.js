@@ -15,7 +15,7 @@ async function api(path, body) {
   return j;
 }
 
-const setBalance = (b) => { state.balance = b; $('#balance').textContent = b; };
+const setBalance = (b) => { state.balance = b; $('#balance').textContent = b; const pb = $('#pbal'); if (pb) pb.textContent = b; };
 const say = (t, cls = '') => { const m = $('#msg'); m.textContent = t; m.className = cls; };
 const betValue = () => Math.max(1, Math.floor(Number($('#bet').value) || 0));
 
@@ -148,11 +148,6 @@ async function load() {
   try { apply(await api('games/' + state.game)); } catch (e) { say(e.message, 'lose'); }
 }
 
-document.querySelectorAll('#tabs button').forEach((b) => b.onclick = () => {
-  if (state.round?.status === 'active' && state.game !== b.dataset.g) { /* the round stays active on the server, resumable */ }
-  document.querySelectorAll('#tabs button').forEach((x) => x.classList.toggle('on', x === b));
-  state.game = b.dataset.g; load();
-});
 $('#go').onclick = () => guard(async () => apply(await api(`games/${state.game}/start`, { bet: betValue(), ...startParams() })));
 $('#cash').onclick = () => guard(async () => apply(await api(`games/${state.game}/cashout`, {})));
 $('#bet-minus').onclick = () => $('#bet').value = Math.max(1, betValue() - 10);
@@ -174,4 +169,4 @@ $('#btn-withdraw').onclick = async () => {
   try { const j = await api('withdraw', { amount: a }); setBalance(j.balance); say(`Заявка #${j.id} создана, ожидает проверки`, 'win'); } catch (e) { say(e.message, 'lose'); }
 };
 
-(async () => { try { const me = await api('me'); setBalance(me.balance); state.limits = me.limits; } catch (e) { say(e.message, 'lose'); } load(); })();
+async function boot() { try { const me = await api('me'); setBalance(me.balance); state.limits = me.limits; } catch (e) { console.warn(e.message); } }

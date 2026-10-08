@@ -1,14 +1,14 @@
 // DEMO backend that runs entirely in the browser with the same API shape as the real server.
 // Used only for the shareable preview (scripts/build-preview.mjs). Not secure: secrets live on the client.
 (() => {
-  const EDGE = 0.03, GROWTH = 0.0001, SIZE = 25;
+  const DAILY = 10, EDGE = 0.03, GROWTH = 0.0001, SIZE = 25;
   const LIMITS = { minBet: 1, maxBet: 1000, maxPayout: 10000, minWithdraw: 100 };
   const floor2 = (x) => Math.floor(x * 100 + 1e-9) / 100;
   const rnd = () => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
   const int = (n) => Math.floor(rnd() * n);
   const hex = () => [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, '0')).join('');
 
-  let db = { balance: 1000, nonce: 0, id: 0, rounds: {} };
+  let db = { balance: 1000, nonce: 0, id: 0, rounds: {}, hist: [], lastDaily: 0 };
   try { const s = JSON.parse(localStorage.getItem('demo-casino') || 'null'); if (s) db = s; } catch {}
   const save = () => { try { localStorage.setItem('demo-casino', JSON.stringify(db)); } catch {} };
   const fail = (m) => { throw new Error(m); };
@@ -36,6 +36,7 @@
     r.status = status; r.multiplier = mult;
     r.payout = status === 'won' ? Math.min(Math.floor(r.bet * mult), LIMITS.maxPayout) : 0;
     db.balance += r.payout;
+    db.hist.unshift({ ...r }); db.hist = db.hist.slice(0, 20);
   };
   const settleRocket = (r, now) => {
     const s = r.state, m = multAt(now - s.startedAt);
@@ -49,7 +50,9 @@
 
   const handlers = {
     me: () => ({ id: 1, balance: db.balance, limits: LIMITS }),
-    history: () => [],
+    history: () => db.hist.slice(0, 20).map((r) => present(r)),
+    bonus: () => ({ reward: DAILY, availableAt: db.lastDaily && Date.now() - db.lastDaily < 864e5 ? new Date(db.lastDaily + 864e5).toISOString() : null }),
+    'bonus/daily': () => { if (db.lastDaily && Date.now() - db.lastDaily < 864e5) fail('Бонус уже получен, приходите позже'); db.lastDaily = Date.now(); db.balance += DAILY; save(); return { reward: DAILY, balance: db.balance }; },
     deposit: (b) => { db.balance += Number(b.amount) || 0; save(); return { link: 'demo' }; },
     withdraw: (b) => { const a = Number(b.amount); if (a < LIMITS.minWithdraw) fail('Минимум ' + LIMITS.minWithdraw); if (a > db.balance) fail('Insufficient balance'); db.balance -= a; save(); return { id: 1, balance: db.balance }; },
   };

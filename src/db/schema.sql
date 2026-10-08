@@ -48,3 +48,5 @@ create table if not exists withdrawals (
   created_at timestamptz not null default now(),
   decided_at timestamptz
 );
+
+alter table users add column if not exists last_daily timestamptz;

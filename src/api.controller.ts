@@ -26,6 +26,17 @@ export class ApiController {
     };
   }
 
+  @Get('bonus')
+  bonus(@Req() req: any) {
+    return this.wallet.dailyStatus(req.user.id);
+  }
+
+  @Post('bonus/daily')
+  async claimBonus(@Req() req: any) {
+    const reward = await this.wallet.claimDaily(req.user.id);
+    return { reward, balance: await this.wallet.balance(req.user.id) };
+  }
+
   @Get('history')
   history(@Req() req: any) {
     return this.games.history(req.user.id);

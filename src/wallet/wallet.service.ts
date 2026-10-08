@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PoolClient } from 'pg';
 import { DbService } from '../db/db.service';
+import { config } from '../config';
 import { GameError } from '../games/engines/types';
 
 export interface TgUser {
@@ -84,5 +85,25 @@ export class WalletService {
       "select id, user_id, amount, created_at from withdrawals where status = 'pending' order by id limit 20",
     );
     return rows;
+  }
+
+  async dailyStatus(userId: number) {
+    const { rows } = await this.db.pool.query('select last_daily from users where id = $1', [userId]);
+    const next = rows[0]?.last_daily ? new Date(rows[0].last_daily.getTime() + 86_400_000) : null;
+    return { reward: config.dailyBonus, availableAt: next && next.getTime() > Date.now() ? next.toISOString() : null };
+  }
+
+  /** Once per 24h. The UPDATE is the lock: a concurrent second claim matches no row. */
+  async claimDaily(userId: number): Promise<number> {
+    if (config.dailyBonus <= 0) throw new GameError('Бонус сейчас недоступен');
+    return this.db.tx(async (c) => {
+      const r = await c.query(
+        "update users set last_daily = now() where id = $1 and (last_daily is null or last_daily < now() - interval '24 hours') returning id",
+        [userId],
+      );
+      if (!r.rowCount) throw new GameError('Бонус уже получен, приходите позже');
+      await this.apply(c, userId, config.dailyBonus, 'bonus', `daily:${userId}:${Date.now()}`);
+      return config.dailyBonus;
+    });
   }
 }

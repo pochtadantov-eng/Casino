@@ -13,6 +13,7 @@ export const config = {
   maxPayout: int('MAX_PAYOUT', 10000),
   minDeposit: int('MIN_DEPOSIT', 1),
   minWithdraw: int('MIN_WITHDRAW', 100),
+  dailyBonus: int('DAILY_BONUS', 10), // 0 disables the daily bonus
   adminIds: (process.env.ADMIN_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean).map(Number),
   devAuth: process.env.DEV_AUTH === '1',
 };
