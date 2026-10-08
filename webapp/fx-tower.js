@@ -162,13 +162,14 @@
       if (gy < h + 10) this.drawGround(g, gy);
       // foundation + tower
       const hw = this.hw, xt = this.xt;
-      if (gy < h + 20) { g.fillStyle = '#c3ccd5'; rr(g, xt - hw * 0.62, gy - 4, hw * 1.24, 12, 4); g.fill(); g.fillStyle = '#aeb9c4'; g.fillRect(xt - hw * 0.62, gy + 4, hw * 1.24, 4); }
+      this.drawPlatform(g, t);
       const n = this.floors.length;
       this.floors.forEach((fl, i) => {
         const y = this.groundY - i * this.inc + cam; if (y - this.hh > h) return;
         const k = n > 1 ? i / (n - 1) : 1, ox = this.wob * (0.12 + 0.88 * k);
         this.drawHouse(g, fl.ci, xt + ox, y);
       });
+      this.drawTarget(g, t);
       // dust
       for (const p of this.puffs) { p.life -= 1 / 60; p.x += p.vx / 60; p.y += p.vy / 60; }
       this.puffs = this.puffs.filter((p) => p.life > 0);
@@ -185,19 +186,66 @@
       }
       this.drawCrane(g);
     }
+    // isometric footprint of a house (same projection as the house sprites): half width 0.48*hw, half height 0.43 of that
+    poly(g, pts) { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); }
+    drawPlatform(g, t) {
+      const gy = this.groundY + this.cam; if (gy > this.h + 90) return;
+      const hw = this.hw, cx = this.xt, halfW = 0.76 * hw, halfH = 0.43 * halfW, T = hw * 0.22, cy = gy - 0.43 * 0.48 * hw;
+      const L = [cx - halfW, cy], R = [cx + halfW, cy], F = [cx, cy + halfH], B = [cx, cy - halfH];
+      // soft contact shadow
+      g.fillStyle = 'rgba(60,45,30,.28)'; g.beginPath(); g.ellipse(cx + 4, cy + halfH + T * 0.8, halfW * 1.18, halfH * 1.05, 0, 0, 6.283); g.fill();
+      // side faces (lit from the left like the houses)
+      let gr = g.createLinearGradient(0, L[1], 0, L[1] + T + halfH); gr.addColorStop(0, '#c2cdd8'); gr.addColorStop(1, '#9aa8b7');
+      g.fillStyle = gr; this.poly(g, [L, F, [F[0], F[1] + T], [L[0], L[1] + T]]); g.fill();
+      gr = g.createLinearGradient(0, R[1], 0, R[1] + T + halfH); gr.addColorStop(0, '#93a1b0'); gr.addColorStop(1, '#6f7c8a');
+      g.fillStyle = gr; this.poly(g, [F, R, [R[0], R[1] + T], [F[0], F[1] + T]]); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 1; g.beginPath(); g.moveTo(L[0], L[1] + 0.5); g.lineTo(F[0], F[1] + 0.5); g.lineTo(R[0], R[1] + 0.5); g.stroke();
+      g.strokeStyle = 'rgba(40,55,70,.25)'; g.beginPath(); g.moveTo(F[0], F[1]); g.lineTo(F[0], F[1] + T); g.stroke();
+      // top surface
+      gr = g.createLinearGradient(0, B[1], 0, F[1]); gr.addColorStop(0, '#e4eaf0'); gr.addColorStop(1, '#c9d3dd');
+      g.fillStyle = gr; this.poly(g, [L, F, R, B]); g.fill();
+      // slab joints
+      g.strokeStyle = 'rgba(80,100,120,.22)'; g.lineWidth = 1; g.beginPath();
+      for (const f of [1 / 3, 2 / 3]) { const a = [L[0] + (B[0] - L[0]) * f, L[1] + (B[1] - L[1]) * f], b = [F[0] + (R[0] - F[0]) * f, F[1] + (R[1] - F[1]) * f]; g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); const c = [L[0] + (F[0] - L[0]) * f, L[1] + (F[1] - L[1]) * f], d = [B[0] + (R[0] - B[0]) * f, B[1] + (R[1] - B[1]) * f]; g.moveTo(c[0], c[1]); g.lineTo(d[0], d[1]); }
+      g.stroke();
+      // hazard stripes along the four top edges (inward band)
+      const edge = (A, Bp) => {
+        const ex = Bp[0] - A[0], ey = Bp[1] - A[1], len = Math.hypot(ex, ey), ux = ex / len, uy = ey / len, mx = (A[0] + Bp[0]) / 2, my = (A[1] + Bp[1]) / 2, nx0 = cx - mx, ny0 = cy - my, nl = Math.hypot(nx0, ny0), nx = (nx0 / nl) * 5.5, ny = (ny0 / nl) * 5.5, seg = 9;
+        for (let k = 0; k * seg < len; k++) { const a = k * seg, b = Math.min(len, (k + 1) * seg); g.fillStyle = k % 2 ? '#2c343e' : '#f6b50b'; this.poly(g, [[A[0] + ux * a, A[1] + uy * a], [A[0] + ux * b, A[1] + uy * b], [A[0] + ux * b + nx, A[1] + uy * b + ny], [A[0] + ux * a + nx, A[1] + uy * a + ny]]); g.fill(); }
+      };
+      edge(L, F); edge(F, R); edge(L, B); edge(B, R);
+      // signal lights on three corners (blink in turn)
+      [[L, 0], [R, 1], [F, 2]].forEach(([P, k]) => {
+        const on = Math.sin(t * 4 + k * 2.1) > 0; g.fillStyle = '#58626d'; g.fillRect(P[0] - 2.5, P[1] - 9, 5, 9);
+        g.fillStyle = on ? '#ffd23f' : '#9a8433'; g.beginPath(); g.arc(P[0], P[1] - 11, 4, 0, 6.283); g.fill();
+        if (on) { const gl = g.createRadialGradient(P[0], P[1] - 11, 0, P[0], P[1] - 11, 14); gl.addColorStop(0, 'rgba(255,210,60,.65)'); gl.addColorStop(1, 'rgba(255,210,60,0)'); g.fillStyle = gl; g.beginPath(); g.arc(P[0], P[1] - 11, 14, 0, 6.283); g.fill(); }
+      });
+    }
+    // dashed green outline where the next house will land: makes the drop zone obvious
+    drawTarget(g, t) {
+      if (!(this.state === 'arrive' || this.state === 'sway' || this.state === 'align')) return;
+      if (this.roundStatus !== 'active') return;
+      const hw = this.hw, cx = this.xt, fw = 0.48 * hw, fh = 0.43 * fw, landY = this.groundY - this.landed * this.inc + this.cam, cy = landY - fh;
+      const pulse = 0.5 + 0.5 * Math.sin(t * 4.2), P = [[cx - fw, cy], [cx, cy + fh], [cx + fw, cy], [cx, cy - fh]];
+      g.save(); g.fillStyle = `rgba(34,197,94,${0.14 + 0.1 * pulse})`; this.poly(g, P); g.fill();
+      g.setLineDash([6, 5]); g.lineDashOffset = -t * 18; g.lineWidth = 2.2; g.strokeStyle = `rgba(22,163,74,${0.75 + 0.25 * pulse})`; g.shadowColor = 'rgba(34,197,94,.8)'; g.shadowBlur = 8; this.poly(g, P); g.stroke();
+      // arrow above the zone
+      g.setLineDash([]); g.shadowBlur = 0; const ay = cy - fh - 22 - pulse * 5; g.fillStyle = `rgba(22,163,74,${0.8 + 0.2 * pulse})`; g.beginPath(); g.moveTo(cx - 7, ay); g.lineTo(cx + 7, ay); g.lineTo(cx, ay + 10); g.closePath(); g.fill();
+      g.restore();
+    }
     drawGround(g, gy) {
       const { w, h } = this;
       g.fillStyle = '#a6917c'; g.fillRect(0, gy, w, h - gy + 4); g.fillStyle = '#8f7b68'; g.fillRect(0, gy + 18, w, h);
       g.fillStyle = '#b3a08b'; g.fillRect(0, gy, w, 4);
       const mound = (x, r) => { g.fillStyle = '#f0c44f'; g.beginPath(); g.ellipse(x, gy + 2, r, r * 0.55, 0, Math.PI, 0); g.fill(); g.fillStyle = '#f6d77a'; g.beginPath(); g.ellipse(x - r * 0.25, gy, r * 0.55, r * 0.3, 0, Math.PI, 0); g.fill(); };
-      mound(w * 0.08, 30); mound(w * 0.5, 26); mound(w * 0.86, 24);
+      mound(w * 0.07, 28); mound(w * 0.56, 24); mound(w * 0.88, 24);
       // pipes
-      for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? '#7f97ad' : '#92a9bd'; rr(g, w * 0.12, gy + 8 + i * 5, w * 0.24, 5, 2.5); g.fill(); }
+      for (let i = 0; i < 4; i++) { g.fillStyle = i % 2 ? '#7f97ad' : '#92a9bd'; rr(g, w * 0.03, gy + 22 + i * 5, w * 0.17, 5, 2.5); g.fill(); }
       // barrier
-      const bx = w * 0.62, by = gy - 8; g.fillStyle = '#5b6b7a'; g.fillRect(bx + 4, by + 4, 3, 14); g.fillRect(bx + 36, by + 4, 3, 14);
+      const bx = w * 0.595, by = gy - 8; g.fillStyle = '#5b6b7a'; g.fillRect(bx + 4, by + 4, 3, 14); g.fillRect(bx + 36, by + 4, 3, 14);
       for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? '#fff' : '#e5453d'; g.beginPath(); g.moveTo(bx + i * 7.5, by - 4); g.lineTo(bx + i * 7.5 + 7.5, by - 4); g.lineTo(bx + i * 7.5 + 4, by + 10); g.lineTo(bx + i * 7.5 - 3.5, by + 10); g.fill(); }
       // wheelbarrow
-      const wx = w * 0.47, wy = gy + 4; g.fillStyle = '#6aa84f'; g.beginPath(); g.moveTo(wx, wy - 10); g.lineTo(wx + 24, wy - 10); g.lineTo(wx + 19, wy); g.lineTo(wx + 5, wy); g.fill(); g.strokeStyle = '#56606a'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx + 24, wy - 8); g.lineTo(wx + 34, wy - 14); g.stroke(); g.fillStyle = '#56606a'; g.beginPath(); g.arc(wx + 8, wy + 2, 4, 0, 6.283); g.fill();
+      const wx = w * 0.5, wy = gy + 4; g.fillStyle = '#6aa84f'; g.beginPath(); g.moveTo(wx, wy - 10); g.lineTo(wx + 24, wy - 10); g.lineTo(wx + 19, wy); g.lineTo(wx + 5, wy); g.fill(); g.strokeStyle = '#56606a'; g.lineWidth = 2; g.beginPath(); g.moveTo(wx + 24, wy - 8); g.lineTo(wx + 34, wy - 14); g.stroke(); g.fillStyle = '#56606a'; g.beginPath(); g.arc(wx + 8, wy + 2, 4, 0, 6.283); g.fill();
       // trees
       const tree = (x, sc) => { g.fillStyle = '#8b6a4a'; g.fillRect(x - 3 * sc, gy - 30 * sc, 6 * sc, 32 * sc); g.fillStyle = '#7aa84b'; g.beginPath(); g.ellipse(x, gy - 40 * sc, 20 * sc, 17 * sc, 0, 0, 6.283); g.fill(); g.fillStyle = '#8fbd5c'; g.beginPath(); g.ellipse(x - 5 * sc, gy - 44 * sc, 11 * sc, 9 * sc, 0, 0, 6.283); g.fill(); };
       tree(w * 0.96, 0.95); tree(w * 0.02 + 8, 0.7);
