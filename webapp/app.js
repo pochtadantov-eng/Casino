@@ -5,6 +5,7 @@ const $ = (s) => document.querySelector(s);
 const state = { game: 'rocket', round: null, balance: 0, limits: { minBet: 1, maxBet: 1000, minWithdraw: 100 }, busy: false, raf: 0 };
 
 async function api(path, body) {
+  if (window.__mockApi) return window.__mockApi(path, body);
   const headers = { 'Content-Type': 'application/json' };
   if (tg?.initData) headers.Authorization = 'tma ' + tg.initData;
   else headers['x-dev-user'] = new URLSearchParams(location.search).get('dev') || '1'; // works only if server has DEV_AUTH=1
@@ -17,6 +18,20 @@ async function api(path, body) {
 const setBalance = (b) => { state.balance = b; $('#balance').textContent = b; };
 const say = (t, cls = '') => { const m = $('#msg'); m.textContent = t; m.className = cls; };
 const betValue = () => Math.max(1, Math.floor(Number($('#bet').value) || 0));
+
+
+// prompt() is unavailable in some webviews, so ask for amounts in the page itself
+function askAmount(title, def) {
+  return new Promise((resolve) => {
+    const d = document.createElement('div');
+    d.className = 'modal';
+    d.innerHTML = `<div class="box"><p>${title}</p><input id="ask" type="number" inputmode="numeric" value="${def}"><div class="row"><button class="small ghost" id="ask-no">Отмена</button><button class="small" id="ask-ok">ОК</button></div></div>`;
+    document.body.append(d);
+    const done = (v) => { d.remove(); resolve(v); };
+    d.querySelector('#ask-ok').onclick = () => done(Math.floor(Number(d.querySelector('#ask').value)) || 0);
+    d.querySelector('#ask-no').onclick = () => done(0);
+  });
+}
 
 // ---------- per-game option controls ----------
 const OPTS = {
@@ -145,15 +160,16 @@ $('#bet-plus').onclick = () => $('#bet').value = Math.min(state.limits.maxBet, b
 $('#bet-x2').onclick = () => $('#bet').value = Math.min(state.limits.maxBet, betValue() * 2);
 
 $('#btn-deposit').onclick = async () => {
-  const a = Number(prompt('Сколько Stars внести?', '50'));
+  const a = await askAmount('Сколько Stars внести?', 50);
   if (!a) return;
   try {
     const { link } = await api('deposit', { amount: a });
+    if (window.__mockApi) { setBalance((await api('me')).balance); say(`Демо: +${a} ⭐`, 'win'); return; }
     tg.openInvoice(link, async (status) => { if (status === 'paid') { await new Promise((r) => setTimeout(r, 1500)); const me = await api('me'); setBalance(me.balance); } });
   } catch (e) { say(e.message, 'lose'); }
 };
 $('#btn-withdraw').onclick = async () => {
-  const a = Number(prompt(`Сколько Stars вывести? (минимум ${state.limits.minWithdraw})`, String(state.limits.minWithdraw)));
+  const a = await askAmount(`Сколько Stars вывести? (минимум ${state.limits.minWithdraw})`, state.limits.minWithdraw);
   if (!a) return;
   try { const j = await api('withdraw', { amount: a }); setBalance(j.balance); say(`Заявка #${j.id} создана, ожидает проверки`, 'win'); } catch (e) { say(e.message, 'lose'); }
 };
