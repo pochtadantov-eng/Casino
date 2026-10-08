@@ -4,10 +4,10 @@ import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 const out = process.argv[2] || 'pages';
 const src = (f) => new URL('../webapp/' + f, import.meta.url);
 mkdirSync(out, { recursive: true });
-for (const f of ['style.css', 'app.js', 'mock-api.js']) copyFileSync(src(f), `${out}/${f}`);
+for (const f of ['style.css', 'app.js', 'mock-api.js', 'fx-rocket.js']) copyFileSync(src(f), `${out}/${f}`);
 const html = readFileSync(src('index.html'), 'utf8').replace(
-  '<script src="app.js"></script>',
-  '<script src="mock-api.js"></script>\n<script src="app.js"></script>',
+  '<script src="fx-rocket.js"></script>\n<script src="app.js"></script>',
+  '<script src="fx-rocket.js"></script>\n<script src="mock-api.js"></script>\n<script src="app.js"></script>',
 );
 writeFileSync(`${out}/index.html`, html);
 writeFileSync(`${out}/.nojekyll`, '');

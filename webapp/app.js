@@ -50,32 +50,32 @@ const startParams = () => ({
 // ---------- renderers ----------
 const R = {};
 
+const tier = (m) => (m < 2 ? '' : m < 5 ? ' t2' : m < 10 ? ' t3' : ' t4');
 R.rocket = (round) => {
-  cancelAnimationFrame(state.raf);
   clearTimeout(state.pollTimer);
-  const v = round?.view;
-  $('#stage').innerHTML = `<div class="rocket" id="rk">🚀</div><div class="big" id="mult">1.00x</div>`;
-  if (!round) return;
-  const el = $('#mult');
-  if (round.status !== 'active') {
-    el.textContent = (round.status === 'won' ? round.multiplier : v.crash).toFixed(2) + 'x';
-    el.className = 'big' + (round.status === 'lost' ? ' crashed' : '');
-    $('#rk').textContent = round.status === 'lost' ? '💥' : '🚀';
-    return;
+  const st = $('#stage');
+  let sc = state.scene;
+  if (!sc || !st.contains(sc.canvas ?? sc.c)) { // keep one running scene; rebuild only after another game replaced the stage
+    st.innerHTML = '<canvas id="fx"></canvas><div class="big mult-over" id="mult">1.00x</div>';
+    sc = state.scene = new RocketScene($('#fx'));
   }
-  const offset = v.serverNow - Date.now(); // align local clock with server
-  const tick = () => {
-    const m = Math.floor(Math.exp(v.growth * Math.max(0, Date.now() + offset - v.startedAt)) * 100) / 100;
-    el.textContent = m.toFixed(2) + 'x';
-    $('#rk').style.transform = `translateY(${-Math.min(60, Math.log(m) * 25)}px)`;
-    if (v.auto && m >= v.auto) return poll();
-    state.raf = requestAnimationFrame(tick);
-  };
-  tick();
+  const el = $('#mult'), v = round?.view;
+  const paint = (m, cls = '') => { el.textContent = m.toFixed(2) + 'x'; el.className = 'big mult-over ' + cls + tier(m); };
   const poll = async () => { // learn the real outcome from the server
-    try { const j = await api('games/rocket/act', {}); apply(j); } catch (e) { say(e.message, 'lose'); }
+    try { apply(await api('games/rocket/act', {})); } catch (e) { say(e.message, 'lose'); }
   };
-  state.pollTimer = setTimeout(poll, 1500); // each poll re-renders and re-arms the timer
+  if (!round) { sc.idle(); paint(1); return; }
+  if (round.status === 'active') {
+    const offset = v.serverNow - Date.now(); // align local clock with server
+    sc.fly(v.startedAt, offset, v.growth, (m) => {
+      paint(m);
+      if (v.auto && m >= v.auto && !sc.polled) { sc.polled = true; poll(); }
+    });
+    state.pollTimer = setTimeout(poll, 1500); // each poll re-renders and re-arms the timer
+  } else {
+    paint(round.status === 'won' ? round.multiplier : v.crash, round.status === 'lost' ? 'crashed' : 'won');
+    sc.finish(round.status);
+  }
 };
 
 R.mines = (round) => {
