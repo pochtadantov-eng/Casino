@@ -139,6 +139,14 @@ R.steps = (round) => {
 R.tower = R.seagull = R.steps;
 
 // ---------- flow ----------
+const LOSS_TITLE = { mines: 'ПРОИГРЫШ', tower: 'ПРОИГРЫШ', seagull: 'ПРОИГРЫШ', rocket: 'РАКЕТА УЛЕТЕЛА' };
+function showLoss(r, delay) {
+  document.querySelector('.lossban')?.remove();
+  const el = document.createElement('div'); el.className = 'lossban'; el.style.setProperty('--d', delay + 's');
+  el.innerHTML = `<b>${LOSS_TITLE[state.game] || 'ПРОИГРЫШ'}</b><span>−${r.bet} ⭐</span>`;
+  $('#stage').append(el);
+  setTimeout(() => el.remove(), (delay + 3.4) * 1000);
+}
 function apply(j) {
   if (j.balance !== undefined) setBalance(j.balance);
   const prev = state.round;
@@ -151,7 +159,11 @@ function apply(j) {
   if (state.game === 'rocket') $('#cash').textContent = 'Забрать';
   if (r && !active && prev?.status === 'active') {
     if (r.status === 'won') { say(`Выигрыш +${r.payout} ⭐ (x${r.multiplier.toFixed(2)})`, 'win'); tg?.HapticFeedback?.notificationOccurred('success'); }
-    else { say('Проигрыш', 'lose'); tg?.HapticFeedback?.notificationOccurred('error'); }
+    else {
+      const delay = state.game === 'mines' ? 1.15 : 0.15;                  // mines: wait for the flip and the blast
+      showLoss(r, delay); say('Проигрыш', 'lose');
+      setTimeout(() => tg?.HapticFeedback?.notificationOccurred('error'), delay * 1000);
+    }
   } else if (active) say('');
   $('#fair').innerHTML = r ? `hash(serverSeed): ${r.serverSeedHash}<br>clientSeed: ${r.clientSeed}<br>nonce: ${r.nonce}<br>serverSeed: ${r.serverSeed ?? '— (откроется после раунда)'}` : '';
 }
