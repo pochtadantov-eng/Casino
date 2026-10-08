@@ -98,6 +98,7 @@ h2,h3,p{margin:0}
 .c-mines .txt::before,.c-rocket .txt::before{content:'';position:absolute;left:-14px;right:-14px;bottom:-14px;top:-26px;z-index:-1;background:linear-gradient(180deg,transparent,rgba(5,10,24,.9) 55%)}
 .c-mines .txt,.c-rocket .txt{position:absolute;left:0;right:0;bottom:14px}
 .xval{position:absolute;left:14px;top:12px;z-index:3;font:800 25px/1 'Unbounded',system-ui,sans-serif;color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 16px rgba(120,190,255,.9),0 2px 4px rgba(0,0,0,.6);transition:color .3s}
+.illu{position:absolute;left:15px;top:41px;z-index:3;font:600 9px/1 system-ui,sans-serif;letter-spacing:.4px;text-transform:uppercase;color:rgba(255,255,255,.55);font-style:normal}
 .xval.t2{color:#fde68a}.xval.t3{color:#fdba74}.xval.t4{color:#f9a8d4}
 .xval.bust{color:#ff5a5a;text-shadow:0 0 18px rgba(255,60,60,.95),0 2px 4px rgba(0,0,0,.6)}
 .xval.pop{animation:xpop .5s cubic-bezier(.3,1.6,.5,1)}.xval.dim{opacity:0;transform:translateY(-6px) scale(.92);transition:opacity .45s ease-in,transform .45s ease-in}

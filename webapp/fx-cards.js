@@ -152,12 +152,17 @@
   // breaks into pieces that tumble down, and the loop restarts
   class RocketCardScene extends Scene {
     constructor(c, label) {
-      super(c); this.label = label; this.img = load('rocket.svg'); this.parts = []; this.pieces = []; this.T = 7.6; this.climb = 4.6; this.loop = -1; this.tc = 0;
+      super(c); this.label = label; this.img = load('rocket.svg'); this.parts = []; this.pieces = []; this.T = 7.6; this.climb = 4.6; this.loop = -1; this.tc = 0; this.M = 40; this.queue = [];
       this.stars = Array.from({ length: 26 }, () => ({ x: Math.random(), y: Math.random() * 0.7, p: Math.random() * 6 }));
     }
     layout() { this.px0 = 16; this.pw = this.w - 32; this.base = this.h - 72; this.top = 46; this.ph = this.base - this.top; }
+    // illustration only (the card is labelled so): a fixed showcase of explosions, not game statistics
+    nextShow() {
+      if (!this.queue.length) { this.queue = [3.4, 8.1, 14.6, 2.1, 27.3, 6.7, 11.9, 4.9, 19.4, 1.9, 9.2, 35.5, 5.6, 15.8].sort(() => Math.random() - 0.5); }
+      return this.queue.pop();
+    }
     f(p) { const k = 3.2; return (Math.exp(k * p) - 1) / (Math.exp(k) - 1); }
-    pt(p) { const f = this.f(p); return [this.px0 + this.pw * (0.1 * p + 0.9 * p * p), this.base - this.ph * (0.4 * Math.pow(p, 0.7) + 0.6 * f), 1 + 24 * f]; }
+    pt(p) { const f = this.f(p); return [this.px0 + this.pw * (0.1 * p + 0.9 * p * p), this.base - this.ph * (0.4 * Math.pow(p, 0.7) + 0.6 * f), 1 + (this.M - 1) * f]; }
     explode(hx, hy, ang, rh, rw) {
       this.flash = 0; this.boomAt = null;
       for (let i = 0; i < 46; i++) { const a = rand(0, 6.283), sp = rand(30, 190); this.parts.push({ k: 'fire', x: hx, y: hy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 25, life: rand(0.4, 0.95), max: 0.95, size: rand(2.5, 6.5) }); }
@@ -176,7 +181,7 @@
     draw(g, now, dt) {
       if (this.cs === undefined || now - this.cs > this.tc + 1.45) { this.cs = now; this.loop++; this.newCycle = true; }
       const tt = now - this.cs;
-      if (this.newCycle) { this.newCycle = false; const li = this.loop; this.parts = []; this.pieces = []; this.exploded = false; { let m = 0.97 / (1 - Math.random()); if (m < 1.6) m = 1.6 + Math.random() * 1.2; this.crashM = Math.round(Math.min(m, 25) * 100) / 100; } const f = (this.crashM - 1) / 24; this.pc = Math.log(1 + f * (Math.exp(3.2) - 1)) / 3.2; this.tc = this.pc * this.climb; }
+      if (this.newCycle) { this.newCycle = false; const li = this.loop; this.parts = []; this.pieces = []; this.exploded = false; this.crashM = this.nextShow(); const f = (this.crashM - 1) / (this.M - 1); this.pc = Math.log(1 + f * (Math.exp(3.2) - 1)) / 3.2; this.tc = this.pc * this.climb; }
       const crashed = tt >= this.tc, p = crashed ? this.pc : clamp(tt / this.climb), [hx, hy, m] = this.pt(p);
       const [xa, ya] = this.pt(Math.max(0, p - 0.012)), [x2, y2] = this.pt(Math.min(1, p + 0.012)), ang = Math.atan2(x2 - xa, -(y2 - ya)), rh = 46, rw = 23;
       if (crashed && !this.exploded) { this.exploded = true; this.flash = 1; this.hx = hx; this.hy = hy; this.explode(hx, hy, ang, rh, rw); }
