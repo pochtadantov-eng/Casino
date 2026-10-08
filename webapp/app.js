@@ -139,11 +139,13 @@ R.steps = (round) => {
 R.tower = R.seagull = R.steps;
 
 // ---------- flow ----------
-const LOSS_TITLE = { mines: 'ПРОИГРЫШ', tower: 'ПРОИГРЫШ', seagull: 'ПРОИГРЫШ', rocket: 'РАКЕТА УЛЕТЕЛА' };
-function showLoss(r, delay) {
-  document.querySelector('.lossban')?.remove();
-  const el = document.createElement('div'); el.className = 'lossban'; el.style.setProperty('--d', delay + 's');
-  el.innerHTML = `<b>${LOSS_TITLE[state.game] || 'ПРОИГРЫШ'}</b><span>−${r.bet} ⭐</span>`;
+const RES_LOSS = { mines: 'ПРОИГРЫШ', tower: 'ПРОИГРЫШ', seagull: 'ПРОИГРЫШ', rocket: 'РАКЕТА УЛЕТЕЛА' };
+function showResult(r, delay, kind) {          // "win" / "loss" plaque over the board (glass background, opaque text)
+  document.querySelector('.resban')?.remove();
+  const el = document.createElement('div'); el.className = 'resban ' + kind; el.style.setProperty('--d', delay + 's');
+  el.innerHTML = kind === 'win'
+    ? `<b>ВЫИГРЫШ</b><span>+${r.payout} ⭐ <em>x${r.multiplier.toFixed(2)}</em></span>`
+    : `<b>${RES_LOSS[state.game] || 'ПРОИГРЫШ'}</b><span>−${r.bet} ⭐</span>`;
   $('#stage').append(el);
   setTimeout(() => el.remove(), (delay + 3.4) * 1000);
 }
@@ -158,10 +160,10 @@ function apply(j) {
   $('#cash').textContent = active ? `Забрать ${Math.floor(r.bet * (state.game === 'rocket' ? 1 : r.multiplier))} ⭐` : 'Забрать';
   if (state.game === 'rocket') $('#cash').textContent = 'Забрать';
   if (r && !active && prev?.status === 'active') {
-    if (r.status === 'won') { say(`Выигрыш +${r.payout} ⭐ (x${r.multiplier.toFixed(2)})`, 'win'); tg?.HapticFeedback?.notificationOccurred('success'); }
+    if (r.status === 'won') { showResult(r, 0.15, 'win'); say(`Выигрыш +${r.payout} ⭐ (x${r.multiplier.toFixed(2)})`, 'win'); tg?.HapticFeedback?.notificationOccurred('success'); }
     else {
       const delay = state.game === 'mines' ? 1.15 : 0.15;                  // mines: wait for the flip and the blast
-      showLoss(r, delay); say('Проигрыш', 'lose');
+      showResult(r, delay, 'loss'); say('Проигрыш', 'lose');
       setTimeout(() => tg?.HapticFeedback?.notificationOccurred('error'), delay * 1000);
     }
   } else if (active) say('');
