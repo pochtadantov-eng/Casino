@@ -50,13 +50,13 @@
     tile(g, x, y, s, o) {
       const r = s * 0.24, cx = x + s / 2 + (o.dx || 0), cy = y + s / 2 + (o.dy || 0) + (o.press || 0) * 2;
       const glow = o.glow || 0, burnt = o.burnt || 0;
-      const top = rgb(mixa(mixa(hex('#6ea8ff'), hex('#37e6ff'), glow), hex('#2a2f45'), burnt)), bot = rgb(mixa(mixa(hex('#2f5db5'), hex('#0a8fd0'), glow), hex('#12151f'), burnt));
+      const top = rgb(mixa(mixa(hex('#565b68'), hex('#37e6ff'), glow), hex('#25272f'), burnt)), bot = rgb(mixa(mixa(hex('#23262e'), hex('#0a8fd0'), glow), hex('#0d0e12'), burnt));
       g.save(); g.globalAlpha = o.alpha ?? 1; g.translate(cx, cy); const sc = 1 - (o.press || 0) * 0.08 + glow * 0.04; g.scale(sc, sc);
       if (glow > 0.02) { g.shadowColor = `rgba(60,225,255,${0.9 * glow})`; g.shadowBlur = 22 * glow; } else { g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 8; g.shadowOffsetY = 3 - (o.press || 0) * 2; }
       const gr = g.createLinearGradient(0, -s / 2, 0, s / 2); gr.addColorStop(0, top); gr.addColorStop(1, bot);
       rr(g, -s / 2, -s / 2, s, s, r); g.fillStyle = gr; g.fill(); g.shadowColor = 'transparent'; g.shadowBlur = 0;
-      rr(g, -s / 2 + 1, -s / 2 + 1, s - 2, s - 2, r - 1); g.strokeStyle = `rgba(255,255,255,${0.38 - burnt * 0.25})`; g.lineWidth = 1; g.stroke();
-      const gl = g.createLinearGradient(0, -s / 2, 0, 0); gl.addColorStop(0, `rgba(255,255,255,${0.34 - burnt * 0.25})`); gl.addColorStop(1, 'rgba(255,255,255,0)');
+      rr(g, -s / 2 + 1, -s / 2 + 1, s - 2, s - 2, r - 1); g.strokeStyle = `rgba(255,255,255,${0.26 - burnt * 0.17})`; g.lineWidth = 1; g.stroke();
+      const gl = g.createLinearGradient(0, -s / 2, 0, 0); gl.addColorStop(0, `rgba(255,255,255,${0.22 - burnt * 0.16})`); gl.addColorStop(1, 'rgba(255,255,255,0)');
       rr(g, -s / 2 + 2, -s / 2 + 2, s - 4, s / 2 - 2, r - 2); g.fillStyle = gl; g.fill();
       if (burnt > 0) { const cr = g.createRadialGradient(0, 0, 1, 0, 0, s * 0.62); cr.addColorStop(0, `rgba(0,0,0,${0.65 * burnt})`); cr.addColorStop(1, 'rgba(0,0,0,0)'); rr(g, -s / 2, -s / 2, s, s, r); g.fillStyle = cr; g.fill(); }
       if (o.shimmer) { g.save(); rr(g, -s / 2, -s / 2, s, s, r); g.clip(); const sh = g.createLinearGradient(-s, -s, s, s); const p = o.shimmer; sh.addColorStop(clamp(p - 0.12), 'rgba(255,255,255,0)'); sh.addColorStop(clamp(p), 'rgba(255,255,255,.35)'); sh.addColorStop(clamp(p + 0.12), 'rgba(255,255,255,0)'); g.fillStyle = sh; g.fillRect(-s, -s, s * 2, s * 2); g.restore(); }
@@ -96,7 +96,7 @@
       this.prevTt = tt;
       const fade = 1 - clamp((tt - 7.2) / 0.8), tb = tt - this.boom;
       // bluish floor glow
-      const fl = g.createRadialGradient(this.w / 2, this.y0 + 50, 4, this.w / 2, this.y0 + 50, this.w * 0.75); fl.addColorStop(0, 'rgba(50,220,255,.20)'); fl.addColorStop(1, 'rgba(50,220,255,0)'); g.fillStyle = fl; g.fillRect(0, 0, this.w, this.h);
+      const fl = g.createRadialGradient(this.w / 2, this.y0 + 50, 4, this.w / 2, this.y0 + 50, this.w * 0.75); fl.addColorStop(0, 'rgba(120,255,210,.10)'); fl.addColorStop(1, 'rgba(120,255,210,0)'); g.fillStyle = fl; g.fillRect(0, 0, this.w, this.h);
       for (let i = 0; i < this.cols * this.rows; i++) {
         const [x, y] = this.pos(i); const o = { shimmer: ((now * 0.5 + i * 0.07) % 3) < 1 ? (now * 0.5 + i * 0.07) % 3 : 0 };
         for (const tap of this.taps) {
@@ -141,52 +141,93 @@
   }
 
   // ======================================================================= ROCKET
-  // the rocket climbs an exponential chart curve while the multiplier counts up to x25, then warps out and restarts
+  // the rocket climbs an exponential chart curve while x grows, then blows up at a random multiplier,
+  // breaks into pieces that tumble down, and the loop restarts
   class RocketCardScene extends Scene {
     constructor(c, label) {
-      super(c); this.label = label; this.img = load('rocket.svg'); this.parts = []; this.T = 7; this.climb = 4.8;
+      super(c); this.label = label; this.img = load('rocket.svg'); this.parts = []; this.pieces = []; this.T = 7.6; this.climb = 4.6; this.loop = -1;
+      this.crashes = [11.2, 19.6, 7.8, 24.1, 14.3, 9.5, 17.2];
       this.stars = Array.from({ length: 26 }, () => ({ x: Math.random(), y: Math.random() * 0.7, p: Math.random() * 6 }));
     }
     layout() { this.px0 = 16; this.pw = this.w - 32; this.base = this.h - 72; this.top = 46; this.ph = this.base - this.top; }
-    pt(p) { const k = 3.2, f = (Math.exp(k * p) - 1) / (Math.exp(k) - 1); return [this.px0 + this.pw * p, this.base - this.ph * f, 1 + 24 * f]; }
+    f(p) { const k = 3.2; return (Math.exp(k * p) - 1) / (Math.exp(k) - 1); }
+    pt(p) { const f = this.f(p); return [this.px0 + this.pw * p, this.base - this.ph * f, 1 + 24 * f]; }
+    explode(hx, hy, ang, rh, rw) {
+      this.flash = 0; this.boomAt = null;
+      for (let i = 0; i < 46; i++) { const a = rand(0, 6.283), sp = rand(30, 190); this.parts.push({ k: 'fire', x: hx, y: hy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 25, life: rand(0.4, 0.95), max: 0.95, size: rand(2.5, 6.5) }); }
+      for (let i = 0; i < 22; i++) { const a = rand(0, 6.283), sp = rand(100, 280); this.parts.push({ k: 'spark', x: hx, y: hy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.3, 0.8), max: 0.8 }); }
+      for (let i = 0; i < 9; i++) this.parts.push({ k: 'smoke', x: hx + rand(-8, 8), y: hy + rand(-8, 8), vx: rand(-16, 16), vy: rand(-22, -4), life: rand(1.2, 1.9), max: 1.9, size: rand(8, 15) });
+      // sprite slices (source rects of the 200x400 artwork): nose, two middle halves, two tail halves
+      const cuts = [[0, 0, 200, 125], [0, 125, 100, 145], [100, 125, 100, 145], [0, 270, 100, 130], [100, 270, 100, 130]];
+      const k = rh / 400, ca = Math.cos(ang), sa = Math.sin(ang);
+      this.pieces = cuts.map(([sx, sy, sw, sh], i) => {
+        const lx = (sx + sw / 2 - 100) * k, ly = (sy + sh / 2 - 200) * k;           // offset from ship centre, in ship space
+        const wx = hx + lx * ca - ly * sa, wy = hy + lx * sa + ly * ca;                // rotated into the card
+        const out = Math.atan2(wy - hy, wx - hx);
+        return { sx, sy, sw, sh, k: k * 1.4, x: wx, y: wy, vx: Math.cos(out) * rand(40, 110) + rand(-20, 20), vy: Math.sin(out) * rand(30, 90) - rand(40, 90), rot: ang, vr: rand(-6, 6), trail: i };
+      });
+    }
     draw(g, now, dt) {
-      const tt = now % this.T, p = clamp(tt / this.climb), [hx, hy, m] = this.pt(p);
+      const li = Math.floor(now / this.T), tt = now % this.T;
+      if (li !== this.loop) { this.loop = li; this.parts = []; this.pieces = []; this.exploded = false; this.crashM = this.crashes[li % this.crashes.length]; const f = (this.crashM - 1) / 24; this.pc = Math.log(1 + f * (Math.exp(3.2) - 1)) / 3.2; this.tc = this.pc * this.climb; }
+      const crashed = tt >= this.tc, p = crashed ? this.pc : clamp(tt / this.climb), [hx, hy, m] = this.pt(p);
+      const [x2, y2] = this.pt(Math.min(1, p + 0.01)), ang = Math.atan2(x2 - hx, -(y2 - hy)) || 0.6, rh = 46, rw = 23;
+      if (crashed && !this.exploded) { this.exploded = true; this.flash = 1; this.hx = hx; this.hy = hy; this.explode(hx, hy, ang, rh, rw); }
+      const since = tt - this.tc, fadeOut = crashed ? clamp((tt - (this.T - 1.0)) / 0.9) : 0, alpha = 1 - fadeOut;
+
       for (const s of this.stars) { g.fillStyle = `rgba(255,255,255,${0.25 + 0.5 * Math.abs(Math.sin(now * 1.3 + s.p))})`; g.fillRect(s.x * this.w, s.y * this.h, 1.3, 1.3); }
-      // grid
       g.strokeStyle = 'rgba(160,200,255,.12)'; g.lineWidth = 1; for (let i = 0; i < 4; i++) { const y = this.top + (this.ph * i) / 3; g.beginPath(); g.moveTo(this.px0, y); g.lineTo(this.w - this.px0, y); g.stroke(); }
-      const out = tt > this.climb ? clamp((tt - this.climb - 0.9) / 0.9) : 0, alpha = 1 - out;
+
       g.save(); g.globalAlpha = alpha;
-      // area + curve
+      // chart area + curve (turns red when the rocket blows up)
+      const hot = crashed ? clamp(since / 0.25) : 0;
       g.beginPath(); g.moveTo(this.px0, this.base); const N = 40; for (let i = 0; i <= N; i++) { const [x, y] = this.pt((p * i) / N); g.lineTo(x, y); } g.lineTo(hx, this.base); g.closePath();
-      const ar = g.createLinearGradient(0, this.top, 0, this.base); ar.addColorStop(0, 'rgba(90,170,255,.45)'); ar.addColorStop(1, 'rgba(90,170,255,0)'); g.fillStyle = ar; g.fill();
+      const ar = g.createLinearGradient(0, this.top, 0, this.base); ar.addColorStop(0, hot ? 'rgba(255,90,80,.38)' : 'rgba(90,170,255,.45)'); ar.addColorStop(1, 'rgba(90,170,255,0)'); g.fillStyle = ar; g.fill();
       g.beginPath(); for (let i = 0; i <= N; i++) { const [x, y] = this.pt((p * i) / N); i ? g.lineTo(x, y) : g.moveTo(x, y); }
-      g.lineWidth = 3; g.lineJoin = 'round'; g.lineCap = 'round'; const ln = g.createLinearGradient(this.px0, 0, hx || 1, 0); ln.addColorStop(0, 'rgba(90,200,255,.3)'); ln.addColorStop(1, '#e8f6ff'); g.strokeStyle = ln; g.shadowColor = '#4cc2ff'; g.shadowBlur = 12; g.stroke(); g.shadowBlur = 0;
-      // rocket
-      const [x2, y2] = this.pt(Math.min(1, p + 0.01)), dx = x2 - hx, dy = y2 - hy, ang = Math.atan2(dx, -dy) || 0.6;
-      const rh = 46, rw = 23, wob = Math.sin(now * 9) * 0.03;
-      if (tt < this.climb + 0.35) {
-        const tail = [hx - Math.sin(ang) * rh * 0.5, hy + Math.cos(ang) * rh * 0.5];
-        for (let i = 0; i < 3; i++) { const sp = rand(40, 90); this.parts.push({ x: tail[0] + rand(-2, 2), y: tail[1] + rand(-2, 2), vx: -Math.sin(ang) * sp + rand(-12, 12), vy: Math.cos(ang) * sp + rand(-12, 12), life: rand(0.25, 0.5), max: 0.5, size: rand(2, 4.5) }); }
-      }
-      for (const q of this.parts) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; }
-      this.parts = this.parts.filter((q) => q.life > 0);
-      g.globalCompositeOperation = 'lighter';
-      for (const q of this.parts) { const a = clamp(q.life / q.max), sg = g.createRadialGradient(q.x, q.y, 0, q.x, q.y, q.size * 1.6); sg.addColorStop(0, `rgba(255,${Math.round(150 + 90 * a)},70,${a})`); sg.addColorStop(1, 'rgba(255,80,20,0)'); g.fillStyle = sg; g.beginPath(); g.arc(q.x, q.y, q.size * 1.6, 0, 6.283); g.fill(); }
-      g.globalCompositeOperation = 'source-over';
-      const warp = tt > this.climb ? clamp((tt - this.climb) / 0.35) : 0;
-      if (this.img.complete && this.img.naturalWidth && warp < 1) {
-        g.save(); g.translate(hx, hy); g.rotate(ang + wob); const sc = 1 - E.in(warp) * 0.9; g.scale(sc, sc); g.globalAlpha *= 1 - warp * 0.6;
-        g.shadowColor = 'rgba(120,200,255,.6)'; g.shadowBlur = 10; g.drawImage(this.img, -rw / 2, -rh / 2, rw, rh); g.restore();
-      }
-      // head dot
-      if (warp < 1) { g.fillStyle = '#fff'; g.shadowColor = '#7fd4ff'; g.shadowBlur = 10; g.beginPath(); g.arc(hx, hy, 2.4, 0, 6.283); g.fill(); g.shadowBlur = 0; }
+      g.lineWidth = 3; g.lineJoin = 'round'; g.lineCap = 'round'; const ln = g.createLinearGradient(this.px0, 0, hx || 1, 0); ln.addColorStop(0, 'rgba(90,200,255,.3)'); ln.addColorStop(1, hot ? '#ff8a7a' : '#e8f6ff'); g.strokeStyle = ln; g.shadowColor = hot ? '#ff4a3a' : '#4cc2ff'; g.shadowBlur = 12; g.stroke(); g.shadowBlur = 0;
       g.restore();
-      // warp flash at the end
-      if (tt > this.climb && tt < this.climb + 0.7) { const f = (tt - this.climb) / 0.7; g.strokeStyle = `rgba(190,230,255,${1 - f})`; g.lineWidth = 3 * (1 - f) + 1; g.beginPath(); g.arc(hx, hy, 6 + 36 * E.out(f), 0, 6.283); g.stroke(); const gr = g.createRadialGradient(hx, hy, 0, hx, hy, 30 * (1 - f)); gr.addColorStop(0, `rgba(255,255,255,${0.9 * (1 - f)})`); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.beginPath(); g.arc(hx, hy, 30, 0, 6.283); g.fill(); }
+
+      // exhaust while flying
+      if (!crashed) {
+        const tail = [hx - Math.sin(ang) * rh * 0.5, hy + Math.cos(ang) * rh * 0.5];
+        for (let i = 0; i < 3; i++) { const sp = rand(40, 90); this.parts.push({ k: 'fire', x: tail[0] + rand(-2, 2), y: tail[1] + rand(-2, 2), vx: -Math.sin(ang) * sp + rand(-12, 12), vy: Math.cos(ang) * sp + rand(-12, 12), life: rand(0.25, 0.5), max: 0.5, size: rand(2, 4.5), tail: true }); }
+      }
+      // the rocket itself
+      if (!crashed && this.img.complete && this.img.naturalWidth) {
+        g.save(); g.translate(hx, hy); g.rotate(ang + Math.sin(now * 9) * 0.03); g.shadowColor = 'rgba(120,200,255,.6)'; g.shadowBlur = 10; g.drawImage(this.img, -rw / 2, -rh / 2, rw, rh); g.restore();
+        g.fillStyle = '#fff'; g.shadowColor = '#7fd4ff'; g.shadowBlur = 10; g.beginPath(); g.arc(hx, hy, 2.4, 0, 6.283); g.fill(); g.shadowBlur = 0;
+      }
+      // debris: slices of the rocket fall with gravity, spin and leave fire/smoke
+      if (this.pieces.length && this.img.complete) {
+        g.save(); g.globalAlpha = alpha;
+        for (const q of this.pieces) {
+          q.vy += 250 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt; q.vx *= 0.995;
+          if (Math.random() < 0.5 && q.y < this.h) this.parts.push({ k: Math.random() < 0.5 ? 'fire' : 'smoke', x: q.x, y: q.y, vx: rand(-12, 12), vy: rand(-8, 10), life: rand(0.3, 0.7), max: 0.7, size: rand(2, 4) + (Math.random() < 0.5 ? 0 : 4) });
+          g.save(); g.translate(q.x, q.y); g.rotate(q.rot); g.shadowColor = 'rgba(255,120,40,.7)'; g.shadowBlur = 6;
+          g.drawImage(this.img, q.sx, q.sy, q.sw, q.sh, -q.sw * q.k / 2, -q.sh * q.k / 2, q.sw * q.k, q.sh * q.k); g.restore();
+        }
+        g.restore();
+      }
+      // particles
+      for (const q of this.parts) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; if (q.k === 'fire' && !q.tail) q.vy += 70 * dt; if (q.k === 'smoke') q.size += dt * 9; }
+      this.parts = this.parts.filter((q) => q.life > 0);
+      for (const q of this.parts) {
+        const a = clamp(q.life / q.max) * alpha;
+        if (q.k === 'smoke') { g.globalCompositeOperation = 'source-over'; const sg = g.createRadialGradient(q.x, q.y, 0, q.x, q.y, q.size); sg.addColorStop(0, `rgba(80,86,104,${0.32 * a})`); sg.addColorStop(1, 'rgba(80,86,104,0)'); g.fillStyle = sg; g.beginPath(); g.arc(q.x, q.y, q.size, 0, 6.283); g.fill(); continue; }
+        g.globalCompositeOperation = 'lighter';
+        if (q.k === 'fire') { const r = q.size * (0.6 + a), sg = g.createRadialGradient(q.x, q.y, 0, q.x, q.y, r * 1.6); sg.addColorStop(0, `rgba(255,${Math.round(130 + 100 * a)},60,${a})`); sg.addColorStop(1, 'rgba(255,70,20,0)'); g.fillStyle = sg; g.beginPath(); g.arc(q.x, q.y, r * 1.6, 0, 6.283); g.fill(); }
+        else { g.strokeStyle = `rgba(255,235,170,${a})`; g.lineWidth = 1.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x - q.vx * 0.04, q.y - q.vy * 0.04); g.stroke(); }
+        g.globalCompositeOperation = 'source-over';
+      }
+      // blast flash + shockwave at the moment of the explosion
+      if (crashed && since < 0.7) {
+        const f1 = clamp(since / 0.28); if (f1 < 1) { const R = 58 * E.out(f1), gr = g.createRadialGradient(this.hx, this.hy, 0, this.hx, this.hy, R); gr.addColorStop(0, `rgba(255,250,220,${1 - f1})`); gr.addColorStop(0.45, `rgba(255,170,60,${0.9 * (1 - f1)})`); gr.addColorStop(1, 'rgba(255,80,20,0)'); g.fillStyle = gr; g.beginPath(); g.arc(this.hx, this.hy, R, 0, 6.283); g.fill(); }
+        const sw = clamp(since / 0.6); g.strokeStyle = `rgba(255,220,170,${0.85 * (1 - sw)})`; g.lineWidth = 4 * (1 - sw) + 1; g.beginPath(); g.arc(this.hx, this.hy, 66 * E.out(sw), 0, 6.283); g.stroke();
+      }
       if (this.label) {
-        const shown = tt < this.climb ? m : 25;
+        const shown = crashed ? this.crashM : m;
         this.label.textContent = 'x' + shown.toFixed(2);
-        this.label.className = 'xval' + (shown < 2 ? '' : shown < 5 ? ' t2' : shown < 12 ? ' t3' : ' t4') + (tt > this.climb && tt < this.climb + 1 ? ' pop' : '') + (out > 0 ? ' dim' : '');
+        this.label.className = 'xval' + (crashed ? ' bust' : shown < 2 ? '' : shown < 5 ? ' t2' : shown < 12 ? ' t3' : ' t4') + (crashed && since < 0.6 ? ' pop' : '') + (fadeOut > 0 ? ' dim' : '');
       }
     }
   }

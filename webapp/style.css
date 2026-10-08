@@ -99,6 +99,7 @@ h2,h3,p{margin:0}
 .c-mines .txt,.c-rocket .txt{position:absolute;left:0;right:0;bottom:14px}
 .xval{position:absolute;left:14px;top:12px;z-index:3;font:800 25px/1 'Unbounded',system-ui,sans-serif;color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 0 16px rgba(120,190,255,.9),0 2px 4px rgba(0,0,0,.6);transition:color .3s}
 .xval.t2{color:#fde68a}.xval.t3{color:#fdba74}.xval.t4{color:#f9a8d4}
+.xval.bust{color:#ff5a5a;text-shadow:0 0 18px rgba(255,60,60,.95),0 2px 4px rgba(0,0,0,.6)}
 .xval.pop{animation:xpop .5s cubic-bezier(.3,1.6,.5,1)}.xval.dim{opacity:.35;transition:opacity .8s}
 @keyframes xpop{0%{transform:scale(1)}40%{transform:scale(1.28)}100%{transform:scale(1)}}
 .c-tower .txt{max-width:38%}
