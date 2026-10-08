@@ -233,18 +233,24 @@
   }
 
   // ======================================================================= TOWER
-  // trolley brings a house on a hook, it swings over the tower, drops, the hook climbs out, a new house comes down; the tower sways
+  // endless tower: its foot is below the card. A crane brings a house down from the top, drives to the tower
+  // (the house leans back from the acceleration), settles with a small swing, drops the house, the tower sinks one
+  // floor and wobbles softly while the hook climbs out of view. Then it repeats.
   class TowerScene extends Scene {
     constructor(c) {
       super(c);
       this.house = load('house.webp'); this.hook = load('hook.webp');
       this.colors = ['#ffd166', '#b69cff', '#6fe3a0', '#ff8a8a', '#7fd0ff'];
-      this.tinted = {}; this.reset(); this.max = 4;
+      this.tinted = {}; this.start();
     }
-    reset() { this.floors = []; this.phase = 'descend'; this.u = 0; this.ci = 0; this.wob = 0; this.wv = 0; this.fade = 1; this.puffs = []; this.fall = null; this.hookL = null; this.trolleyX = null; }
+    start() {
+      this.ci = 0; this.floors = []; for (let i = 0; i < 9; i++) this.floors.push({ ci: this.ci++ });   // newest first
+      this.phase = 'enter'; this.u = 0; this.scroll = 0; this.scrollFrom = 0; this.scrollT = 1; this.wob = 0; this.wv = 0; this.puffs = []; this.fall = null;
+      this.th = 0; this.thv = 0; this.hookL = null; this.trolleyX = null; this.hand = this.ci++;
+    }
     layout() {
-      this.hw = Math.min(54, this.h * 0.36); this.s = this.hw / 337; this.hh = 317 * this.s;
-      this.inc = this.hw * 0.46; this.cx = this.w - this.hw * 1.1; this.baseY = this.h - 14; this.x0 = Math.max(this.w * 0.55, this.cx - this.hw * 2.3);
+      this.hw = Math.min(46, this.h * 0.31); this.s = this.hw / 337; this.hh = 317 * this.s; this.inc = this.hw * 0.46;
+      this.cx = this.w - this.hw * 1.25; this.yTop = this.h * 0.77; this.yLand = this.yTop - this.inc; this.x0 = Math.max(this.w * 0.5, this.cx - this.hw * 2.6);
       this.tinted = {};
     }
     tint(i) {
@@ -255,72 +261,67 @@
       x.globalCompositeOperation = 'destination-in'; x.drawImage(this.house, 0, 0, w, h);
       return (this.tinted[i] = c);
     }
-    landingY(n) { return this.baseY - n * this.inc; }
-    hoverBottom(n) { return Math.max(this.landingY(n) - 40, this.hh + 6); }
-    drawHouse(g, i, ax, ay, scale = 1) { const c = this.tint(i); g.drawImage(c, ax - 183 * this.s * scale, ay - 315 * this.s * scale, c.width / DPR * scale, c.height / DPR * scale); }
+    drawHouse(g, i, ax, ay) { const c = this.tint(i); g.drawImage(c, ax - 183 * this.s, ay - 315 * this.s, c.width / DPR, c.height / DPR); }
+    posX(t) { const k = clamp(t / 1.6); return lerp(this.x0, this.cx, E.io(k)); }
     draw(g, now, dt) {
-      if (!this.house.complete || !this.house.naturalWidth || !this.hook.complete) return;
-      const n = this.floors.length, s = this.s;
-      this.u += dt;
+      if (!this.house.complete || !this.house.naturalWidth || !this.hook.complete || !this.hook.naturalWidth) return;
+      const s = this.s; this.u += dt;
       if (this.trolleyX === null) this.trolleyX = this.x0;
-      const ropeGap = 22 * 1, hookH = this.hook.height * s * 1.9, hookW = this.hook.width * s * 1.9;
-      const Lhide = -(this.hh + ropeGap + hookH + 20);
-      const Lhover = this.hoverBottom(n) - this.hh - ropeGap;
-      let L = this.hookL ?? Lhide, th = 0, hasHouse = true;
-      // ---- state machine
-      if (this.phase === 'descend') {
-        const k = E.out(clamp(this.u / 0.9)); L = lerp(Lhide, Lhover, k); this.trolleyX = this.x0; th = 0.16 * Math.sin(this.u * 6) * (1 - k * 0.3);
-        if (this.u >= 0.9) { this.phase = 'move'; this.u = 0; }
+      const ropeGap = 18, hookH = this.hook.height * s * 1.55, hookW = this.hook.width * s * 1.55, Lhide = -(this.hh + ropeGap + hookH + 24);
+      const hoverBottom = this.yLand - 34, Lhover = hoverBottom - this.hh - ropeGap, ropeLen = 66, om2 = 21, damp = 1.5;
+      let L = this.hookL ?? Lhide, hasHouse = true, ax = 0;
+      // ---------- phases
+      if (this.phase === 'enter') {
+        const k = E.out(clamp(this.u / 1.0)); L = lerp(Lhide, Lhover, k); this.trolleyX = this.x0;
+        if (this.u >= 1.0) { this.phase = 'move'; this.u = 0; }
       } else if (this.phase === 'move') {
-        const D = 1.5, k = clamp(this.u / D), e = E.io(k), prev = E.io(clamp((this.u - dt) / D)), vx = (e - prev) / dt * (this.cx - this.x0);
-        this.trolleyX = lerp(this.x0, this.cx, e); L = Lhover - Math.sin(k * Math.PI) * 4;
-        th = -vx * 0.0045 + 0.07 * Math.sin(this.u * 7) * (1 - k);
-        if (this.u >= D) { this.phase = 'fall'; this.u = 0; const bx = this.trolleyX + Math.sin(th) * (L + ropeGap), by = L + ropeGap + this.hh; this.fall = { x: bx, y: Lhover + this.hh + ropeGap + this.hh * 0 + 0, vy: 0, rot: th * 0.6, vr: th * 1.4, ci: this.ci }; this.fall.y = this.hoverBottom(n); this.hookStart = L; }
+        L = Lhover; const h = 0.03; this.trolleyX = this.posX(this.u); ax = (this.posX(this.u + h) - 2 * this.posX(this.u) + this.posX(this.u - h)) / (h * h);
+        if (this.u >= 1.6) { this.phase = 'settle'; this.u = 0; }
+      } else if (this.phase === 'settle') {
+        L = Lhover; this.trolleyX = this.cx;
+        if (this.u >= 1.1) { this.phase = 'fall'; this.u = 0; this.hookStart = L; const bx = this.trolleyX + Math.sin(this.th) * (L + ropeGap); this.fall = { x: bx, y: hoverBottom, vy: 0, rot: this.th, vr: this.thv * 0.6, ci: this.hand }; }
       } else if (this.phase === 'fall') {
-        const f = this.fall;
+        hasHouse = false; const f = this.fall;
         if (f) {
-          f.vy += 1100 * dt; f.y += f.vy * dt; f.x = lerp(f.x, this.cx, clamp(dt * 9)); f.rot += f.vr * dt; f.vr *= 0.96;
-          if (f.y >= this.landingY(n)) {
-            this.floors.push({ ci: f.ci }); this.fall = null; this.wv += 38 + n * 10 + f.vy * 0.04;
-            for (let i = 0; i < 9; i++) this.puffs.push({ x: this.cx + rand(-this.hw * 0.4, this.hw * 0.4), y: this.landingY(n) + 2, vx: rand(-26, 26), vy: rand(-18, -4), life: rand(0.35, 0.7), max: 0.7, size: rand(3, 6) });
+          f.vy += 900 * dt; f.y += f.vy * dt; f.x = lerp(f.x, this.cx, clamp(dt * 10)); f.rot *= 0.94;
+          if (f.y >= this.yLand) {
+            this.floors.unshift({ ci: f.ci }); if (this.floors.length > 12) this.floors.pop(); this.fall = null; this.scrollT = 0; this.scrollFrom = this.inc; this.scroll = this.inc;
+            this.wv += 16; for (let i = 0; i < 8; i++) this.puffs.push({ x: this.cx + rand(-this.hw * 0.4, this.hw * 0.4), y: this.yLand + this.inc * 0.5, vx: rand(-22, 22), vy: rand(-14, -3), life: rand(0.35, 0.65), max: 0.65, size: rand(2.5, 5) });
           }
         }
-        const k = clamp(this.u / 0.75); L = lerp(this.hookStart, Lhide, E.in(k)); hasHouse = false; th = 0.05 * Math.sin(this.u * 9) * (1 - k);
-        if (this.u >= 0.75 && !this.fall) { this.phase = this.floors.length >= this.max ? 'hold' : 'descend'; this.u = 0; this.ci++; this.hookL = null; this.trolleyX = this.x0; }
-      } else if (this.phase === 'hold') {
-        L = Lhide; hasHouse = false;
-        if (this.u > 1.5) { this.fade = 1 - clamp((this.u - 1.5) / 0.6); if (this.u > 2.1) this.reset(); }
+        const k = clamp((this.u - 0.1) / 0.9); L = lerp(this.hookStart, Lhide, E.in(k));
+        if (this.u >= 1.1 && !this.fall) { this.phase = 'enter'; this.u = 0; this.hookL = null; this.hand = this.ci++; this.trolleyX = this.x0; this.th = 0.05; this.thv = 0; }
       }
       if (this.phase === 'fall') this.hookL = L;
-      // ---- tower spring wobble
-      const acc = -90 * this.wob - 5.5 * this.wv; this.wv += acc * dt; this.wob += this.wv * dt;
-      // ---- draw: ground, tower, assembly
-      g.save(); g.globalAlpha = this.fade;
-      const sh = g.createRadialGradient(this.cx, this.baseY + 4, 2, this.cx, this.baseY + 4, this.hw * 0.8); sh.addColorStop(0, 'rgba(0,0,0,.4)'); sh.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = sh; g.save(); g.translate(this.cx, this.baseY + 4); g.scale(1, 0.25); g.translate(-this.cx, -(this.baseY + 4)); g.beginPath(); g.arc(this.cx, this.baseY + 4, this.hw * 0.8, 0, 6.283); g.fill(); g.restore();
-      const squash = clamp(Math.abs(this.wv) / 160) * 0.025;
-      this.floors.forEach((fl, i) => {
-        const h = (i + 1) / this.max, ox = this.wob * 0.12 * (0.4 + i * 0.9) + Math.sin(now * 1.1 + i * 0.9) * 0.45 * i * 0.6 * h;
-        g.save(); g.translate(this.cx + ox, this.landingY(i)); g.scale(1 + squash, 1 - squash * (i + 1) * 0.5); g.translate(-this.cx - ox, -this.landingY(i)); this.drawHouse(g, fl.ci, this.cx + ox, this.landingY(i)); g.restore();
-      });
-      for (const p of this.puffs) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; }
-      this.puffs = this.puffs.filter((p) => p.life > 0);
-      for (const p of this.puffs) { const a = clamp(p.life / p.max); g.fillStyle = `rgba(255,240,215,${0.55 * a})`; g.beginPath(); g.arc(p.x, p.y, p.size * (1.4 - a * 0.5), 0, 6.283); g.fill(); }
+      // ---------- physics: damped pendulum driven by the trolley's acceleration, and a soft spring for the tower
+      if (hasHouse) { const acc = -om2 * Math.sin(this.th) - 0.22 * (ax / ropeLen) * Math.cos(this.th) - damp * this.thv; this.thv += acc * dt; this.th += this.thv * dt; this.th = clamp(this.th, -0.22, 0.22); }
+      else { this.thv *= 0.9; this.th *= 0.92; }
+      const wacc = -55 * this.wob - 4.2 * this.wv; this.wv += wacc * dt; this.wob += this.wv * dt;
+      if (this.scrollT < 1) { this.scrollT = Math.min(1, this.scrollT + dt / 0.75); this.scroll = this.scrollFrom * (1 - E.io(clamp((this.scrollT - 0.1) / 0.9))); }
+      // ---------- draw the tower (oldest first so newer houses overlap the roof below)
+      const tx = (k) => this.cx + this.wob * Math.max(0.2, 1 - k * 0.2);
+      for (let k = this.floors.length - 1; k >= 0; k--) {
+        const y = this.yTop + k * this.inc - this.scroll; if (y - this.hh > this.h) continue;
+        this.drawHouse(g, this.floors[k].ci, tx(k), y);
+      }
+      for (const q of this.puffs) { q.life -= dt; q.x += q.vx * dt; q.y += q.vy * dt; }
+      this.puffs = this.puffs.filter((q) => q.life > 0);
+      for (const q of this.puffs) { const a = clamp(q.life / q.max); g.fillStyle = `rgba(255,240,215,${0.5 * a})`; g.beginPath(); g.arc(q.x, q.y, q.size * (1.4 - a * 0.5), 0, 6.283); g.fill(); }
       if (this.fall) { const f = this.fall; g.save(); g.translate(f.x, f.y - this.hh * 0.5); g.rotate(f.rot); g.translate(-f.x, -(f.y - this.hh * 0.5)); this.drawHouse(g, f.ci, f.x, f.y); g.restore(); }
-      // hook assembly (pendulum around the trolley)
-      if (this.phase !== 'hold' || L > Lhide + 1) {
-        g.save(); g.translate(this.trolleyX, -4); g.rotate(th);
-        g.strokeStyle = '#56627e'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, -80); g.lineTo(0, L); g.stroke();
+      // ---------- crane: cable, hook, ropes and the hanging house, rotated by the pendulum angle
+      if (L > Lhide + 1) {
+        g.save(); g.translate(this.trolleyX, -4); g.rotate(this.th);
+        g.strokeStyle = '#56627e'; g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(0, -90); g.lineTo(0, L); g.stroke();
         g.drawImage(this.hook, -hookW * 0.46, L - hookH * 0.9, hookW, hookH);
         if (hasHouse) {
-          const yh = L + ropeGap, ax = -163 * s, ay = yh - 1 * s;
+          const yh = L + ropeGap, axp = -163 * s;
           g.strokeStyle = 'rgba(190,200,220,.9)'; g.lineWidth = 1.1;
           for (const [px, py] of [[0, 1], [37 - 163, 63], [309 - 163, 65], [193 - 163, 137]]) { g.beginPath(); g.moveTo(0, L); g.lineTo(px * s, yh + py * s); g.stroke(); }
           g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 8; g.shadowOffsetY = 4;
-          const c = this.tint(this.ci); g.drawImage(c, ax, yh - 0.5, c.width / DPR, c.height / DPR);
+          const c = this.tint(this.hand); g.drawImage(c, axp, yh - 0.5, c.width / DPR, c.height / DPR);
         }
         g.restore();
       }
-      g.restore();
     }
   }
 

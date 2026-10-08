@@ -103,6 +103,7 @@ h2,h3,p{margin:0}
 .xval.pop{animation:xpop .5s cubic-bezier(.3,1.6,.5,1)}.xval.dim{opacity:.35;transition:opacity .8s}
 @keyframes xpop{0%{transform:scale(1)}40%{transform:scale(1.28)}100%{transform:scale(1)}}
 .c-tower .txt{max-width:38%}
+.c-tower.wide{min-height:184px}
 
 /* panels (bonus / profile) */
 .panel{background:var(--card);border-radius:22px;padding:18px;margin-bottom:12px;position:relative;overflow:hidden}
