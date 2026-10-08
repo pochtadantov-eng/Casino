@@ -251,7 +251,7 @@
   class TowerScene extends Scene {
     constructor(c) {
       super(c);
-      this.house = load('house.webp'); this.hook = load('hook.webp');
+      this.houses = [0, 1, 2, 3, 4].map((i) => load(`house_${i}.webp`)); this.hook = load('hook.webp');
       this.colors = ['#ffbe0b', '#9d4dff', '#12d67a', '#ff3d4f', '#1fb6ff'];
       this.tinted = {}; this.start();
     }
@@ -265,18 +265,16 @@
       this.cx = this.w - this.hw * 1.25; this.yTop = this.h * 0.77; this.yLand = this.yTop - this.inc; this.x0 = Math.max(this.w * 0.5, this.cx - this.hw * 2.6);
       this.tinted = {};
     }
-    tint(i) {
+    tint(i) {                           // pre-painted sprite (walls colour, blue windows, wooden door) scaled to card size
       if (this.tinted[i]) return this.tinted[i];
-      const sc = DPR, w = Math.round(337 * this.s * sc), h = Math.round(317 * this.s * sc), c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
-      x.drawImage(this.house, 0, 0, w, h); x.globalCompositeOperation = 'color'; x.fillStyle = this.colors[i % this.colors.length]; x.fillRect(0, 0, w, h);
-      x.globalCompositeOperation = 'screen'; x.fillStyle = 'rgba(255,255,255,.12)'; x.fillRect(0, 0, w, h);
-      x.globalCompositeOperation = 'destination-in'; x.drawImage(this.house, 0, 0, w, h);
+      const src = this.houses[i % this.houses.length], sc = DPR, w = Math.round(337 * this.s * sc), h = Math.round(317 * this.s * sc), c = document.createElement('canvas'); c.width = w; c.height = h;
+      const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, w, h);
       return (this.tinted[i] = c);
     }
     drawHouse(g, i, ax, ay) { const c = this.tint(i); g.drawImage(c, ax - 183 * this.s, ay - 315 * this.s, c.width / DPR, c.height / DPR); }
     posX(t) { const k = clamp(t / 1.25); return lerp(this.x0, this.cx, E.sm(k)); }
     draw(g, now, dt) {
-      if (!this.house.complete || !this.house.naturalWidth || !this.hook.complete || !this.hook.naturalWidth) return;
+      if (!this.houses.every((h) => h.complete && h.naturalWidth) || !this.hook.complete || !this.hook.naturalWidth) return;
       const s = this.s; this.u += dt;
       if (this.trolleyX === null) this.trolleyX = this.x0;
       const ropeGap = 18, hookH = this.hook.height * s * 1.55, hookW = this.hook.width * s * 1.55, Lhide = -(this.hh + ropeGap + hookH + 24);
