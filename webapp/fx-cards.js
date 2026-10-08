@@ -95,6 +95,7 @@
       for (let i = 0; i < 8; i++) this.parts.push({ k: 'smoke', x: mx + rand(-8, 8), y: my + rand(-6, 6), vx: rand(-14, 14), vy: rand(-26, -8), life: rand(1.1, 1.6), max: 1.6, size: rand(8, 14) });
     }
     draw(g, now, dt) {
+      const SPEED = 1.3; now *= SPEED; dt *= SPEED;
       const tt = now % this.T;
       if (tt < this.prevTt) this.parts = [];
       const [mx0, my0] = this.pos(this.taps[2].i), mx = mx0 + this.s / 2, my = my0 + this.s / 2;
@@ -156,7 +157,7 @@
     }
     layout() { this.px0 = 16; this.pw = this.w - 32; this.base = this.h - 72; this.top = 46; this.ph = this.base - this.top; }
     f(p) { const k = 3.2; return (Math.exp(k * p) - 1) / (Math.exp(k) - 1); }
-    pt(p) { const f = this.f(p); return [this.px0 + this.pw * p, this.base - this.ph * f, 1 + 24 * f]; }
+    pt(p) { const f = this.f(p); return [this.px0 + this.pw * (0.1 * p + 0.9 * p * p), this.base - this.ph * (0.4 * Math.pow(p, 0.7) + 0.6 * f), 1 + 24 * f]; }
     explode(hx, hy, ang, rh, rw) {
       this.flash = 0; this.boomAt = null;
       for (let i = 0; i < 46; i++) { const a = rand(0, 6.283), sp = rand(30, 190); this.parts.push({ k: 'fire', x: hx, y: hy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 25, life: rand(0.4, 0.95), max: 0.95, size: rand(2.5, 6.5) }); }
@@ -177,7 +178,7 @@
       const tt = now - this.cs;
       if (this.newCycle) { this.newCycle = false; const li = this.loop; this.parts = []; this.pieces = []; this.exploded = false; { let m = 0.97 / (1 - Math.random()); if (m < 1.6) m = 1.6 + Math.random() * 1.2; this.crashM = Math.round(Math.min(m, 25) * 100) / 100; } const f = (this.crashM - 1) / 24; this.pc = Math.log(1 + f * (Math.exp(3.2) - 1)) / 3.2; this.tc = this.pc * this.climb; }
       const crashed = tt >= this.tc, p = crashed ? this.pc : clamp(tt / this.climb), [hx, hy, m] = this.pt(p);
-      const [x2, y2] = this.pt(Math.min(1, p + 0.01)), ang = Math.atan2(x2 - hx, -(y2 - hy)) || 0.6, rh = 46, rw = 23;
+      const [xa, ya] = this.pt(Math.max(0, p - 0.012)), [x2, y2] = this.pt(Math.min(1, p + 0.012)), ang = Math.atan2(x2 - xa, -(y2 - ya)), rh = 46, rw = 23;
       if (crashed && !this.exploded) { this.exploded = true; this.flash = 1; this.hx = hx; this.hy = hy; this.explode(hx, hy, ang, rh, rw); }
       const since = tt - this.tc, fadeOut = crashed ? clamp((since - 0.8) / 0.55) : 0, alpha = 1 - fadeOut;
 
@@ -246,7 +247,7 @@
     constructor(c) {
       super(c);
       this.house = load('house.webp'); this.hook = load('hook.webp');
-      this.colors = ['#ffd166', '#b69cff', '#6fe3a0', '#ff8a8a', '#7fd0ff'];
+      this.colors = ['#ffbe0b', '#9d4dff', '#12d67a', '#ff3d4f', '#1fb6ff'];
       this.tinted = {}; this.start();
     }
     start() {
@@ -255,15 +256,15 @@
       this.th = 0; this.thv = 0; this.hookL = null; this.trolleyX = null; this.hand = this.ci++;
     }
     layout() {
-      this.hw = Math.min(46, this.h * 0.31); this.s = this.hw / 337; this.hh = 317 * this.s; this.inc = this.hw * 0.46;
+      this.hw = Math.min(53, this.h * 0.29); this.s = this.hw / 337; this.hh = 317 * this.s; this.inc = this.hw * 0.46;
       this.cx = this.w - this.hw * 1.25; this.yTop = this.h * 0.77; this.yLand = this.yTop - this.inc; this.x0 = Math.max(this.w * 0.5, this.cx - this.hw * 2.6);
       this.tinted = {};
     }
     tint(i) {
       if (this.tinted[i]) return this.tinted[i];
       const sc = DPR, w = Math.round(337 * this.s * sc), h = Math.round(317 * this.s * sc), c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingQuality = 'high';
-      x.drawImage(this.house, 0, 0, w, h); x.globalCompositeOperation = 'multiply'; x.fillStyle = this.colors[i % this.colors.length]; x.fillRect(0, 0, w, h);
-      x.globalCompositeOperation = 'screen'; x.fillStyle = 'rgba(255,255,255,.16)'; x.fillRect(0, 0, w, h);
+      x.drawImage(this.house, 0, 0, w, h); x.globalCompositeOperation = 'color'; x.fillStyle = this.colors[i % this.colors.length]; x.fillRect(0, 0, w, h);
+      x.globalCompositeOperation = 'screen'; x.fillStyle = 'rgba(255,255,255,.12)'; x.fillRect(0, 0, w, h);
       x.globalCompositeOperation = 'destination-in'; x.drawImage(this.house, 0, 0, w, h);
       return (this.tinted[i] = c);
     }
