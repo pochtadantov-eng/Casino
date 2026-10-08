@@ -89,7 +89,8 @@ R.rocket = (round) => {
   }
 };
 
-const STAR_SVG = '<svg class="gstar" viewBox="0 0 24 24"><defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6b0"/><stop offset=".55" stop-color="#ffd23f"/><stop offset="1" stop-color="#ff9f0a"/></linearGradient></defs><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1 5.9 20.6l1.5-6.8L2.2 9.2l6.9-.7z" fill="url(#sg)" stroke="#ffe27a" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+// solid fills only (no gradient ids: 25 copies of one id make WebKit pick a hidden, dull copy)
+const STAR_SVG = '<svg class="gstar" viewBox="0 0 24 24"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1 5.9 20.6l1.5-6.8L2.2 9.2l6.9-.7z" fill="#ffd21f" stroke="#fff3a0" stroke-width="1.3" stroke-linejoin="round"/><path d="M12 5.6l1.7 3.9 4.2.4-3.2 2.8.9 4.1L12 14.6l-3.6 2.2.9-4.1-3.2-2.8 4.2-.4z" fill="#ffee7a"/></svg>';
 R.mines = (round) => {
   const v = round?.view; const size = 25;
   const prev = (round && v.revealed.length) ? (state.prevOpen || new Set()) : new Set();   // a fresh round starts with nothing open

@@ -13,7 +13,7 @@
   const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   const mixa = (a, b, t) => a.map((v, i) => lerp(v, b[i], t));
   const rgb = (a) => `rgb(${a.map(Math.round).join(',')})`;
-  const SRC = (n) => (window.CARD_IMG && window.CARD_IMG[n]) || (n === 'rocket.svg' && (window.ROCKET_SRC || 'rocket.svg')) || 'img/' + n;
+  const SRC = (n) => (window.CARD_IMG && window.CARD_IMG[n]) || (n === 'rocket.svg' && window.ROCKET_SRC) || (n === 'rocket.svg' ? 'rocket.svg' : 'img/' + n) + (window.BUILD ? '?v=' + window.BUILD : '');
   const load = (n) => { const i = new Image(); i.src = SRC(n); return i; };
   const rr = (g, x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
   const rand = (a, b) => a + Math.random() * (b - a);
