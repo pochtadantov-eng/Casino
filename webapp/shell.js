@@ -111,6 +111,5 @@ async function loadProfile() {
 $('#p-deposit').onclick = () => $('#btn-deposit').click();
 
 // ---------- boot ----------
-$('#card-rocket').src = window.ROCKET_SRC || 'rocket.svg';
 paintUser();
 boot().then(() => { selectTab('play', true); });

@@ -15,55 +15,32 @@
 
 <!-- ============ ИГРАТЬ ============ -->
 <section id="view-play" class="view on">
-  <div class="card daily" data-go="bonus">
-    <div><h3>Ежедневный бонус</h3><p>Забирай каждый день!</p></div>
-    <svg class="art float" viewBox="0 0 120 100" aria-hidden="true">
-      <rect x="22" y="44" width="76" height="46" rx="8" fill="#f59e0b"/><rect x="16" y="32" width="88" height="20" rx="7" fill="#fbbf24"/>
-      <rect x="54" y="32" width="12" height="58" fill="#ef4444"/>
-      <path d="M60 32c-8-18-30-14-22-3 5 6 15 4 22 3Zm0 0c8-18 30-14 22-3-5 6-15 4-22 3Z" fill="#ef4444"/>
-      <path d="M100 14l3 7 7 1-5 5 1 7-6-4-6 4 1-7-5-5 7-1z" fill="#fde047"/>
-    </svg>
+  <div class="card c-daily wide" data-go="bonus" style="--c:251,191,36">
+    <div class="txt"><h3>Ежедневный бонус</h3><p>Забирай каждый день!</p></div>
+    <div class="spark s1"></div><div class="spark s2"></div><div class="spark s3"></div><div class="spark s4"></div>
+    <img class="chest" src="img/chest.png" alt="">
   </div>
 
   <div class="cards">
-    <div class="card c-mines" data-game="mines">
-      <svg class="art float" viewBox="0 0 200 120" aria-hidden="true">
-        <g transform="rotate(-12 46 74)"><rect x="12" y="42" width="66" height="66" rx="15" fill="#ff8fbd"/><path d="M45 60l15 15-15 22-15-22z" fill="#fff"/></g>
-        <g transform="rotate(12 154 74)"><rect x="122" y="42" width="66" height="66" rx="15" fill="#ff8fbd"/><path d="M155 60l15 15-15 22-15-22z" fill="#fff"/></g>
-        <rect x="64" y="4" width="72" height="72" rx="17" fill="#fff"/>
-        <circle cx="99" cy="44" r="21" fill="#e11d48"/><circle cx="92" cy="37" r="5" fill="#fff" opacity=".45"/>
-        <rect x="95" y="16" width="9" height="9" rx="2" fill="#4b5563"/><path d="M104 18c6-6 13-5 17 0" stroke="#fbbf24" stroke-width="3" fill="none" stroke-linecap="round"/>
-      </svg>
-      <div class="ct"><h3>Мины</h3><p>Разминируй поле</p></div>
+    <div class="card c-mines" data-game="mines" style="--c:45,212,191">
+      <img class="bg" src="img/mines.jpg" alt="">
+      <div class="glow-x"></div>
+      <div class="txt"><h3>Мины</h3><p>Разминируй поле</p></div>
     </div>
-
-    <div class="card c-rocket" data-game="rocket">
-      <div class="xnum">x25</div>
-      <svg class="curve" viewBox="0 0 200 90" aria-hidden="true"><path d="M0 84C60 80 110 70 150 36S196 4 200 2" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/></svg>
-      <img class="rk float" id="card-rocket" alt="" width="64" height="128">
-      <div class="ct"><h3>Ракета</h3><p>Поставил — забрал</p></div>
+    <div class="card c-rocket" data-game="rocket" style="--c:80,150,255">
+      <img class="bg" src="img/rocket.jpg" alt="">
+      <i class="streak a"></i><i class="streak b"></i><i class="streak c"></i>
+      <div class="txt"><h3>Ракета</h3><p>Поставил — забрал</p></div>
     </div>
-
-    <div class="card c-tower wide" data-game="tower">
-      <div><h3>Башня</h3><p>Чем выше, тем больше икс</p></div>
-      <svg class="art tw" viewBox="0 0 150 130" aria-hidden="true">
-        <path d="M118 6v22M118 6H70" stroke="#fde68a" stroke-width="4" stroke-linecap="round"/><path d="M100 6v14" stroke="#fde68a" stroke-width="2.5"/>
-        <g class="sway"><rect x="82" y="22" width="40" height="16" rx="4" fill="#fb923c"/></g>
-        <rect x="40" y="96" width="70" height="26" rx="6" fill="#c2410c"/><rect x="48" y="70" width="58" height="26" rx="6" fill="#ea580c"/>
-        <rect x="56" y="46" width="46" height="24" rx="6" fill="#f97316"/>
-        <path d="M52 104h42M60 78h30" stroke="#fff" stroke-opacity=".25" stroke-width="3" stroke-linecap="round"/>
-      </svg>
+    <div class="card c-tower wide" data-game="tower" style="--c:251,146,60">
+      <div class="txt"><h3>Башня</h3><p>Чем выше, тем больше икс</p></div>
+      <div class="crane"><img class="hang" src="img/tower_hang.png" alt=""></div>
+      <img class="stack" src="img/tower_stack.png" alt="">
     </div>
-
-    <div class="card c-gull wide" data-game="seagull">
-      <div class="ribbon">НОВОЕ</div>
-      <div><h3>Чайка</h3><p>Угадай, кого она не схватит</p></div>
-      <svg class="art" viewBox="0 0 170 110" aria-hidden="true">
-        <g class="dive"><path d="M20 30C45 8 70 8 85 30 100 8 125 8 150 30 125 24 105 30 85 44 65 30 45 24 20 30Z" fill="#fff"/><circle cx="85" cy="34" r="6" fill="#fff"/><path d="M89 34l9 3-9 3z" fill="#f59e0b"/></g>
-        <g fill="#fde68a"><circle cx="40" cy="92" r="14"/><circle cx="85" cy="92" r="14"/><circle cx="130" cy="92" r="14"/></g>
-        <g fill="#0f172a"><circle cx="35" cy="90" r="2.2"/><circle cx="45" cy="90" r="2.2"/><circle cx="80" cy="90" r="2.2"/><circle cx="90" cy="90" r="2.2"/><circle cx="125" cy="90" r="2.2"/><circle cx="135" cy="90" r="2.2"/></g>
-        <g stroke="#0f172a" stroke-width="1.8" fill="none" stroke-linecap="round"><path d="M35 97q5 4 10 0"/><path d="M80 97q5 4 10 0"/><path d="M125 97q5 4 10 0"/></g>
-      </svg>
+    <div class="card c-gull wide" data-game="seagull" style="--c:186,230,253">
+      <div class="txt"><h3>Чайка</h3><p>Угадай, кого она не схватит</p></div>
+      <img class="bird" src="img/gull.png" alt="">
+      <div class="mist"></div>
     </div>
   </div>
 </section>
@@ -72,11 +49,7 @@
 <section id="view-bonus" class="view">
   <h2 class="title">Бонусы</h2>
   <div class="panel bonus">
-    <svg class="art float" viewBox="0 0 120 100" aria-hidden="true">
-      <rect x="22" y="44" width="76" height="46" rx="8" fill="#f59e0b"/><rect x="16" y="32" width="88" height="20" rx="7" fill="#fbbf24"/>
-      <rect x="54" y="32" width="12" height="58" fill="#ef4444"/>
-      <path d="M60 32c-8-18-30-14-22-3 5 6 15 4 22 3Zm0 0c8-18 30-14 22-3-5 6-15 4-22 3Z" fill="#ef4444"/>
-    </svg>
+    <img class="chest" src="img/chest.png" alt="">
     <h3>Ежедневный бонус</h3>
     <p id="bonus-text">Загрузка…</p>
     <button class="primary" id="bonus-claim">Забрать</button>
