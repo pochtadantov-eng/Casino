@@ -17,25 +17,22 @@
 <section id="view-play" class="view on">
   <div class="card c-daily wide" data-go="bonus" style="--c:251,191,36">
     <div class="txt"><h3>Ежедневный бонус</h3><p>Забирай каждый день!</p></div>
-    <div class="spark s1"></div><div class="spark s2"></div><div class="spark s3"></div><div class="spark s4"></div>
-    <img class="chest" src="img/chest.webp" alt="">
+    <div class="chestbox"><img class="chest" src="img/chest.webp" alt=""><i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i></div>
   </div>
 
   <div class="cards">
-    <div class="card c-mines" data-game="mines" style="--c:45,212,191">
-      <img class="bg" src="img/mines.webp" alt="">
-      <div class="glow-x"></div>
+    <div class="card c-mines" data-game="mines" style="--c:52,235,170">
+      <canvas class="cv" id="cv-mines"></canvas>
       <div class="txt"><h3>Мины</h3><p>Разминируй поле</p></div>
     </div>
-    <div class="card c-rocket" data-game="rocket" style="--c:80,150,255">
-      <img class="bg" src="img/rocket.webp" alt="">
-      <i class="streak a"></i><i class="streak b"></i><i class="streak c"></i>
+    <div class="card c-rocket" data-game="rocket" style="--c:96,165,250">
+      <canvas class="cv" id="cv-rocket"></canvas>
+      <div class="xval" id="x-rocket">x1.00</div>
       <div class="txt"><h3>Ракета</h3><p>Поставил — забрал</p></div>
     </div>
-    <div class="card c-tower wide" data-game="tower" style="--c:251,146,60">
+    <div class="card c-tower wide" data-game="tower" style="--c:253,186,116">
+      <canvas class="cv" id="cv-tower"></canvas>
       <div class="txt"><h3>Башня</h3><p>Чем выше, тем больше икс</p></div>
-      <div class="crane"><img class="hang" src="img/tower_hang.webp" alt=""></div>
-      <img class="stack" src="img/tower_stack.webp" alt="">
     </div>
     <div class="card c-gull wide" data-game="seagull" style="--c:186,230,253">
       <div class="txt"><h3>Чайка</h3><p>Угадай, кого она не схватит</p></div>
@@ -103,6 +100,7 @@
 
 <script src="fx-rocket.js"></script>
 <script src="app.js"></script>
+<script src="fx-cards.js"></script>
 <script src="shell.js"></script>
 </body>
 </html>

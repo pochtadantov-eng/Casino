@@ -11,7 +11,7 @@ const out = `<title>Stars Casino</title>
 <style>${r('style.css')}\nhtml,body{height:auto}body{max-width:520px;margin-inline:auto}</style>
 ${body}
 <script>window.ROCKET_SRC='data:image/svg+xml;base64,${svg}'</script>
-<script>${r('fx-rocket.js')}</script>
+<script>window.CARD_IMG={'house.webp':'data:image/webp;base64,${readFileSync(f('img/house.webp')).toString('base64')}','hook.webp':'data:image/webp;base64,${readFileSync(f('img/hook.webp')).toString('base64')}'}</script>\n<script>${r('fx-rocket.js')}</script>\n<script>${r('fx-cards.js')}</script>
 <script>${r('mock-api.js')}</script>
 <script>${r('app.js')}</script>
 <script>${r('shell.js')}</script>`;
