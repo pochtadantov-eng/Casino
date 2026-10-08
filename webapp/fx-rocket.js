@@ -25,7 +25,7 @@ class RocketScene {
     this.c.width = this.w * d; this.c.height = this.h * d;
     this.g.setTransform(d, 0, 0, d, 0, 0);
   }
-  _reset() { this.parts = []; this.trail = []; this.gone = false; this.ry = 0.5; this.rx = 0.5; this.shake = 0; this.flash = 0; }
+  _reset() { this.after = 0; this.parts = []; this.trail = []; this.gone = false; this.ry = 0.5; this.rx = 0.5; this.shake = 0; this.flash = 0; }
   idle() { if (this.mode !== 'idle') this._reset(); this.mode = 'idle'; this.m = 1; this.onTick = null; }
   fly(startedAt, offset, growth, onTick) {
     if (this.mode !== 'flying') { this._reset(); this.polled = false; }
@@ -36,10 +36,10 @@ class RocketScene {
     this.onTick = null;
     if (was === 'flying') {
       if (status === 'lost') this._explode(); else this._win();
-    } else if (was === 'idle') { this.gone = true; this.mode = status === 'lost' ? 'crashed' : 'won'; }
+    }
   }
   _explode() {
-    this.mode = 'crashed'; this.gone = true; this.flash = 1; this.flashColor = '255,90,60'; this.shake = this.reduced ? 0 : 1;
+    this.after = 0; this.mode = 'crashed'; this.gone = true; this.flash = 1; this.flashColor = '255,90,60'; this.shake = this.reduced ? 0 : 1;
     const x = this.rx * this.w, y = this.ry * this.h;
     for (let i = 0; i < 90; i++) {
       const a = Math.random() * Math.PI * 2, sp = 40 + Math.random() * 260;
@@ -47,7 +47,8 @@ class RocketScene {
     }
     for (let i = 0; i < 14; i++) this.parts.push({ x, y, vx: (Math.random() - 0.5) * 120, vy: -Math.random() * 80, life: 1.8, max: 1.8, size: 10 + Math.random() * 18, rgb: '90,90,110', add: false });
   }
-  _win() { this.mode = 'won'; this.flash = 0.6; this.flashColor = '34,197,94'; this.vy = 0; }
+  _comeBack() { this.mode = 'return'; this.rt = 0; this.after = 0; this.gone = false; this.ry = 1.3; this.rx = 0.5; this.trail = []; this.parts = []; this.m = 1; }
+  _win() { this.after = 0; this.mode = 'won'; this.flash = 0.6; this.flashColor = '34,197,94'; this.vy = 0; }
   _emit(x, y, n, power, ww) {
     for (let i = 0; i < n; i++) {
       const hot = Math.random() < 0.6;
@@ -67,7 +68,9 @@ class RocketScene {
       this.onTick?.(this.m);
     }
     const lm = Math.log(this.m);
-    const speed = this.mode === 'flying' ? 1.6 + lm * 2.4 : this.mode === 'won' ? 5 : this.mode === 'crashed' ? 0.2 : 0.7;
+    const target = this.mode === 'flying' ? 1.6 + lm * 2.4 : this.mode === 'won' && !this.gone ? 5 : this.mode === 'crashed' ? 0.2 : this.mode === 'return' ? 1.6 : 1.0;
+    this.sp = (this.sp ?? 1) + (target - (this.sp ?? 1)) * Math.min(1, dt * 4);   // eased, so the sky never jumps between tempos
+    const speed = this.sp;
     const targetHue = this.mode === 'crashed' ? 350 : 232 + Math.min(70, lm * 38);
     this.hue += (targetHue - this.hue) * Math.min(1, dt * 2);
 
@@ -109,10 +112,18 @@ class RocketScene {
     } else if (this.mode === 'won' && !this.gone) {
       this.vy -= dt * 1.6; this.ry += this.vy * dt * 2.2;
       if (this.ry < -0.25) this.gone = true;
+    } else if (this.mode === 'return') {
+      this.rt += dt; const k = 1 - Math.pow(1 - Math.min(1, this.rt / 1.25), 3);   // ease-out: arrives smoothly at the launch pad
+      this.ry = 1.3 + (0.5 - 1.3) * k; this.rx = 0.5;
+      if (this.rt >= 1.25) { this.mode = 'idle'; this.ry = 0.5; }
+    }
+    if ((this.mode === 'won' && this.gone) || this.mode === 'crashed') {
+      this.after = (this.after || 0) + dt;
+      if (this.after > (this.mode === 'won' ? 0.3 : 1.5)) this._comeBack();
     }
     const hh = h * 0.5, ww = hh * 0.5;                    // rocket size (SVG is 200x400)
     const rx = this.rx * w, ry = this.ry * h, noseY = ry - hh * 0.45, tailY = ry + hh * 0.53;
-    const power = this.gone || this.mode === 'crashed' ? 0 : this.mode === 'idle' ? 0.35 : this.mode === 'won' ? 2.2 : 1 + Math.min(1.2, lm * 0.5);
+    const power = this.gone || this.mode === 'crashed' ? 0 : this.mode === 'idle' ? 0.35 : this.mode === 'return' ? 1.5 : this.mode === 'won' ? 2.2 : 1 + Math.min(1.2, lm * 0.5);
 
     // trail
     if (this.mode === 'flying' && !this.gone) { this.trail.push({ x: rx, y: tailY, a: 1 }); if (this.trail.length > 60) this.trail.shift(); }
