@@ -10,7 +10,7 @@ function show(name) {
   if (name !== 'game') { clearTimeout(state.pollTimer); cancelAnimationFrame(state.raf); state.scene = null; $('#stage').innerHTML = ''; }
   view = name;
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('on', v.id === 'view-' + name));
-  const inGame = name === 'game';
+  const inGame = name === 'game'; document.body.classList.toggle('ingame', inGame);
   $('#dock').style.display = inGame ? 'none' : '';
   const bb = window.Telegram?.WebApp?.BackButton;
   if (bb) inGame ? bb.show() : bb.hide();
@@ -113,3 +113,7 @@ $('#p-deposit').onclick = () => $('#btn-deposit').click();
 // ---------- boot ----------
 paintUser();
 boot().then(() => { selectTab('play', true); });
+
+// keep the bottom padding of the game screen equal to the real height of the pinned control panel
+const ctrl = document.querySelector('.ctrl');
+if (ctrl) new ResizeObserver(() => document.documentElement.style.setProperty('--ctrl-h', ctrl.offsetHeight + 16 + 'px')).observe(ctrl);

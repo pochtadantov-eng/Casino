@@ -72,22 +72,25 @@
 <!-- ============ ИГРА ============ -->
 <section id="view-game" class="view">
   <div class="gamehead"><button id="back" aria-label="Назад">‹</button><h2 id="gtitle"></h2></div>
-  <section class="bet">
-    <label>Ставка</label>
-    <div class="row">
-      <button class="small ghost" id="bet-minus">−</button>
-      <input id="bet" type="number" inputmode="numeric" value="10" min="1">
-      <button class="small ghost" id="bet-plus">+</button>
-      <button class="small ghost" id="bet-x2">x2</button>
-    </div>
-    <div id="opts"></div>
-  </section>
   <section id="stage"></section>
-  <div class="row actions">
-    <button id="go" class="primary">Играть</button>
-    <button id="cash" class="cash" hidden>Забрать</button>
+
+  <!-- controls live at the bottom of the screen -->
+  <div class="ctrl">
+    <section class="bet">
+      <div class="row betrow">
+        <button class="small ghost" id="bet-minus">−</button>
+        <input id="bet" type="number" inputmode="numeric" value="10" min="1" aria-label="Ставка">
+        <button class="small ghost" id="bet-plus">+</button>
+        <button class="small ghost" id="bet-x2">x2</button>
+      </div>
+      <div id="opts"></div>
+    </section>
+    <p id="msg"></p>
+    <div class="row actions">
+      <button id="go" class="primary">Играть</button>
+      <button id="cash" class="cash" hidden>Забрать</button>
+    </div>
   </div>
-  <p id="msg"></p>
 </section>
 
 <!-- liquid glass dock -->
