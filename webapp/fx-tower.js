@@ -448,12 +448,31 @@
         const sx = ((t * 0.5) % 1.7 - 0.35) * w, sh = oc.createLinearGradient(sx - 36, y1 - 40, sx + 36, y1 + 120); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.75)'); sh.addColorStop(1, 'rgba(255,255,255,0)'); oc.fillStyle = sh; oc.fillRect(0, 0, w, h); oc.globalCompositeOperation = 'source-over';
         o2.setTransform(1, 0, 0, 1, 0, 0); o2.drawImage(this.tcv, 0, 0);       // outline + fill merged into one layer, so fading never shows the outline through the letters
         g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = ta; { const k = DP.a; g.translate((cx + dx) * k, (topY + dy) * k); g.rotate(swing); g.translate(-cx * k, -topY * k); } g.drawImage(this.tcv2, 0, 0); g.restore();
-        // two ropes from the skid struts to rings on top of the first and last letter (they follow the swaying title)
-        g.save(); g.globalAlpha = ta; g.lineCap = 'round';
-        for (const [rx, L] of [[hx - 1.0 * hs, letters[0]], [hx + 2.3 * hs, letters[3]]]) {
-          const [tx, ty] = xf(L.x, L.y - L.fs * 0.5 - 3), mx = (rx + tx) / 2 + Math.sin(t * 2.4 + rx) * 3, my = (ropeY + ty) / 2 + 4;
-          g.strokeStyle = 'rgba(30,26,24,.95)'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(rx, ropeY); g.quadraticCurveTo(mx, my, tx, ty); g.stroke();
-          g.strokeStyle = '#c9ccd2'; g.lineWidth = 1.6; g.beginPath(); g.arc(tx, ty - 1, 3, 0, 6.283); g.stroke();
+        // rigging: a cargo cable from the belly of the helicopter to a ring, two ropes from the ring to a rod above "NOVA", short strings from the rod
+        // to every letter of the top word, and chains tying the top word to the bottom word (everything follows the swaying title)
+        g.save(); g.globalAlpha = ta; g.lineCap = 'round'; g.lineJoin = 'round';
+        const rope = (x1, y1, x2, y2, sag, w = 1.8, col = 'rgba(32,28,26,.96)') => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x1, y1); g.quadraticCurveTo((x1 + x2) / 2 + Math.sin(t * 2.2 + x1 * 0.05) * 2, (y1 + y2) / 2 + sag, x2, y2); g.stroke(); };
+        const ringAt = (x, y, r = 3) => { g.strokeStyle = '#d5d8de'; g.lineWidth = 1.7; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke(); g.strokeStyle = 'rgba(30,30,34,.7)'; g.lineWidth = 0.7; g.beginPath(); g.arc(x, y, r + 0.9, 0, 6.283); g.stroke(); };
+        const top = letters.slice(0, 4), low = letters.slice(4);
+        const rodY = Math.min(...top.map((L) => L.y - L.fs * 0.5)) - 11, rl = top[0].x - fs1 * 0.5, rr = top[3].x + fs1 * 0.5;
+        const [ax, ay] = xf(rl, rodY), [bx, by] = xf(rr, rodY);
+        const hookX = hx + 0.9 * hs, beltY = hy + 1.4 * hs, ringX = hookX + Math.sin(t * 1.3) * 1.5, ringY = hy + 3.5 * hs;
+        // cable from the cargo hook under the fuselage down to the lifting ring
+        g.fillStyle = '#2a2d33'; g.fillRect(hookX - 0.28 * hs, beltY - 0.1 * hs, 0.56 * hs, 0.34 * hs);
+        rope(hookX, beltY + 0.2 * hs, ringX, ringY - 4, 0, 2.2);
+        ringAt(ringX, ringY, 4.5);
+        // the two sling ropes: ring -> both ends of the rod
+        rope(ringX, ringY + 3, ax, ay, 3, 1.9); rope(ringX, ringY + 3, bx, by, 3, 1.9);
+        // the rod with end rings
+        g.strokeStyle = '#8f949d'; g.lineWidth = 3.2; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+        g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(ax, ay - 1); g.lineTo(bx, by - 1); g.stroke();
+        ringAt(ax, ay, 3.2); ringAt(bx, by, 3.2);
+        // every letter of "NOVA" hangs from the rod on its own string
+        for (const L of top) { const [px, py] = xf(L.x, rodY), [qx, qy] = xf(L.x, L.y - L.fs * 0.5 + 2); rope(px, py, qx, qy, 1, 1.4); ringAt(px, py, 1.9); }
+        // chains between the two words: N-B, V-Sh, A-I (each link is a small ring)
+        for (const [i, j] of [[0, 4], [2, 6], [3, 8]]) {
+          const U = letters[i], D = letters[j], [px, py] = xf(U.x, U.y + U.fs * 0.5 - 2), [qx, qy] = xf(D.x, D.y - D.fs * 0.5 + 2), n = Math.max(2, Math.round(Math.hypot(qx - px, qy - py) / 7));
+          for (let k = 0; k <= n; k++) { const f = k / n; g.strokeStyle = k % 2 ? '#aeb3bb' : '#d8dbe1'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(px + (qx - px) * f, py + (qy - py) * f, k % 2 ? 1.2 : 2.1, k % 2 ? 2.2 : 1.4, Math.atan2(qy - py, qx - px) + 1.5708, 0, 6.283); g.stroke(); }
         }
         g.restore();
       }
