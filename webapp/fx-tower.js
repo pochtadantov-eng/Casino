@@ -129,7 +129,7 @@
         const q = this.tumble || this.rest; this.tumble = null; this.rest = null; this.floors.push({ v: q.v, ox: 0, tilt: 0.01, sq: 0.05, dmg: q.dmg || [] }); this.landed++; this.state = 'land'; this.u = 0;
       }
     }       // the server's verdict is final
-    startIntro() { this.intro = { x: 0.1, y: Math.max(SLAB_H + 6, this.camBottom + this.hv) + HH, vy: -1, rot: 0.25, vr: -0.9, v: this.ci++ }; this.state = 'intro'; this.u = 0; }
+    startIntro() { this.intro = { x: 0.1, y: Math.max(SLAB_H + 6, this.camBottom + this.hv) + HH, vy: -3.5, rot: 0.25, vr: -1.2, v: this.ci++ }; this.state = 'intro'; this.u = 0; }
     newHang() { this.hang = { v: this.ci++ }; }
     _setReady(v) { if (v !== this._ready) { this._ready = v; this.onReady?.(v); } }
     landTop() { return SLAB_H + (this.landed + this.base) * INC; }
@@ -206,11 +206,11 @@
       let hasHouse = false;
       switch (this.state) {
         case 'intro': {
-          const f = this.intro; f.vy -= 11 * dt; f.y += f.vy * dt; f.rot += f.vr * dt * Math.min(1, (f.y - HH / 2 - top) / 5); f.x = lerp(f.x, 0, clamp(dt * 2));
+          const f = this.intro; f.vy -= 17 * dt; f.y += f.vy * dt; f.rot += f.vr * dt * Math.min(1, (f.y - HH / 2 - top) / 5); f.x = lerp(f.x, 0, clamp(dt * 2));
           if (f.y - HH / 2 <= top) { this.floors.push({ v: f.v, ox: 0, tilt: 0.01, sq: 0.1, dmg: [] }); this.base = 1; this.intro = null; this.wv += 3.4; this.shake = 0.7; this.puff(0, top + 0.1, 14, 1.1); this.state = 'land'; this.u = 0; }
           break; }
         case 'land': case 'drop': case 'tumble': this.lrope = lerp(this.lrope, LROPE_HIDE, clamp(dt * 3.2)); break;
-        case 'arrive': { const k = sm(clamp(1 - (sw0 - tS) / 1100)); this.lrope = lerp(LROPE_HIDE, LROPE_HOVER, k); hasHouse = true; if (tS >= sw0) { this.state = 'sway'; this.u = 0; } break; }
+        case 'arrive': { const k = sm(clamp(1 - (sw0 - tS) / 800)); this.lrope = lerp(LROPE_HIDE, LROPE_HOVER, k); hasHouse = true; if (tS >= sw0) { this.state = 'sway'; this.u = 0; } break; }
         case 'sway': this.lrope = LROPE_HOVER; hasHouse = true; if (this.queue.length && this.hang) this.release(this.queue.shift()); break;   // a verdict that arrived without a tap (resumed round)
         case 'leave': { this.lrope = lerp(this.leaveFrom, LROPE_HIDE, sm(clamp(this.u / 0.9))); hasHouse = !!this.hang; if (this.u >= 0.9) { this.hang = null; this.state = 'done'; } break; }
         default: this.lrope = lerp(this.lrope, LROPE_HIDE, clamp(dt * 3));
@@ -264,7 +264,7 @@
         }
       }
       if (this.state === 'land' && this.u > 1.05) {
-        if (this.roundStatus === 'active' && this.landed < this.maxSteps) { if (!this.hang) this.newHang(); if (tS >= sw0 - 1100) { this.state = 'arrive'; this.u = 0; } } else this.state = 'done';
+        if (this.roundStatus === 'active' && this.landed < this.maxSteps) { if (!this.hang) this.newHang(); if (tS >= sw0 - 800) { this.state = 'arrive'; this.u = 0; } } else this.state = 'done';
       }
     }
 

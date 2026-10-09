@@ -20,11 +20,12 @@
   const fail = (m) => { throw new Error(m); };
 
   // Tower (skill) - mirrors src/games/engines/tower.ts. The swing is a function of (server) time.
-  const TW = { maxSteps: 20, spaceFrom: 10, spaceGrowth: 1.15, amp: 1.6, firstDelay: 3400, nextDelay: 2500, maxLat: 250, ladderP: 0.8 };
+  const TW = { maxSteps: 20, spaceFrom: 10, spaceGrowth: 1.1, ladderGrowth: 1.2, easyFloors: 5, easyMult: 2, amp: 1.6, firstDelay: 2700, nextDelay: 2500, maxLat: 250 };
   const TW_EASY = !!window.EASY_TOWER || /[?&]easy(=|&|$)/.test(location.search);        // demo shortcut: every drop lands, to look at the space floors
-  const twPeriod = (k) => (k < 3 ? 3000 - 150 * k : k < TW.spaceFrom ? 2550 - 130 * (k - 3) : Math.max(1050, 1700 - 70 * (k - TW.spaceFrom))), twTol = (k) => TW_EASY ? 3 : (k < 3 ? 0.3 - 0.016 * k : k < TW.spaceFrom ? 0.252 - 0.02 * (k - 3) : Math.max(0.05, 0.12 - 0.0075 * (k - TW.spaceFrom)));
+  const twPeriod = (k) => (k === 0 ? 3000 : k === 1 ? 2400 : k === 2 ? 2100 : k < TW.spaceFrom ? Math.max(1250, 2000 - 90 * (k - 3)) : Math.max(1050, 1400 - 35 * (k - TW.spaceFrom)));
+  const twTol = (k) => TW_EASY ? 3 : (k === 0 ? 0.3 : k === 1 ? 0.2 : k === 2 ? 0.15 : k < TW.spaceFrom ? Math.max(0.07, 0.13 - 0.01 * (k - 3)) : Math.max(0.04, 0.065 - 0.003 * (k - TW.spaceFrom)));
   const twX = (t, start, k) => TW.amp * Math.sin((2 * Math.PI * (t - start)) / twPeriod(k));
-  const twMult = (n) => (n === 0 ? 1 : n <= TW.spaceFrom ? floor2((1 - EDGE) * Math.pow(1 / TW.ladderP, n)) : floor2((1 - EDGE) * Math.pow(1 / TW.ladderP, TW.spaceFrom) * Math.pow(TW.spaceGrowth, n - TW.spaceFrom)));
+  const twMult = (n) => (n === 0 ? 1 : n <= TW.easyFloors ? floor2(Math.pow(TW.easyMult, n / TW.easyFloors)) : n <= TW.spaceFrom ? floor2(TW.easyMult * Math.pow(TW.ladderGrowth, n - TW.easyFloors)) : floor2(TW.easyMult * Math.pow(TW.ladderGrowth, TW.spaceFrom - TW.easyFloors) * Math.pow(TW.spaceGrowth, n - TW.spaceFrom)));
   const stepsCfg = {
     seagull: { variants: { classic: [3, 1] }, def: 'classic', max: 12 },
   };

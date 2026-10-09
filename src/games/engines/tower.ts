@@ -1,4 +1,4 @@
-import { Engine, GameError, HOUSE_EDGE, floor2 } from './types';
+import { Engine, GameError, floor2 } from './types';
 
 /**
  * Tower (skill): the hook swings on a rope, the player taps to release the house.
@@ -9,23 +9,26 @@ import { Engine, GameError, HOUSE_EDGE, floor2 } from './types';
  */
 export const TOWER = {
   maxSteps: 20,             // floors 1-10 are the sky ladder; 11-20 climb into space: tiny windows, slowly growing payouts
+  easyFloors: 5,            // the pink-and-white house (floor 5) pays exactly x2
+  easyMult: 2,
   amp: 1.6,                 // swing amplitude, world units (a house is 2 wide)
   spaceFrom: 10,            // floors from this index on are 'space'
-  spaceGrowth: 1.15,        // payout multiplies by this per floor in space (the skyward ladder is x1.25 per floor)
-  firstDelay: 3400,         // ms from round start until the first swing is live (intro + crane arrival)
+  spaceGrowth: 1.1,         // payout multiplies by this per floor in space
+  ladderGrowth: 1.2,        // per floor between the pink house (x2) and floor 10
+  firstDelay: 2700,         // ms from round start until the first swing is live (intro + crane arrival)
   nextDelay: 2500,          // ms from a landing until the next swing is live
   maxLat: 250,              // ms of network latency the server compensates for
-  ladderP: 0.8,             // success rate the payout ladder is priced for (see scripts/tower-rtp.mjs)
 };
 
-// swing period (ms) and accepted release distance from the axis (world units). Easy for floors 1-3, clearly harder from floor 4, tiny in space.
-export const periodAt = (step: number) => (step < 3 ? 3000 - 150 * step : step < TOWER.spaceFrom ? 2550 - 130 * (step - 3) : Math.max(1050, 1700 - 70 * (step - TOWER.spaceFrom)));
-export const tolAt = (step: number) => (step < 3 ? 0.3 - 0.016 * step : step < TOWER.spaceFrom ? 0.252 - 0.02 * (step - 3) : Math.max(0.05, 0.12 - 0.0075 * (step - TOWER.spaceFrom)));
+// swing period (ms) and accepted release distance from the axis (world units). Floor 1 is easy, floors 2-3 already need care, tiny windows in space.
+export const periodAt = (step: number) => step === 0 ? 3000 : step === 1 ? 2400 : step === 2 ? 2100 : step < TOWER.spaceFrom ? Math.max(1250, 2000 - 90 * (step - 3)) : Math.max(1050, 1400 - 35 * (step - TOWER.spaceFrom));
+export const tolAt = (step: number) => step === 0 ? 0.3 : step === 1 ? 0.2 : step === 2 ? 0.15 : step < TOWER.spaceFrom ? Math.max(0.07, 0.13 - 0.01 * (step - 3)) : Math.max(0.04, 0.065 - 0.003 * (step - TOWER.spaceFrom));
 export const swingX = (t: number, swingStart: number, step: number) => TOWER.amp * Math.sin((2 * Math.PI * (t - swingStart)) / periodAt(step));
 export const towerMultiplier = (picks: number) =>
   picks === 0 ? 1
-  : picks <= TOWER.spaceFrom ? floor2((1 - HOUSE_EDGE) * Math.pow(1 / TOWER.ladderP, picks))
-  : floor2((1 - HOUSE_EDGE) * Math.pow(1 / TOWER.ladderP, TOWER.spaceFrom) * Math.pow(TOWER.spaceGrowth, picks - TOWER.spaceFrom));
+  : picks <= TOWER.easyFloors ? floor2(Math.pow(TOWER.easyMult, picks / TOWER.easyFloors))
+  : picks <= TOWER.spaceFrom ? floor2(TOWER.easyMult * Math.pow(TOWER.ladderGrowth, picks - TOWER.easyFloors))
+  : floor2(TOWER.easyMult * Math.pow(TOWER.ladderGrowth, TOWER.spaceFrom - TOWER.easyFloors) * Math.pow(TOWER.spaceGrowth, picks - TOWER.spaceFrom));
 
 interface State {
   picks: number;
