@@ -298,3 +298,24 @@ button.cash.dim{background:#3a3d46;color:rgba(255,255,255,.45)}
 .fieldhint{position:absolute;left:50%;top:50%;z-index:25;transform:translate(-50%,-50%);max-width:86%;text-align:center;padding:12px 20px;border-radius:16px;font:700 16px/1.25 system-ui,sans-serif;color:#fff;background:rgba(20,22,30,.82);border:1px solid rgba(255,255,255,.2);box-shadow:0 8px 28px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);pointer-events:none;animation:hintin .2s ease-out,hintout .35s ease-in 1.6s forwards}
 @keyframes hintin{from{opacity:0;transform:translate(-50%,-44%) scale(.94)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @keyframes hintout{to{opacity:0}}
+
+/* bet picker */
+.betbox{display:flex;gap:8px;align-items:stretch;margin:0 0 8px}
+.bstep{flex:0 0 52px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.03));color:#fff;font:700 24px/1 system-ui,sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.bstep:active{transform:scale(.94)}
+.bval{flex:1;position:relative;display:block}
+.bval input{width:100%;height:100%;padding:12px 40px 12px 40px;border-radius:14px;font:800 22px/1 'Unbounded',system-ui,sans-serif;font-variant-numeric:tabular-nums;color:#fff;background:rgba(8,10,24,.7);border:1px solid rgba(120,170,255,.35);box-shadow:inset 0 0 14px rgba(70,120,255,.18);-moz-appearance:textfield}
+.bval input::-webkit-outer-spin-button,.bval input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.bval input:focus{outline:none;border-color:rgba(120,200,255,.8);box-shadow:inset 0 0 14px rgba(70,120,255,.25),0 0 14px rgba(70,160,255,.35)}
+.bval .bstar{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px;pointer-events:none;filter:drop-shadow(0 0 6px rgba(255,210,60,.7))}
+.chips{display:flex;gap:6px;margin:0 0 8px}
+.chip{flex:1;padding:8px 0;border-radius:11px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:rgba(255,255,255,.85);font:700 13px/1 system-ui,sans-serif}
+.chip.on{background:rgba(70,150,255,.25);border-color:rgba(110,190,255,.7);color:#fff;box-shadow:0 0 10px rgba(70,150,255,.4)}
+.chip.alt{background:rgba(255,255,255,.1);color:#fff}
+.chip:active{transform:scale(.94)}
+/* mines: neon play / cash-out buttons */
+.ctrl[data-game="mines"] #go{background:linear-gradient(180deg,#4aa3ff,#1666ff);color:#fff;border:1px solid rgba(160,215,255,.7);text-shadow:0 0 10px rgba(180,225,255,.8);box-shadow:0 0 18px rgba(40,140,255,.75),0 0 40px rgba(40,120,255,.4),inset 0 1px 0 rgba(255,255,255,.45);animation:neonblue 2.2s ease-in-out infinite}
+@keyframes neonblue{50%{box-shadow:0 0 24px rgba(60,170,255,.95),0 0 52px rgba(40,120,255,.55),inset 0 1px 0 rgba(255,255,255,.45)}}
+.ctrl[data-game="mines"] button.cash:not(.dim){background:linear-gradient(180deg,#43ffa6,#00c978);color:#032314;border:1px solid rgba(190,255,225,.75);text-shadow:0 1px 0 rgba(255,255,255,.35);box-shadow:0 0 18px rgba(30,255,150,.75),0 0 40px rgba(20,220,130,.4),inset 0 1px 0 rgba(255,255,255,.6);animation:neongreen 2.2s ease-in-out infinite}
+@keyframes neongreen{50%{box-shadow:0 0 26px rgba(60,255,170,.95),0 0 54px rgba(20,230,140,.55),inset 0 1px 0 rgba(255,255,255,.6)}}
+.ctrl[data-game="mines"] #go:disabled{animation:none;opacity:.55}

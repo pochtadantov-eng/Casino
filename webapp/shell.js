@@ -21,7 +21,7 @@ function show(name) {
 function openGame(g) {
   state.game = g; state.round = null; unlockPlay(); state.tscene = null; state.tpending = false; Music.stop(); $('#stage').className = '';
   { const rp = $('#rfeed-panel'); if (rp) { rp.hidden = g !== 'rocket'; if (g !== 'rocket') $('#rfeed').innerHTML = ''; } state.rfeed = null; }
-  $('#gtitle').textContent = TITLES[g];
+  $('#gtitle').textContent = TITLES[g]; document.querySelector('.ctrl').dataset.game = g;
   show('game');
   document.querySelector('.loadgate')?.remove();
   if (g === 'mines' || g === 'rocket') Music.play(g);

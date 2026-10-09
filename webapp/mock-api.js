@@ -2,7 +2,7 @@
 // Used only for the shareable preview (scripts/build-preview.mjs). Not secure: secrets live on the client.
 (() => {
   const DAILY = 10, EDGE = 0.03, GROWTH = 0.0001, SIZE = 25;
-  const LIMITS = { minBet: 1, maxBet: 1000, maxPayout: 10000, minWithdraw: 100 };
+  const LIMITS = { minBet: 50, maxBet: 100000, maxPayout: 1000000, minWithdraw: 100 };
   const floor2 = (x) => Math.floor(x * 100 + 1e-9) / 100;
   const rnd = () => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
   const int = (n) => Math.floor(rnd() * n);

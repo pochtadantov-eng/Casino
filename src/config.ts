@@ -8,9 +8,9 @@ export const config = {
   botToken: process.env.BOT_TOKEN ?? '',
   webappUrl: process.env.WEBAPP_URL ?? '',
   databaseUrl: process.env.DATABASE_URL ?? 'postgres://casino:casino@localhost:5432/casino',
-  minBet: int('MIN_BET', 1),
-  maxBet: int('MAX_BET', 1000),
-  maxPayout: int('MAX_PAYOUT', 10000),
+  minBet: int('MIN_BET', 50),
+  maxBet: int('MAX_BET', 100000),
+  maxPayout: int('MAX_PAYOUT', 1000000),
   minDeposit: int('MIN_DEPOSIT', 1),
   minWithdraw: int('MIN_WITHDRAW', 100),
   dailyBonus: int('DAILY_BONUS', 10), // 0 disables the daily bonus

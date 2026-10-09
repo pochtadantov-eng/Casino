@@ -78,11 +78,14 @@
   <!-- controls live at the bottom of the screen -->
   <div class="ctrl">
     <section class="bet">
-      <div class="row betrow">
-        <button class="small ghost" id="bet-minus">−</button>
-        <input id="bet" type="number" inputmode="numeric" value="10" min="1" aria-label="Ставка">
-        <button class="small ghost" id="bet-plus">+</button>
-        <button class="small ghost" id="bet-x2">x2</button>
+      <div class="betbox">
+        <button class="bstep" id="bet-minus" aria-label="Меньше">−</button>
+        <label class="bval"><span class="bstar">⭐</span><input id="bet" type="number" inputmode="numeric" value="100" min="50" aria-label="Ставка"></label>
+        <button class="bstep" id="bet-plus" aria-label="Больше">+</button>
+      </div>
+      <div class="chips">
+        <button class="chip" data-bet="100">100</button><button class="chip" data-bet="500">500</button><button class="chip" data-bet="1000">1K</button><button class="chip" data-bet="5000">5K</button>
+        <button class="chip alt" id="bet-half">½</button><button class="chip alt" id="bet-x2">x2</button><button class="chip alt" id="bet-max">MAX</button>
       </div>
       <div id="opts"></div>
     </section>

@@ -2,7 +2,7 @@ const tg = window.Telegram?.WebApp;
 tg?.ready(); tg?.expand();
 
 const $ = (s) => document.querySelector(s);
-const state = { game: 'rocket', round: null, balance: 0, limits: { minBet: 1, maxBet: 1000, minWithdraw: 100 }, busy: false, raf: 0 };
+const state = { game: 'rocket', round: null, balance: 0, limits: { minBet: 50, maxBet: 100000, minWithdraw: 100 }, busy: false, raf: 0 };
 
 const RU_ERR = {
   'No active round': 'Раунд уже завершён', 'Insufficient balance': 'Недостаточно звёзд на балансе', 'Finish your current round first': 'Сначала завершите текущий раунд',
@@ -33,7 +33,10 @@ async function api0(path, body) {
 
 const setBalance = (b) => { state.balance = b; $('#balance').textContent = b; const pb = $('#pbal'); if (pb) pb.textContent = b; };
 const say = (t, cls = '') => { const m = $('#msg'); m.textContent = t; m.className = cls; };
-const betValue = () => Math.max(1, Math.floor(Number($('#bet').value) || 0));
+const betValue = () => clampBet(Math.floor(Number($('#bet').value) || 0));
+const clampBet = (v) => Math.min(state.limits.maxBet, Math.max(state.limits.minBet, v));
+const setBet = (v) => { $('#bet').value = clampBet(Math.floor(v)); document.querySelectorAll('.chip[data-bet]').forEach((c) => c.classList.toggle('on', Number(c.dataset.bet) === Number($('#bet').value))); };
+const betStep = (v) => (v < 500 ? 50 : v < 1000 ? 100 : v < 5000 ? 500 : v < 20000 ? 1000 : 5000);
 
 
 // prompt() is unavailable in some webviews, so ask for amounts in the page itself
@@ -239,9 +242,14 @@ $('#go').onclick = () => { if (Date.now() < (state.lockUntil || 0)) return; guar
 function fieldHint(txt) { document.querySelector('.fieldhint')?.remove(); const el = document.createElement('div'); el.className = 'fieldhint'; el.textContent = txt; $('#stage').append(el); setTimeout(() => el.remove(), 2000); }
 $('#cash').onclick = () => { if ($('#cash').classList.contains('dim')) { fieldHint('Открой хотя бы одну плитку, чтобы забрать'); return; } cashOut(); };
 const cashOut = () => guard(async () => apply(await api(`games/${state.game}/cashout`, {})));
-$('#bet-minus').onclick = () => $('#bet').value = Math.max(1, betValue() - 10);
-$('#bet-plus').onclick = () => $('#bet').value = Math.min(state.limits.maxBet, betValue() + 10);
-$('#bet-x2').onclick = () => $('#bet').value = Math.min(state.limits.maxBet, betValue() * 2);
+$('#bet-minus').onclick = () => setBet(betValue() - betStep(betValue() - 1));
+$('#bet-plus').onclick = () => setBet(betValue() + betStep(betValue()));
+$('#bet-x2').onclick = () => setBet(betValue() * 2);
+$('#bet-half').onclick = () => setBet(betValue() / 2);
+$('#bet-max').onclick = () => setBet(Math.min(state.limits.maxBet, state.balance || state.limits.maxBet));
+document.querySelectorAll('.chip[data-bet]').forEach((c) => c.onclick = () => setBet(Number(c.dataset.bet)));
+$('#bet').onchange = () => setBet(betValue());
+setBet(100);
 
 $('#btn-deposit').onclick = async () => {
   const a = await askAmount('Сколько Stars внести?', 50);
