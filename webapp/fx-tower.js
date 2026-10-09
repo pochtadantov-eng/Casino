@@ -100,11 +100,12 @@
     now() { return Date.now() + this.clockOffset; }
     swingAt(t) { const w = this.swing; if (!w || t < w.start) return { x: 0, v: 0 }; const k = (2 * Math.PI) / w.period, ph = k * (t - w.start); return { x: w.amp * Math.sin(ph), v: w.amp * k * 1000 * Math.cos(ph) }; }
     sync(round) {
+      const first = (this.syncs = (this.syncs || 0) + 1) === 1;      // very first look at the scene: an already-running round is only resumed, the first house does not drop again
       if (!round) { if (this.roundId !== null) { this.reset(); this.roundId = null; } this._setReady(false); return; }
       const v = round.view, succ = v.picks; this.swing = v.swing; this.clockOffset = v.serverNow - Date.now();
       if (round.id !== this.roundId) {
         this.reset(); this.roundId = round.id;
-        const fresh = round.status === 'active' && succ === 0, total = succ + (fresh ? 0 : 1);
+        const fresh = round.status === 'active' && succ === 0 && !first, total = succ + (fresh ? 0 : 1);
         for (let i = 0; i < total; i++) this.floors.push({ v: this.ci++, ox: 0, tilt: 0, sq: 0, dmg: [] });
         this.base = fresh ? 0 : 1; this.landed = this.targetSucc = succ;
         if (fresh) this.startIntro();
