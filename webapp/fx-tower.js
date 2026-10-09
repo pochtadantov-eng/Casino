@@ -407,10 +407,10 @@
       if (this.t0 == null) this.t0 = t;
       const mt = typeof Music !== 'undefined' && Music.time ? Music.time() : null, since = mt != null ? mt : t - this.t0, base = clamp(Math.max(since, t - this.t0) / 3.8), ta = this.titleA * base;   // starts invisible and fades in over the ~4 s song intro; then stays until Play is pressed
       if (ta > 0.01) {
-        const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.3, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
+        const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.4, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
         // the helicopter flies in from the left, hovers and holds the title on two ropes; when the round starts it flies away to the right with it
-        const hk = sm(clamp(base)), away = 1 - this.titleA, hs = Math.min(w * 0.034, 17), bob = Math.sin(t * 1.4) * 3 + Math.sin(t * 2.3) * 1.2;
-        const hx = cx - 1.2 * hs - (1 - hk) * w * 0.9 + away * away * w * 1.1, hy = h * 0.115 + bob - away * h * 0.06, dx = hx - (cx - 1.2 * hs), dy = bob - away * h * 0.06;
+        const hk = sm(clamp(base)), away = 1 - this.titleA, hs = Math.min(w * 0.044, 23), bob = Math.sin(t * 1.4) * 3 + Math.sin(t * 2.3) * 1.2;
+        const hx = cx - 1.2 * hs - (1 - hk) * w * 0.9 + away * away * w * 1.1, hy = h * 0.155 + bob - away * h * 0.06, dx = hx - (cx - 1.2 * hs), dy = bob - away * h * 0.06;
         const swing = Math.sin(t * 1.3) * 0.022 - ((1 - hk) + away) * 0.07, topY = y1 - fs1 * 0.58, halfW = fs1 * 1.55, ropeY = hy + 2.15 * hs;
         const xf = (px, py) => { const c = Math.cos(swing), sn = Math.sin(swing), ax = px - cx, ay = py - topY; return [cx + dx + ax * c - ay * sn, topY + dy + ax * sn + ay * c]; };
         g.save(); g.globalAlpha = ta; this.drawHeli(g, hx, hy, hs, t); g.strokeStyle = 'rgba(40,36,34,.9)'; g.lineWidth = 1.6;
@@ -602,19 +602,16 @@
       g.fillStyle = '#1d1d22'; g.beginPath(); g.ellipse(-2.1, -1.55, 0.55, 0.38, 0, 0, 6.283); g.fill();                                                               // exhaust
       // cabin windows
       for (const [wx0, ww] of [[-1.7, 1.3], [-0.1, 1.3]]) { g.fillStyle = '#2d4a58'; g.fillRect(wx0, -1.2, ww, 1.1); g.fillStyle = 'rgba(190,230,245,.35)'; g.fillRect(wx0 + 0.1, -1.15, ww * 0.35, 0.5); }
-      // open door: cream interior with the guy standing in it
-      g.fillStyle = '#d9ccb0'; g.fillRect(1.55, -1.75, 1.75, 2.55); g.fillStyle = 'rgba(70,50,30,.35)'; g.fillRect(1.55, -1.75, 0.22, 2.55); g.fillRect(1.55, -1.75, 1.75, 0.18);
-      g.fillStyle = '#7a5a3a'; g.fillRect(1.75, 0.15, 1.4, 0.55);                                                                                                           // seat
-      const wave = Math.sin(t * 7);
-      g.fillStyle = '#ff8a1a'; g.beginPath(); g.roundRect ? g.roundRect(2.05, -0.75, 0.95, 1.35, 0.25) : g.rect(2.05, -0.75, 0.95, 1.35); g.fill();                         // hi-vis jacket
-      g.fillStyle = '#2a2f3a'; g.fillRect(2.15, 0.5, 0.35, 0.45); g.fillRect(2.55, 0.5, 0.35, 0.45);                                                                       // legs
-      g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(2.05, -0.2, 0.95, 0.1);
-      g.fillStyle = '#f0c49a'; g.beginPath(); g.arc(2.55, -1.1, 0.36, 0, 6.283); g.fill();                                                                                 // head
-      g.fillStyle = '#2b1d14'; g.beginPath(); g.arc(2.55, -1.18, 0.37, Math.PI, 0); g.fill(); g.fillStyle = '#1f2f4a'; g.fillRect(2.18, -1.2, 0.75, 0.12);                  // hair + cap brim
-      g.fillStyle = '#111'; g.beginPath(); g.arc(2.67, -1.05, 0.04, 0, 6.283); g.fill();
-      g.save(); g.translate(2.98, -0.55); g.rotate(-1.15 + wave * 0.5);                                                                                                       // waving arm
-      g.strokeStyle = '#ff8a1a'; g.lineWidth = 0.3; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -0.95); g.stroke(); g.fillStyle = '#f0c49a'; g.beginPath(); g.arc(0, -1.1, 0.19, 0, 6.283); g.fill(); g.restore();
-      g.strokeStyle = '#ff8a1a'; g.lineWidth = 0.28; g.beginPath(); g.moveTo(2.12, -0.5); g.lineTo(2.0, 0.3); g.stroke();                                                   // other arm
+      // open door: cream interior with the cartoon builder standing in it, waving
+      g.fillStyle = '#d9ccb0'; g.fillRect(1.35, -1.95, 2.05, 2.75); g.fillStyle = 'rgba(70,50,30,.35)'; g.fillRect(1.35, -1.95, 0.22, 2.75); g.fillRect(1.35, -1.95, 2.05, 0.18);
+      g.fillStyle = '#7a5a3a'; g.fillRect(1.6, 0.15, 1.6, 0.55);                                                                                                            // seat
+      if (!TowerFx.bld) { TowerFx.bld = {}; for (const n of ['body', 'arm']) { const im = new Image(); im.onload = () => { TowerFx.bld[n] = im; }; im.src = (window.BUILDER_SRC && window.BUILDER_SRC[n]) || `img/builder_${n}.webp` + (window.BUILD ? '?v=' + window.BUILD : ''); } }
+      if (TowerFx.bld.body && TowerFx.bld.arm) {
+        const k = 2.75 / 505, bob = Math.sin(t * 3.4) * 0.02;
+        g.save(); g.beginPath(); g.rect(1.35, -1.95, 2.05, 2.75); g.clip(); g.translate(1.2, -1.95 + bob); g.scale(k, k); g.drawImage(TowerFx.bld.body, 0, 0);
+        g.restore();
+        g.save(); g.translate(1.2, -1.95 + bob); g.scale(k, k); g.translate(492 - 180, 540 - 310); g.rotate(Math.sin(t * 7) * 0.3 - 0.05); g.translate(-(492 - 180), -(540 - 310)); g.drawImage(TowerFx.bld.arm, 0, 0); g.restore();   // the raised arm swings about the shoulder
+      }
       // windshield and nose
       g.fillStyle = '#8fc4dc'; g.beginPath(); g.moveTo(3.45, -1.6); g.quadraticCurveTo(4.5, -1.1, 5.1, 0.0); g.lineTo(3.55, 0.05); g.closePath(); g.fill();
       g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.moveTo(3.7, -1.3); g.lineTo(4.3, -0.9); g.lineTo(3.8, -0.1); g.closePath(); g.fill();
