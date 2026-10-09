@@ -13,10 +13,10 @@
       const THREE = (this.T = window.THREE); this.c = canvas;
       this.r = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
       this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); this.r.shadowMap.enabled = true; this.r.shadowMap.type = THREE.PCFSoftShadowMap;
-      this.scene = new THREE.Scene(); this.scene.fog = new THREE.Fog(0xdce9f4, 42, 95);
+      this.scene = new THREE.Scene(); this.scene.fog = new THREE.Fog(0x9ad3f4, 70, 150);
       this.camera = new THREE.PerspectiveCamera(30, 1, 0.5, 200);
-      this.az = 0.52; this.el = 0.43; this.camTy = 3.5; this.camH = 11; this.jibY = 13.8;
-      this.buildMaterials(); this.buildSky(); this.buildLights(); this.buildGround(); this.buildPlatform(); this.buildProps(); this.buildCrane(); this.buildExtras();
+      this.az = 0.17; this.el = 0.1; this.camTy = 6; this.camH = 14; this.jibY = 13.8;
+      this.buildMaterials(); this.buildSky(); this.buildLights(); this.buildGround(); this.buildPlatform(); this.buildProps(); this.buildCrane(); this.craneRoot.visible = false; this.buildExtras();   // the video shows only the rope coming from above
       this.ci = 0; this.roundId = null; this.onReady = null; this._ready = null; this.houseGroup = new THREE.Group(); this.scene.add(this.houseGroup);
       this.reset(); this.resize(); this.update(0, 0);                // place the camera before the first paint
       this._ro = new ResizeObserver(() => this.resize()); this._ro.observe(canvas);
@@ -38,11 +38,16 @@
     mesh(geo, mat, sx = 1, sy = 1, sz = 1, x = 0, y = 0, z = 0, cast = true) { const m = new this.T.Mesh(geo, mat); m.scale.set(sx, sy, sz); m.position.set(x, y, z); m.castShadow = cast; m.receiveShadow = true; return m; }
     buildSky() {
       const T = this.T, cv = document.createElement('canvas'); cv.width = 2; cv.height = 256; const x = cv.getContext('2d'), gr = x.createLinearGradient(0, 0, 0, 256);
-      gr.addColorStop(0, '#f4f9fe'); gr.addColorStop(0.55, '#e7f1f9'); gr.addColorStop(1, '#d3e4f2'); x.fillStyle = gr; x.fillRect(0, 0, 2, 256); this.scene.background = new T.CanvasTexture(cv);
+      gr.addColorStop(0, '#2f94e0'); gr.addColorStop(0.5, '#55b0ee'); gr.addColorStop(1, '#a6dcf6'); x.fillStyle = gr; x.fillRect(0, 0, 2, 256); this.scene.background = new T.CanvasTexture(cv);
       // far city silhouettes (flat colour so fog melts them into the sky)
-      const mat = [new T.MeshBasicMaterial({ color: 0xd3e3f1 }), new T.MeshBasicMaterial({ color: 0xc6dbed })];
-      for (let i = 0; i < 26; i++) { const w = rand(3, 6.5), h = rand(6, 22), m = new T.Mesh(this.g.box, mat[i % 2]); m.scale.set(w, h, rand(3, 6)); m.position.set(-60 + i * 4.8 + rand(-1, 1), h / 2 - 0.2, -34 - (i % 2) * 8 - rand(0, 4)); this.scene.add(m); }
-      const sp = new T.Mesh(new T.ConeGeometry(1.2, 14, 4), mat[1]); sp.position.set(14, 18, -40); this.scene.add(sp);
+      const mat = [new T.MeshBasicMaterial({ color: 0xa4d4f0 }), new T.MeshBasicMaterial({ color: 0x95cbee })];
+      for (let i = 0; i < 30; i++) { const w = rand(3, 6), h = rand(3, 11), m = new T.Mesh(this.g.box, mat[i % 2]); m.scale.set(w, h, rand(3, 6)); m.position.set(-70 + i * 4.8 + rand(-1, 1), h / 2 - 0.2, -52 - (i % 2) * 9 - rand(0, 4)); this.scene.add(m); }
+      const sp = new T.Mesh(new T.ConeGeometry(1.2, 14, 4), mat[1]); sp.position.set(16, 12, -62); this.scene.add(sp);
+      // clouds: soft sprites drifting slowly behind the tower
+      const cc = document.createElement('canvas'); cc.width = 256; cc.height = 128; const cx2 = cc.getContext('2d'); cx2.fillStyle = '#fff';
+      for (const [x, y, r] of [[70, 80, 40], [112, 60, 48], [156, 78, 42], [190, 86, 30], [40, 90, 26]]) { cx2.beginPath(); cx2.arc(x, y, r, 0, 6.283); cx2.fill(); }
+      const ct = new T.CanvasTexture(cc); this.clouds = [];
+      for (let i = 0; i < 5; i++) { const c = new T.Sprite(new T.SpriteMaterial({ map: ct, transparent: true, opacity: 0.92, depthWrite: false, fog: false })); const sc = rand(7, 12); c.scale.set(sc, sc / 2, 1); c.position.set(rand(-22, 22), rand(2, 40), -26 - i * 2); c.userData.v = rand(0.12, 0.3); this.scene.add(c); this.clouds.push(c); }
     }
     buildLights() {
       const T = this.T; this.scene.add(new T.HemisphereLight(0xffffff, 0xb4b0a8, 0.72));
@@ -148,7 +153,7 @@
       for (const f of this.floors || []) this.houseGroup.remove(f); for (const o of [this.fall?.obj, this.hang, this.tumble?.obj, this.restObj]) if (o?.parent) o.parent.remove(o);
       this.state = 'idle'; this.u = 0; this.floors = []; this.base = 0; this.intro = null; this.landed = 0; this.targetSucc = 0; this.queue = []; this.failQueued = false; this.wob = 0; this.wv = 0; this.th = 0; this.thv = 0; this.sw = 0;
       this.trolleyX = 0; this.L = 0.25; this.hookStart = 0.25; this.fall = null; this.hang = null; this.tumble = null; this.restObj = null; this.roundStatus = 'idle'; this.maxSteps = 10; this.mults = []; this.badgeT = 0; this.badgeText = '';
-      this.badge.visible = false;
+      this.badge.visible = false; this.popFor = 0; this.pendingTap = false; this.tapWait = 0; for (const q of this.pops || []) { q.life = 0; q.sp.visible = false; }
     }
     resize() {
       const w = this.c.clientWidth || 360, h = this.c.clientHeight || 440; this.r.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.aspect = w / h;
@@ -165,7 +170,7 @@
         if (fresh) { this.startIntro(); }
         else if (round.status === 'active') { this.state = 'arrive'; this.newHang(); }
         else { this.state = 'done'; if (round.status === 'lost') { this.failQueued = true; const h = this.makeHouse(this.ci++); h.position.set(3.6, 1.0, 0.6); h.rotation.z = -Math.PI / 2; this.scene.add(h); this.restObj = h; } }
-        this.jibY = this.jibTarget(); this.camTy = 3.5;
+        this.jibY = this.jibTarget(); this.camTy = 6;
       }
       this.maxSteps = v.maxSteps; this.mults = v.multipliers; this.roundStatus = round.status;
       while (this.targetSucc < succ) { this.queue.push({ ok: true }); this.targetSucc++; }
@@ -177,7 +182,7 @@
       const h = this.makeHouse(this.ci++); h.position.set(0.15, PLAT_TOP + 17, 0); h.rotation.set(0.05, 0.5, 0.12); this.scene.add(h);
       this.intro = { obj: h, vy: -2, vr: 0.9 }; this.state = 'intro'; this.u = 0;
     }
-    newHang() { if (this.hang?.parent) this.hang.parent.remove(this.hang); this.hang = this.makeHouse(this.ci++); this.asm.add(this.hang); this.hang.scale.setScalar(0.01); }
+    newHang() { if (this.hang?.parent) this.hang.parent.remove(this.hang); this.hang = this.makeHouse(this.ci++); this.asm.add(this.hang); }
     // The house leaves the hook at the moment of the tap and flies on with the crane's and the pendulum's momentum.
     release(item) {
       const obj = this.hang; if (!obj) return; this.scene.attach(obj); this.hang = null;
@@ -187,17 +192,22 @@
       this.fall = { obj, vy: 0, vx, ok: item ? item.ok : null, side, ox, tilt, wait: 0 };
       this.hookStart = this.L; this.state = 'drop'; this.u = 0; this.thv *= 0.35;
     }
-    tap() { if (this.state === 'sway' && this.roundStatus === 'active' && this.hang && !this.fall) this.release(null); }
+    tap() { if (this.state === 'sway' && this.roundStatus === 'active' && this.hang && !this.fall) this.pendingTap = true; }
     _setReady(v) { if (v !== this._ready) { this._ready = v; this.onReady?.(v); } }
     jibTarget() { return Math.max(13.8, PLAT_TOP + (this.landed + this.base) * INC + 6.4); }
     updateBadge() {
       const n = this.landed, txt = n && this.mults[n - 1] != null ? 'x' + this.mults[n - 1].toFixed(2) : '';
-      if (txt === this.badgeText) return; this.badgeText = txt; this.badgeT = 1;
-      if (!txt) { this.badge.visible = false; return; }
-      const x = this.badgeCv.getContext('2d'); x.clearRect(0, 0, 256, 96); x.fillStyle = '#22c55e'; x.beginPath(); x.roundRect ? x.roundRect(8, 8, 240, 80, 40) : x.rect(8, 8, 240, 80); x.fill();
-      x.fillStyle = '#fff'; x.font = "800 46px 'Unbounded',system-ui,sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, 128, 50); this.badgeTex.needsUpdate = true; this.badge.visible = true;
+      if (!txt || this.popFor === n) return; this.popFor = n; this.popText(txt);          // the multiplier flies up from the tower after each landing
     }
-    puff(x, y, z, n = 8) { let k = 0; for (const p of this.puffs) { if (p.life > 0 || k >= n) continue; p.life = p.max = rand(0.45, 0.9); p.vx = rand(-1.6, 1.6); p.vy = rand(0.2, 1.1); p.vz = rand(-1.2, 1.2); p.size = rand(0.5, 0.95); p.s.position.set(x + rand(-0.6, 0.6), y, z + rand(-0.6, 0.6)); p.s.visible = true; k++; } }
+    puff(x, y, z, n = 8, spread = 0) { let k = 0; for (const p of this.puffs) { if (p.life > 0 || k >= n) continue; const side = spread ? (k % 2 ? 1 : -1) : 0; p.life = p.max = rand(0.55, 1.0); p.vx = side ? side * rand(0.8, 2.4) : rand(-1.6, 1.6); p.vy = rand(0.1, 0.8); p.vz = rand(-0.6, 0.6); p.size = spread ? rand(0.8, 1.35) : rand(0.5, 0.95); p.s.position.set(x + side * spread + rand(-0.3, 0.3), y + rand(0, 0.25), z + rand(-0.3, 0.3)); p.s.visible = true; k++; } }
+    popText(txt) {
+      const T = this.T; this.pops = this.pops || [];
+      let q = this.pops.find((o) => o.life <= 0);
+      if (!q) { const cv = document.createElement('canvas'); cv.width = 300; cv.height = 110; const tex = new T.CanvasTexture(cv), sp = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, depthTest: false })); sp.renderOrder = 12; this.scene.add(sp); q = { sp, cv, tex, life: 0, max: 1.4 }; this.pops.push(q); }
+      const x = q.cv.getContext('2d'); x.clearRect(0, 0, 300, 110); x.font = "800 74px 'Unbounded',system-ui,sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+      x.lineWidth = 14; x.strokeStyle = 'rgba(120,60,0,.95)'; x.strokeText(txt, 150, 58); x.fillStyle = '#ffc533'; x.fillText(txt, 150, 58); x.save(); x.beginPath(); x.rect(0, 0, 300, 52); x.clip(); x.fillStyle = '#ffe58a'; x.fillText(txt, 150, 58); x.restore(); q.tex.needsUpdate = true;
+      const top = PLAT_TOP + (this.landed + this.base) * INC; q.sp.position.set(-1.0, top + 0.6, 1.2); q.life = q.max = 1.5; q.sp.visible = true; q.y0 = top + 0.6;
+    }
 
     // ---------------------------------------------------------------- loop
     _loop(now) {
@@ -207,18 +217,24 @@
       this.update(dt, now / 1000); this.r.render(this.scene, this.camera);
     }
     update(dt, t) {
-      const A = 1.5, OM = (Math.PI * 2) / 3.4, om2 = 24, damp = 1.9, ropeLen = 66 / 22;
+      const A = 0, TH0 = 0.33, OM = (Math.PI * 2) / 3.3, om2 = 24, damp = 1.9, ropeLen = 66 / 22;
       this.jibY += (this.jibTarget() - this.jibY) * (dt === 0 ? 1 : Math.min(1, dt * 2.2));
-      const trolleyY = this.jibY - 0.4, landBottom = PLAT_TOP + (this.landed + this.base) * INC, hoverCenter = landBottom + HALF + 2.2;
-      const Lhover = trolleyY - (hoverCenter + HALF + ROPE) - HOOKH, Lhide = 0.3;
+      const landBottom = PLAT_TOP + (this.landed + this.base) * INC, hoverCenter = landBottom + HALF + 5.6, pivot = landBottom + 11.8;
+      const Lhover = pivot - (hoverCenter + HALF + ROPE) - HOOKH, Lhide = 0.3;
+      const lift = 4.4 * (1 - clamp((this.L - Lhide) / Math.max(0.01, Lhover - Lhide))), trolleyY = pivot + lift;       // the hook rises out of the frame between houses
       this.u += dt; this.sw += dt;
       let L = this.L, ax = 0, hasHouse = !!this.hang && ['arrive', 'sway', 'leave'].includes(this.state);
       const swayPos = (time, amp) => A * amp * Math.sin(OM * time);
       this.trolleyVx = this.prevTx === undefined ? 0 : (this.trolleyX - this.prevTx) / Math.max(dt, 1e-3); 
       switch (this.state) {
-        case 'arrive': { const k = sm(clamp(this.u / 1.1)); L = lerp(Lhide, Lhover, k); this.trolleyX = swayPos(this.sw, k); ax = -A * k * OM * OM * Math.sin(OM * this.sw); if (this.hang) this.hang.scale.setScalar(clamp(this.u / 0.35, 0.01, 1)); if (this.u >= 1.1) { this.state = 'sway'; this.u = 0; } break; }
-        case 'sway': { L = Lhover; this.trolleyX = swayPos(this.sw, 1); ax = -A * OM * OM * Math.sin(OM * this.sw);
-          if (this.queue.length && this.hang) this.release(this.queue.shift()); break; }      // result arrived without a tap (e.g. resumed round): release now
+        case 'arrive': { const k = sm(clamp(this.u / 1.1)); L = lerp(Lhide, Lhover, k); this.trolleyX = swayPos(this.sw, k); ax = -A * k * OM * OM * Math.sin(OM * this.sw);  if (this.u >= 1.1) { this.state = 'sway'; this.u = 0; } break; }
+        case 'sway': { L = Lhover;
+          if (this.hang && (this.queue.length || this.pendingTap)) {
+            this.tapWait = (this.tapWait || 0) + dt; const hx = (L + HOOKH + ROPE + HALF) * Math.sin(this.th);
+            if (this.queue.length) { const it = this.queue[0]; if (it.ok ? Math.abs(hx) < 0.85 : Math.abs(hx) > 1.3) { this.release(this.queue.shift()); this.pendingTap = false; this.tapWait = 0; } }   // a miss is released over the edge, a hit over the tower
+            else if (this.tapWait > 3) { this.pendingTap = false; this.tapWait = 0; }
+          } else this.tapWait = 0;
+          break; }
         case 'drop': case 'land': case 'tumble': {
           this.trolleyX = swayPos(this.sw, 1); ax = -A * OM * OM * Math.sin(OM * this.sw);
           L = lerp(this.hookStart, Lhide, sm(clamp((this.u - 0.05) / 0.85)));
@@ -227,14 +243,14 @@
             if (f.ok === null && this.queue.length) f.ok = this.queue.shift().ok;                // the server's verdict
             const o = f.obj; f.vy -= 28 * dt; o.position.y += f.vy * dt;
             f.vx *= Math.exp(-5 * dt); o.position.x += f.vx * dt;
-            const tx = f.ok === false ? f.side * 1.0 : f.ox;                                       // a failing house comes down on the platform's edge
+            const tx = f.ok === false ? o.position.x : f.ox;                                       // a missed house keeps falling straight down
             o.position.x = lerp(o.position.x, tx, clamp(dt * 4.5)); o.position.z = lerp(o.position.z, 0, clamp(dt * 6));
-            o.rotation.z = lerp(o.rotation.z, f.ok === false ? -f.side * 0.22 : f.tilt, clamp(dt * 7)); o.rotation.y *= 0.92;
+            o.rotation.z = lerp(o.rotation.z, f.ok === false ? o.rotation.z : f.tilt, clamp(dt * 7)); o.rotation.y *= 0.92;
             if (o.position.y - HALF <= landBottom) {
               if (f.ok === null) { o.position.y = landBottom + HALF; f.vy = 0; f.wait += dt; if (f.wait > 2.5) { this.scene.remove(o); this.fall = null; this.state = 'arrive'; this.u = 0; this.newHang(); } }
               else if (f.ok) {
                 const impact = -f.vy; o.position.set(f.ox, landBottom + HALF, 0); o.rotation.set(0, 0, f.tilt - f.side * 0.045); o.userData = { ox: f.ox, tilt: f.tilt, sq: clamp(impact / 120, 0.03, 0.1) };
-                this.floors.push(o); this.houseGroup.add(o); this.landed++; this.fall = null; this.wv += 1.4 + impact * 0.1 + this.landed * 0.1; this.puff(f.ox, landBottom + 0.1, 0, 10); this.thv += 0.3 * f.side; this.state = 'land'; this.updateBadge();
+                this.floors.push(o); this.houseGroup.add(o); this.landed++; this.fall = null; this.wv += 1.4 + impact * 0.1 + this.landed * 0.1; this.puff(f.ox, landBottom + 0.2, 0.8, 12, 1.15); this.thv += 0.3 * f.side; this.state = 'land'; this.updateBadge();
               } else {
                 this.tumble = { obj: o, side: f.side, vx: f.side * 3.0, vy: 3.6, vr: -f.side * 3.0, hit: 0 }; this.fall = null; this.wv += f.side * 3.4; this.puff(o.position.x, landBottom + 0.1, 0, 8); this.state = 'tumble';
               }
@@ -261,7 +277,7 @@
             o.position.x = lerp(o.position.x, 0, clamp(dt * 2));
             if (o.position.y - HALF <= landBottom) {
               const impact = -f.vy; o.position.set(0, landBottom + HALF, 0); o.rotation.set(0, Math.round(o.rotation.y / (Math.PI / 2)) * (Math.PI / 2) * 0, 0); o.userData = { ox: 0, tilt: 0.012, sq: 0.1 };
-              this.floors.push(o); this.houseGroup.add(o); this.base = 1; this.intro = null; this.wv += 3.2 + impact * 0.12; this.puff(0, landBottom + 0.1, 0, 14); this.state = 'land'; this.u = 0; this.shake = 0.6;
+              this.floors.push(o); this.houseGroup.add(o); this.base = 1; this.intro = null; this.wv += 3.2 + impact * 0.12; this.puff(0, landBottom + 0.2, 0.8, 14, 1.2); this.state = 'land'; this.u = 0; this.shake = 0.6;
             }
           }
           break; }
@@ -269,10 +285,11 @@
         default: L = lerp(L, Lhide, clamp(dt * 3));
       }
       this.prevTx = this.trolleyX;
-      this.L = L;
+      this.L = L; this.trolleyX = 0; this.trolleyVx = 0;
 
       // pendulum driven by the trolley, soft spring for the tower
-      if (hasHouse) { const acc = -om2 * Math.sin(this.th) - 0.22 * (ax / ropeLen) * Math.cos(this.th) - damp * this.thv; this.thv += acc * dt; this.th = clamp(this.th + this.thv * dt, -0.25, 0.25); } else { this.thv *= 0.9; this.th *= 0.92; }
+      if (hasHouse) { const amp = this.state === 'arrive' ? sm(clamp(this.u / 1.1)) : 1; this.th = TH0 * amp * Math.sin(OM * this.sw); this.thv = TH0 * amp * OM * Math.cos(OM * this.sw); }
+      else { this.thv *= 0.9; this.th *= 0.92; }
       this.wv += (-60 * this.wob - 5.5 * this.wv) * dt; this.wob += this.wv * dt;
 
       // crane pose
@@ -295,14 +312,14 @@
       const show = ['arrive', 'sway', 'align'].includes(this.state) && this.roundStatus === 'active', pulse = 0.5 + 0.5 * Math.sin(t * 4.2);
       this.targetMat.opacity = lerp(this.targetMat.opacity, show ? 0.65 + 0.35 * pulse : 0, clamp(dt * 8)); this.target.position.set(0, landBottom + 0.03, 0); this.target.rotation.z = 0;
       this.arrow.visible = show; this.arrow.position.set(0, landBottom + 1.15 + pulse * 0.25, 0);
-      if (this.landed && this.badge.visible) { this.badgeT = Math.max(0, this.badgeT - dt * 0.7); const top = PLAT_TOP + (this.landed + this.base) * INC; this.badge.position.set(1.9 + this.wob * 0.9, top - 0.5, 1.4); this.badge.scale.set(2.2 * (1 + this.badgeT * 0.3), 0.82 * (1 + this.badgeT * 0.3), 1); }
+      for (const q of this.pops || []) { if (q.life <= 0) continue; q.life -= dt; if (q.life <= 0) { q.sp.visible = false; continue; } const k = 1 - q.life / q.max; q.sp.position.y = q.y0 + 2.6 * (1 - Math.pow(1 - k, 2)); const sc = 1 + 0.35 * Math.sin(clamp(k * 4) * Math.PI) ; q.sp.scale.set(2.9 * sc, 1.06 * sc, 1); q.sp.material.opacity = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3; }
+      for (const c of this.clouds || []) { c.position.x += c.userData.v * dt; if (c.position.x > 30) c.position.x = -30; }
       for (const q of this.puffs) { if (q.life <= 0) continue; q.life -= dt; if (q.life <= 0) { q.s.visible = false; continue; } const a = q.life / q.max; q.s.position.x += q.vx * dt; q.s.position.y += q.vy * dt; q.s.position.z += q.vz * dt; q.s.scale.setScalar(q.size * (2.2 - a)); q.s.material.opacity = 0.75 * a; }
 
       // camera: follows the tower, dollies out when it gets tall
-      const top = PLAT_TOP + (this.landed + this.base) * INC, yLow = Math.max(-0.9, top - 3.3), yHigh = top + 7.1;
-      const Hv = Math.max(yHigh - yLow, 10.4 / this.aspect), ty = (yLow + yHigh) / 2;
+      const top = PLAT_TOP + (this.landed + this.base) * INC, Hv = Math.max(13.6, 11.5 / this.aspect), ty = Math.max(top - 0.3 * Hv + Hv / 2, -1 + Hv / 2);
       const ke = dt === 0 ? 1 : Math.min(1, dt * 2.4); this.camTy += (ty - this.camTy) * ke; this.camH += (Hv - this.camH) * ke;
-      const dist = this.camH / 2 / Math.tan((this.camera.fov * Math.PI) / 360), cx = 0.9, ce = Math.cos(this.el);
+      const dist = this.camH / 2 / Math.tan((this.camera.fov * Math.PI) / 360), cx = 0, ce = Math.cos(this.el);
       this.camera.position.set(cx + dist * Math.sin(this.az) * ce, this.camTy + dist * Math.sin(this.el), dist * Math.cos(this.az) * ce); if (this.shake > 0) { this.camera.position.y += Math.sin(t * 70) * this.shake * 0.14; this.camera.position.x += Math.cos(t * 55) * this.shake * 0.08; this.shake = Math.max(0, this.shake - dt * 2.2); }
       this.camera.lookAt(cx, this.camTy, 0);
       this.sun.position.set(-9, this.camTy + 12, 10); this.sun.target.position.set(0, this.camTy - 2, 0); this.sun.target.updateMatrixWorld();
