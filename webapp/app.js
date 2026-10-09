@@ -213,7 +213,7 @@ async function load() {
   try { apply(await api('games/' + state.game)); } catch (e) { say(e.message, 'lose'); }
 }
 
-$('#place').onclick = () => { if ($('#place').disabled) return; $('#place').disabled = true; $('#cash').disabled = true; act({ choice: 0 }); };
+$('#place').onclick = () => { if ($('#place').disabled) return; state.tscene?.tap?.(); $('#place').disabled = true; $('#cash').disabled = true; act({ choice: 0 }); };   // the house drops at once; the server's verdict arrives a moment later
 $('#go').onclick = () => { if (Date.now() < (state.lockUntil || 0)) return; guard(async () => apply(await api(`games/${state.game}/start`, { bet: betValue(), ...startParams() }))); };
 $('#cash').onclick = () => guard(async () => apply(await api(`games/${state.game}/cashout`, {})));
 $('#bet-minus').onclick = () => $('#bet').value = Math.max(1, betValue() - 10);

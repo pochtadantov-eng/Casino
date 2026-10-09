@@ -171,6 +171,16 @@
       this.updateBadge();
     }
     newHang() { if (this.hang?.parent) this.hang.parent.remove(this.hang); this.hang = this.makeHouse(this.ci++); this.asm.add(this.hang); this.hang.scale.setScalar(0.01); }
+    // The house leaves the hook at the moment of the tap and flies on with the crane's and the pendulum's momentum.
+    release(item) {
+      const obj = this.hang; if (!obj) return; this.scene.attach(obj); this.hang = null;
+      const rel = obj.position.x, side = Math.abs(rel) < 0.25 ? (Math.random() < 0.5 ? -1 : 1) : Math.sign(rel);
+      const r = this.L + HOOKH + ROPE + HALF, vx = this.trolleyVx + r * Math.cos(this.th) * this.thv;
+      const ox = clamp(rel * 0.24 + vx * 0.03, -0.38, 0.38), tilt = clamp(-rel * 0.03 - vx * 0.004, -0.075, 0.075);
+      this.fall = { obj, vy: 0, vx, ok: item ? item.ok : null, side, ox, tilt, wait: 0 };
+      this.hookStart = this.L; this.state = 'drop'; this.u = 0; this.thv *= 0.35;
+    }
+    tap() { if (this.state === 'sway' && this.roundStatus === 'active' && this.hang && !this.fall) this.release(null); }
     _setReady(v) { if (v !== this._ready) { this._ready = v; this.onReady?.(v); } }
     jibTarget() { return Math.max(13.8, PLAT_TOP + this.landed * INC + 6.4); }
     updateBadge() {
@@ -190,37 +200,48 @@
       this.update(dt, now / 1000); this.r.render(this.scene, this.camera);
     }
     update(dt, t) {
-      const A = 3.2, OM = (Math.PI * 2) / 3.7, om2 = 24, damp = 1.9, ropeLen = 66 / 22;
+      const A = 1.5, OM = (Math.PI * 2) / 3.4, om2 = 24, damp = 1.9, ropeLen = 66 / 22;
       this.jibY += (this.jibTarget() - this.jibY) * (dt === 0 ? 1 : Math.min(1, dt * 2.2));
       const trolleyY = this.jibY - 0.4, landBottom = PLAT_TOP + this.landed * INC, hoverCenter = landBottom + HALF + 2.2;
       const Lhover = trolleyY - (hoverCenter + HALF + ROPE) - HOOKH, Lhide = 0.3;
       this.u += dt; this.sw += dt;
-      let L = this.L, ax = 0, hasHouse = !!this.hang && ['arrive', 'sway', 'align', 'leave'].includes(this.state);
+      let L = this.L, ax = 0, hasHouse = !!this.hang && ['arrive', 'sway', 'leave'].includes(this.state);
       const swayPos = (time, amp) => A * amp * Math.sin(OM * time);
+      this.trolleyVx = this.prevTx === undefined ? 0 : (this.trolleyX - this.prevTx) / Math.max(dt, 1e-3); 
       switch (this.state) {
         case 'arrive': { const k = sm(clamp(this.u / 1.1)); L = lerp(Lhide, Lhover, k); this.trolleyX = swayPos(this.sw, k); ax = -A * k * OM * OM * Math.sin(OM * this.sw); if (this.hang) this.hang.scale.setScalar(clamp(this.u / 0.35, 0.01, 1)); if (this.u >= 1.1) { this.state = 'sway'; this.u = 0; } break; }
         case 'sway': { L = Lhover; this.trolleyX = swayPos(this.sw, 1); ax = -A * OM * OM * Math.sin(OM * this.sw);
-          if (this.queue.length) { this.cur = this.queue.shift(); this.state = 'align'; this.u = 0; this.x0 = this.trolleyX; this.alignTo = this.cur.ok ? 0 : this.cur.side * 1.55; } break; }
-        case 'align': { L = Lhover; const D = 0.42, pos = (uu) => lerp(this.x0, this.alignTo, sm(clamp(uu / D))), h = 0.03; this.trolleyX = pos(this.u); ax = (pos(this.u + h) - 2 * pos(this.u) + pos(this.u - h)) / (h * h);
-          if (this.u >= D + 0.28) { const obj = this.hang; this.scene.attach(obj); this.hang = null; this.fall = { obj, vy: 0, ok: this.cur.ok, side: this.cur.side }; this.hookStart = L; this.state = 'drop'; this.u = 0; } break; }
+          if (this.queue.length && this.hang) this.release(this.queue.shift()); break; }      // result arrived without a tap (e.g. resumed round): release now
         case 'drop': case 'land': case 'tumble': {
+          this.trolleyX = swayPos(this.sw, 1); ax = -A * OM * OM * Math.sin(OM * this.sw);
           L = lerp(this.hookStart, Lhide, sm(clamp((this.u - 0.05) / 0.85)));
           const f = this.fall;
           if (f) {
-            f.vy -= 28 * dt; f.obj.position.y += f.vy * dt; if (f.ok) { f.obj.position.x = lerp(f.obj.position.x, 0, clamp(dt * 12)); f.obj.position.z = lerp(f.obj.position.z, 0, clamp(dt * 12)); f.obj.rotation.z *= 0.9; f.obj.rotation.y *= 0.9; }
-            if (f.obj.position.y - HALF <= landBottom) {
-              if (f.ok) { f.obj.position.set(0, landBottom + HALF, 0); f.obj.rotation.set(0, 0, 0); this.floors.push(f.obj); this.houseGroup.add(f.obj); this.landed++; this.fall = null; this.wv += 2.2 + this.landed * 0.12; this.puff(0, landBottom + 0.1, 0, 10); this.state = 'land'; this.updateBadge(); }
-              else { this.tumble = { obj: f.obj, vx: f.side * 3.4, vy: 2.2, vr: -f.side * 3.2, hit: 0 }; this.fall = null; this.wv += f.side * 3.6; this.puff(f.obj.position.x, landBottom + 0.1, 0, 8); this.state = 'tumble'; }
+            if (f.ok === null && this.queue.length) f.ok = this.queue.shift().ok;                // the server's verdict
+            const o = f.obj; f.vy -= 28 * dt; o.position.y += f.vy * dt;
+            f.vx *= Math.exp(-5 * dt); o.position.x += f.vx * dt;
+            const tx = f.ok === false ? f.side * 1.0 : f.ox;                                       // a failing house comes down on the platform's edge
+            o.position.x = lerp(o.position.x, tx, clamp(dt * 4.5)); o.position.z = lerp(o.position.z, 0, clamp(dt * 6));
+            o.rotation.z = lerp(o.rotation.z, f.ok === false ? -f.side * 0.22 : f.tilt, clamp(dt * 7)); o.rotation.y *= 0.92;
+            if (o.position.y - HALF <= landBottom) {
+              if (f.ok === null) { o.position.y = landBottom + HALF; f.vy = 0; f.wait += dt; if (f.wait > 2.5) { this.scene.remove(o); this.fall = null; this.state = 'arrive'; this.u = 0; this.newHang(); } }
+              else if (f.ok) {
+                const impact = -f.vy; o.position.set(f.ox, landBottom + HALF, 0); o.rotation.set(0, 0, f.tilt - f.side * 0.045); o.userData = { ox: f.ox, tilt: f.tilt, sq: clamp(impact / 120, 0.03, 0.1) };
+                this.floors.push(o); this.houseGroup.add(o); this.landed++; this.fall = null; this.wv += 1.4 + impact * 0.1 + this.landed * 0.1; this.puff(f.ox, landBottom + 0.1, 0, 10); this.thv += 0.3 * f.side; this.state = 'land'; this.updateBadge();
+              } else {
+                this.tumble = { obj: o, side: f.side, vx: f.side * 3.0, vy: 3.6, vr: -f.side * 3.0, hit: 0 }; this.fall = null; this.wv += f.side * 3.4; this.puff(o.position.x, landBottom + 0.1, 0, 8); this.state = 'tumble';
+              }
             }
           }
           const q = this.tumble;
           if (q) {
             const o = q.obj; q.vy -= 28 * dt; o.position.x += q.vx * dt; o.position.y += q.vy * dt; o.rotation.z += q.vr * dt;
-            const contact = Math.abs(o.position.x) < 2.35 ? PLAT_TOP : 0, low = Math.abs(Math.sin(o.rotation.z)) * 1.0 + Math.abs(Math.cos(o.rotation.z)) * HALF;
-            if (o.position.y - low <= contact) {
-              o.position.y = contact + low; q.hit++; this.puff(o.position.x, contact + 0.1, o.position.z, 8);
-              if (q.hit >= 3 || Math.abs(q.vy) < 3) { const r = Math.round(o.rotation.z / (Math.PI / 2)) * (Math.PI / 2); o.rotation.z = r; o.position.y = (Math.abs(o.position.x) < 2.35 ? PLAT_TOP : 0) + Math.abs(Math.sin(r)) + Math.abs(Math.cos(r)) * HALF; this.restObj = o; this.tumble = null; this.state = 'done'; this.u = 0; }
-              else { q.vy *= -0.28; q.vx *= 0.55; q.vr *= 0.5; }
+            const sup = (x) => (Math.abs(x) < 1.25 ? landBottom : Math.abs(x) < 2.35 ? PLAT_TOP : 0);   // top of the tower, the platform, the ground
+            const contact = sup(o.position.x), low = Math.abs(Math.sin(o.rotation.z)) * 1.0 + Math.abs(Math.cos(o.rotation.z)) * HALF;
+            if (o.position.y - low <= contact && q.vy < 0) {
+              o.position.y = contact + low; q.hit++; this.puff(o.position.x, contact + 0.1, o.position.z, 8); this.wv += -Math.sign(q.vx) * 0.6;
+              if (q.hit >= 3 || (q.hit >= 2 && Math.abs(q.vy) < 3.2)) { const r = -q.side * (Math.PI / 2), c2 = sup(o.position.x); o.rotation.z = r; o.position.y = c2 + Math.abs(Math.sin(r)) + Math.abs(Math.cos(r)) * HALF; this.restObj = o; this.tumble = null; this.state = 'done'; this.u = 0; this.puff(o.position.x, c2 + 0.1, 0, 6); }
+              else { q.vy *= -0.3; q.vx *= 0.6; q.vr *= 0.55; }
             }
           }
           if (this.state === 'land' && this.u > 1.05) { if (this.roundStatus === 'active' && this.landed < this.maxSteps) { this.state = 'arrive'; this.u = 0; this.newHang(); } else this.state = 'done'; }
@@ -228,6 +249,7 @@
         case 'leave': { L = lerp(this.hookStart, Lhide, sm(clamp(this.u / 0.9))); if (this.hang) this.hang.scale.setScalar(clamp(1.35 - this.u / 0.9 * 1.3, 0.01, 1)); if (this.u >= 0.9) { if (this.hang) { this.asm.remove(this.hang); this.hang = null; } this.state = 'done'; this.u = 0; } break; }
         default: L = lerp(L, Lhide, clamp(dt * 3));
       }
+      this.prevTx = this.trolleyX;
       this.L = L;
 
       // pendulum driven by the trolley, soft spring for the tower
@@ -244,7 +266,11 @@
       for (const post of this.posts) { post.scale.y = this.jibY; post.position.y = this.jibY / 2; } this.segs.forEach((s, i) => { s.visible = i + 1 <= this.jibY - 0.2; });
 
       // tower wobble
-      this.floors.forEach((f, i) => { const k = this.floors.length > 1 ? i / (this.floors.length - 1) : 1; f.position.x = this.wob * (0.1 + 0.9 * k); f.rotation.z = -this.wob * 0.035 * k; });
+      this.floors.forEach((f, i) => {
+        const k = this.floors.length > 1 ? i / (this.floors.length - 1) : 1, u = f.userData || {}, sq = u.sq || 0;
+        f.position.x = (u.ox || 0) + this.wob * (0.1 + 0.9 * k); f.rotation.z = lerp(f.rotation.z, (u.tilt || 0) - this.wob * 0.035 * k, clamp(dt * 9));   // settles into a slight lean and stays there
+        if (sq) { u.sq = sq * Math.exp(-9 * dt); f.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5); if (u.sq < 0.002) { u.sq = 0; f.scale.set(1, 1, 1); } }
+      });
       // lamps, drop zone, arrow, badge, dust
       this.lamps.forEach((l, i) => { l.material.color.setHex(Math.sin(t * 4 + i * 1.6) > 0 ? 0xffd23f : 0x6b5a1c); });
       const show = ['arrive', 'sway', 'align'].includes(this.state) && this.roundStatus === 'active', pulse = 0.5 + 0.5 * Math.sin(t * 4.2);
