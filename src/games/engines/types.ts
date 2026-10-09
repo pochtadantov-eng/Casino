@@ -1,6 +1,6 @@
 import { Rng } from '../../fair/fair';
 
-export const HOUSE_EDGE = 0.03; // RTP 97%
+export const HOUSE_EDGE = 0.08; // RTP 92% (Rocket, Seagull); Mines has MINES_EDGE, Tower is skill-based
 
 export class GameError extends Error {}
 

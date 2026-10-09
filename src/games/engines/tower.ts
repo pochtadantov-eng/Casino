@@ -27,7 +27,7 @@ export const TOWER = {
 export const periodAt = (step: number) => step === 0 ? 3000 : step === 1 ? 2400 : step === 2 ? 2100 : step < TOWER.spaceFrom ? Math.max(1250, 2000 - 90 * (step - 3)) : Math.max(1050, 1400 - 35 * (step - TOWER.spaceFrom));
 // how far (fraction of half a house width) the centre of mass above level j may sit from that level's centre; tightens with every level
 const LIM = [0.5, 0.4, 0.3, 0.24, 0.19, 0.15, 0.12, 0.1, 0.085, 0.07];
-export const levelLim = (j: number) => Math.max(0.05, LIM[j] ?? 0.07 * Math.pow(0.93, j - 9));
+export const levelLim = (j: number) => Math.max(0.045, 0.85 * (LIM[j] ?? 0.07 * Math.pow(0.93, j - 9)));      // x0.85: a little harder than before
 export const tolAt = (step: number) => levelLim(step) * TOWER.hw / 2;
 /** per level j (0 = the base house): the interval the NEXT house's x has to fall in so that level j still holds */
 export function levelRanges(full: number[]): [number, number][] {

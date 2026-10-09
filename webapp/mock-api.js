@@ -1,7 +1,7 @@
 // DEMO backend that runs entirely in the browser with the same API shape as the real server.
 // Used only for the shareable preview (scripts/build-preview.mjs). Not secure: secrets live on the client.
 (() => {
-  const DAILY = 10, EDGE = 0.03, GROWTH = 0.0001, SIZE = 25;
+  const DAILY = 10, EDGE = 0.08, GROWTH = 0.0001, SIZE = 25;
   const LIMITS = { minBet: 50, maxBet: 100000, maxPayout: 1000000, minWithdraw: 100 };
   const floor2 = (x) => Math.floor(x * 100 + 1e-9) / 100;
   const rnd = () => crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32;
@@ -25,7 +25,7 @@
   const twPeriod = (k) => (k === 0 ? 3000 : k === 1 ? 2400 : k === 2 ? 2100 : k < TW.spaceFrom ? Math.max(1250, 2000 - 90 * (k - 3)) : Math.max(1050, 1400 - 35 * (k - TW.spaceFrom)));
   const twTol = (k) => TW_EASY ? 3 : twLim(k) * TW_HW / 2;
   const TW_LIM = [0.5, 0.4, 0.3, 0.24, 0.19, 0.15, 0.12, 0.1, 0.085, 0.07], TW_HW = 1.9;
-  const twLim = (j) => Math.max(0.05, TW_LIM[j] ?? 0.07 * Math.pow(0.93, j - 9));
+  const twLim = (j) => Math.max(0.045, 0.85 * (TW_LIM[j] ?? 0.07 * Math.pow(0.93, j - 9)));
   const twRanges = (offs) => { const full = [0, ...(offs || [])], m = full.length - 1, lv = []; for (let j = 0; j <= m; j++) { const cnt = m + 1 - j, d = twLim(j) * TW_HW / 2; let sum = 0; for (let i = j + 1; i <= m; i++) sum += full[i]; lv.push([(full[j] - d) * cnt - sum, (full[j] + d) * cnt - sum]); } return { lv, lo: Math.max(...lv.map((r) => r[0])), hi: Math.min(...lv.map((r) => r[1])) }; };
   const twStress = (offs) => { const full = [0, ...(offs || [])], m = full.length - 1; let w = 0; for (let j = 0; j < m; j++) { let sum = 0; for (let i = j + 1; i <= m; i++) sum += full[i]; w = Math.max(w, Math.abs(sum / (m - j) - full[j]) / (twLim(j) * TW_HW / 2)); } return Math.round(w * 1000) / 1000; };
   const twX = (t, start, k) => TW.amp * Math.sin((2 * Math.PI * (t - start)) / twPeriod(k));
@@ -34,7 +34,7 @@
     seagull: { variants: { classic: [3, 1] }, def: 'classic', max: 12 },
   };
   const stepsMult = (c, b, k) => (k === 0 ? 1 : floor2((1 - EDGE) * Math.pow(c / (c - b), k)));
-  const minesMult = (m, k) => { let x = 1 - 0.1; for (let i = 0; i < k; i++) x *= (SIZE - i) / (SIZE - m - i); return k === 0 ? 1 : floor2(x); };
+  const minesMult = (m, k) => { let x = 1 - 0.15; for (let i = 0; i < k; i++) x *= (SIZE - i) / (SIZE - m - i); return k === 0 ? 1 : floor2(x); };
   const multAt = (ms) => floor2(Math.exp(GROWTH * Math.max(0, ms)));
   const crashPoint = () => Math.min(1000, Math.max(1, floor2((1 - EDGE) / (1 - rnd()))));
 
