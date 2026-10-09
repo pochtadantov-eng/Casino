@@ -1,7 +1,9 @@
 import { Rng } from '../../fair/fair';
-import { Engine, GameError, HOUSE_EDGE, floor2 } from './types';
+import { Engine, GameError, floor2 } from './types';
 
 export const SIZE = 25;
+export const MINES_EDGE = 0.1;   // Mines pays less than the other games (RTP 90%) and needs at least 3 mines, so stars are harder to collect
+export const MIN_MINES = 3;
 
 /** Partial Fisher-Yates: first `count` entries of a shuffled board are the mines. */
 export function minePositions(rng: Rng, count: number): number[] {
@@ -13,9 +15,9 @@ export function minePositions(rng: Rng, count: number): number[] {
   return board.slice(0, count).sort((a, b) => a - b);
 }
 
-/** 0.97 * C(25, k) / C(25 - mines, k) for k revealed safe tiles. */
+/** 0.90 * C(25, k) / C(25 - mines, k) for k revealed safe tiles. */
 export function minesMultiplier(mines: number, revealed: number): number {
-  let m = 1 - HOUSE_EDGE;
+  let m = 1 - MINES_EDGE;
   for (let i = 0; i < revealed; i++) m *= (SIZE - i) / (SIZE - mines - i);
   return revealed === 0 ? 1 : floor2(m);
 }
@@ -30,7 +32,7 @@ export const mines: Engine<State> = {
   id: 'mines',
   init(params, rng) {
     const count = Number(params?.mines);
-    if (!Number.isInteger(count) || count < 1 || count > SIZE - 1) throw new GameError('mines must be 1..24');
+    if (!Number.isInteger(count) || count < MIN_MINES || count > SIZE - 1) throw new GameError('mines must be 3..24');
     return { state: { mines: minePositions(rng, count), count, revealed: [] }, multiplier: 1 };
   },
   act(state, input) {

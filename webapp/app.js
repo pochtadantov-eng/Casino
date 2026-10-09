@@ -13,7 +13,7 @@ function ruError(m) {
   if (RU_ERR[m]) return RU_ERR[m];
   if (/undefined|is not|null|TypeError|Failed to fetch|NetworkError|JSON|Unexpected/i.test(String(m))) { console.error(m); return 'Что-то пошло не так, попробуйте ещё раз'; }
   const b = /^Bet must be (\d+)\.\.(\d+) Stars$/.exec(m); if (b) return `Ставка должна быть от ${b[1]} до ${b[2]} ⭐`;
-  const k = /^mines must be/.exec(m); if (k) return 'Количество мин: от 1 до 24';
+  const k = /^mines must be/.exec(m); if (k) return 'Количество мин: от 3 до 24';
   return m;
 }
 async function api(path, body) {
@@ -55,7 +55,7 @@ function askAmount(title, def) {
 // ---------- per-game option controls ----------
 const OPTS = {
   rocket: () => `<label>Авто-вывод (необязательно)</label><div class="row"><input id="auto" type="number" step="0.1" min="1.01" placeholder="например 2.0"></div>`,
-  mines: () => `<label>Количество мин</label><div class="row"><select id="mines">${[1,2,3,5,8,10,15,20,24].map((n) => `<option ${n === 3 ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`,
+  mines: () => `<label>Количество мин</label><div class="row"><select id="mines">${[3,5,7,10,15,20,24].map((n) => `<option ${n === 5 ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`,
   tower: () => '',
   towerOld: () => `<label>Сложность</label><div class="row"><select id="variant"><option value="easy">Лёгкая (1 из 4 плохой)</option><option value="medium" selected>Средняя (1 из 3)</option><option value="hard">Сложная (1 из 2)</option><option value="expert">Эксперт (2 из 3)</option></select></div>`,
   seagull: () => '',
@@ -196,13 +196,13 @@ R.tower = (round) => {                       // flat construction-site scene; th
 const RES_LOSS = { mines: 'ПРОИГРЫШ', tower: 'ПРОИГРЫШ', seagull: 'ПРОИГРЫШ', rocket: 'РАКЕТА УЛЕТЕЛА' };
 function showResult(r, delay, kind) {          // "win" / "loss" plaque over the board (glass background, opaque text)
   document.querySelector('.resban')?.remove();
-  const el = document.createElement('div'); el.className = 'resban ' + kind + (kind === 'win' && state.game === 'tower' ? ' tw' : ''); el.style.setProperty('--d', delay + 's');
+  const el = document.createElement('div'); el.className = 'resban ' + kind + (kind === 'win' && state.game === 'tower' ? ' tw' : '') + (state.game === 'mines' ? ' mn' : ''); el.style.setProperty('--d', delay + 's');
   el.innerHTML = kind === 'win'
     ? `<b>ВЫИГРЫШ</b><span>+${r.payout} ⭐ <em>x${r.multiplier.toFixed(2)}</em></span>`
     : `<b>${RES_LOSS[state.game] || 'ПРОИГРЫШ'}</b><span>−${r.bet} ⭐</span>`;
   $('#stage').append(el);
-  setTimeout(() => el.remove(), (delay + 3.4) * 1000);
-  lockPlay((delay + (state.game === 'tower' ? 3.4 : 2.95)) * 1000);               // no new round while the result animation is still playing
+  setTimeout(() => el.remove(), (delay + (state.game === 'mines' ? 2.0 : 3.4)) * 1000);
+  lockPlay((delay + (state.game === 'tower' ? 3.4 : state.game === 'mines' ? 1.7 : 2.95)) * 1000);               // no new round while the result animation is still playing
 }
 // Play button stays disabled until the animation has finished
 function lockPlay(ms) {
@@ -229,7 +229,7 @@ function apply(j) {
   if (r && !active && prev?.status === 'active') {
     if (r.status === 'won') { showResult(r, state.game === 'tower' ? 0.9 : 0.15, 'win'); tg?.HapticFeedback?.notificationOccurred('success'); }
     else {
-      const delay = state.game === 'mines' ? 0.82 : state.game === 'tower' ? 1.7 : 0.15;                  // mines: wait for the flip and the blast
+      const delay = state.game === 'mines' ? 0.6 : state.game === 'tower' ? 1.7 : 0.15;                  // mines: wait for the flip and the blast
       showResult(r, delay, 'loss');
       setTimeout(() => tg?.HapticFeedback?.notificationOccurred('error'), delay * 1000);
     }

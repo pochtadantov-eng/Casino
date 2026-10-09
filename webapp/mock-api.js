@@ -34,7 +34,7 @@
     seagull: { variants: { classic: [3, 1] }, def: 'classic', max: 12 },
   };
   const stepsMult = (c, b, k) => (k === 0 ? 1 : floor2((1 - EDGE) * Math.pow(c / (c - b), k)));
-  const minesMult = (m, k) => { let x = 1 - EDGE; for (let i = 0; i < k; i++) x *= (SIZE - i) / (SIZE - m - i); return k === 0 ? 1 : floor2(x); };
+  const minesMult = (m, k) => { let x = 1 - 0.1; for (let i = 0; i < k; i++) x *= (SIZE - i) / (SIZE - m - i); return k === 0 ? 1 : floor2(x); };
   const multAt = (ms) => floor2(Math.exp(GROWTH * Math.max(0, ms)));
   const crashPoint = () => Math.min(1000, Math.max(1, floor2((1 - EDGE) / (1 - rnd()))));
 
@@ -101,7 +101,7 @@
         if (body.autoCashout != null) { auto = floor2(Number(body.autoCashout)); if (!(auto >= 1.01 && auto <= 1000)) fail('Bad auto cashout'); }
         state = { crash: crashPoint(), startedAt: now, auto };
       } else if (g === 'mines') {
-        const count = Number(body.mines); if (!Number.isInteger(count) || count < 1 || count > 24) fail('mines must be 1..24');
+        const count = Number(body.mines); if (!Number.isInteger(count) || count < 3 || count > 24) fail('mines must be 3..24');
         const board = [...Array(SIZE).keys()]; for (let i = 0; i < count; i++) { const j = i + int(SIZE - i); [board[i], board[j]] = [board[j], board[i]]; }
         state = { count, mines: board.slice(0, count), revealed: [] };
       } else if (g === 'tower') {

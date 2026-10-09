@@ -55,7 +55,7 @@ describe('mines', () => {
     const m = minePositions(rng(1), 10);
     expect(new Set(m).size).toBe(10);
   });
-  it('RTP of "open 3 tiles then cash out" is ~97%', () => {
+  it('RTP of "open 3 tiles then cash out" is ~90% (Mines has a 10% edge)', () => {
     const N = 100_000;
     let ret = 0;
     for (let i = 0; i < N; i++) {
@@ -68,8 +68,8 @@ describe('mines', () => {
       }
       if (ok) ret += mines.cashout(s, 0).multiplier;
     }
-    expect(ret / N).toBeGreaterThan(0.93);
-    expect(ret / N).toBeLessThan(1.0);
+    expect(ret / N).toBeGreaterThan(0.86);
+    expect(ret / N).toBeLessThan(0.94);
   });
   it('multiplier grows, cashout needs a safe tile, mines are hidden', () => {
     expect(minesMultiplier(3, 2)).toBeGreaterThan(minesMultiplier(3, 1));
@@ -77,6 +77,7 @@ describe('mines', () => {
     expect(() => mines.cashout(state, 0)).toThrow();
     expect((mines.view(state, 'active', 0) as any).mines).toBeUndefined();
     expect(() => mines.init({ mines: 25 }, rng(2), 0)).toThrow();
+    expect(() => mines.init({ mines: 2 }, rng(2), 0)).toThrow();
   });
 });
 
