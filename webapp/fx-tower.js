@@ -307,12 +307,18 @@
         g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0, gp, w, 2); g.fillStyle = 'rgba(0,0,0,.12)'; for (let i = 0; i < 18; i++) { g.beginPath(); g.ellipse(((i * 97) % 211) / 211 * w, gp + 0.45 * ppu + ((i * 53) % 37) / 37 * 0.9 * ppu, 5 + (i % 4) * 2, 2.5, 0, 0, 6.283); g.fill(); }
         this.props(g, gp);
       }
-      const sy = this.Y(SLAB_H), sw = SLAB_W * ppu;
+      const sy = this.Y(SLAB_H), sw = SLAB_W * ppu, gb = gy + 0.15 * ppu;                           // everything on the site stands on the same baseline gb
       if (sy < h + 40) {
-        const x = this.X(-SLAB_W / 2), gr = g.createLinearGradient(0, sy, 0, gy); gr.addColorStop(0, '#d7dee6'); gr.addColorStop(1, '#8e9aa7'); g.fillStyle = gr; g.fillRect(x, sy, sw, gy - sy);
-        g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(x, sy, sw, 2.5); g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(x, sy + (gy - sy) * 0.55, sw, 1.5);
-        const bandH = (gy - sy) * 0.3, by = sy + (gy - sy) * 0.18; g.save(); g.beginPath(); g.rect(x, by, sw, bandH); g.clip(); for (let i = -2, ix = x; ix < x + sw + 40; i++, ix += 22) { g.fillStyle = i % 2 ? '#2b333c' : '#f6b50b'; g.beginPath(); g.moveTo(ix, by + bandH); g.lineTo(ix + 11, by + bandH); g.lineTo(ix + 22, by); g.lineTo(ix + 11, by); g.fill(); } g.restore();
-        g.fillStyle = '#6f7c89'; for (const bx of [x + 8, x + sw - 8]) { g.beginPath(); g.arc(bx, by + bandH + (gy - sy) * 0.18, 2.6, 0, 6.283); g.fill(); }
+        // poured concrete foundation: bevelled top lip, board-marked formwork, steel rebar stubs and anchor bolts
+        const x = this.X(-SLAB_W / 2), th = gb - sy, lip = Math.min(th * 0.28, 0.2 * ppu);
+        let gr = g.createLinearGradient(0, sy, 0, gb); gr.addColorStop(0, '#c9c3b8'); gr.addColorStop(0.3, '#a9a398'); gr.addColorStop(1, '#6f6a60'); g.fillStyle = gr; g.fillRect(x, sy, sw, th);
+        g.fillStyle = '#d9d3c7'; g.beginPath(); g.moveTo(x - 4, sy + lip); g.lineTo(x + 3, sy); g.lineTo(x + sw - 3, sy); g.lineTo(x + sw + 4, sy + lip); g.closePath(); g.fill();       // top lip
+        g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(x + 3, sy, sw - 6, 1.6); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x - 4, sy + lip, sw + 8, 1.5);
+        g.strokeStyle = 'rgba(40,36,30,.35)'; g.lineWidth = 1; const bw = 0.62 * ppu; for (let bx = x + bw; bx < x + sw; bx += bw) { g.beginPath(); g.moveTo(bx, sy + lip); g.lineTo(bx, gb); g.stroke(); }     // formwork board marks
+        g.fillStyle = 'rgba(0,0,0,.18)'; for (let i = 0; i < 26; i++) { g.beginPath(); g.arc(x + ((i * 83) % 197) / 197 * sw, sy + lip + ((i * 47) % 31) / 31 * (th - lip), 1 + (i % 3) * 0.6, 0, 6.283); g.fill(); }  // pores
+        g.fillStyle = '#7a4a2a'; for (const bx of [x + 0.35 * ppu, x + sw - 0.35 * ppu]) { g.fillRect(bx - 1.5, sy - 0.22 * ppu, 3, 0.22 * ppu); g.fillRect(bx + 5, sy - 0.16 * ppu, 3, 0.16 * ppu); }   // rusty rebar stubs
+        g.fillStyle = '#8c949c'; for (const bx of [x + 0.9 * ppu, x + sw - 0.9 * ppu]) { g.beginPath(); g.arc(bx, sy + lip * 0.55, 2.4, 0, 6.283); g.fill(); }
+        g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x - 4, gb - 2, sw + 8, 3);
       }
       const n = this.floors.length;
       this.floors.forEach((f, i) => { const k = n > 1 ? i / (n - 1) : 1, kf = 0.1 + 0.9 * k, wy = SLAB_H + i * INC + HH / 2; if (this.Y(wy) < -HH * ppu) return; this.drawHouse(g, f.v, f.ox + this.wob * 0.2 * kf, wy, f.tilt - this.wob * 0.02 * kf, f.sq, f.dmg); });
@@ -337,11 +343,11 @@
     }
     props(g, gy) {                                  // behind the tower: site fence, trees, park lamp
       const { ppu } = this, P = TowerProps, f = P.fence(ppu);
-      for (let i = -2; i <= 1; i++) this.sprite(g, f, i * 3.2 + 1.6, gy + 0.12 * ppu);
+      for (let i = -2; i <= 1; i++) this.sprite(g, f, i * 3.2 + 1.6, gy + 0.15 * ppu);
       const tt = this._t || 0, gust = 0.5 + 0.5 * Math.sin(tt * 0.5);       // wind: slow sway plus a gust; the crown leans more than the trunk base
-      this.sprite(g, P.tree('birch', ppu), -3.15, gy + 0.2 * ppu, false, (Math.sin(tt * 1.7) * 0.022 + Math.sin(tt * 3.1 + 1) * 0.008) * (0.6 + gust));
-      this.sprite(g, P.tree('linden', ppu), 3.35, gy + 0.2 * ppu, false, (Math.sin(tt * 1.3 + 2) * 0.018 + Math.sin(tt * 2.7) * 0.007) * (0.6 + gust));
-      const l = P.lamp(ppu); this.sprite(g, l, -2.95 + (l.anchorX != null ? 0 : 0), gy + 0.02 * ppu);
+      this.sprite(g, P.tree('birch', ppu), -3.15, gy + 0.15 * ppu, false, (Math.sin(tt * 1.7) * 0.022 + Math.sin(tt * 3.1 + 1) * 0.008) * (0.6 + gust));
+      this.sprite(g, P.tree('linden', ppu), 3.35, gy + 0.15 * ppu, false, (Math.sin(tt * 1.3 + 2) * 0.018 + Math.sin(tt * 2.7) * 0.007) * (0.6 + gust));
+      const l = P.lamp(ppu); this.sprite(g, l, -2.95, gy + 0.15 * ppu);
     }
     // the foreman and his speaker on the ground in front: he sways to the beat, the speaker cone pumps and notes float up
     drawCrew(g, gy, t) {
@@ -350,7 +356,7 @@
       const beatPos = mt != null ? (mt - 0.519 + 0.03) * 104 / 60 : t * 104 / 60, ph = ((beatPos % 1) + 1) % 1, pulse = Math.pow(Math.max(0, Math.cos(ph * 6.283)), 3);
       if (!TowerFx.loading) { TowerFx.loading = true; const im = new Image(); im.onload = () => { TowerFx.worker = im; }; im.src = window.WORKER_SRC || 'img/worker.webp' + (window.BUILD ? '?v=' + window.BUILD : ''); }
       const sx = this.X(-2.3), sw = 0.62 * u, sh = 0.9 * u, shake = pulse * 0.6;
-      g.save(); g.translate(sx + (Math.random() - 0.5) * shake, gy + 0.1 * u);
+      g.save(); g.translate(sx + (Math.random() - 0.5) * shake, gy + 0.15 * u);
       g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, sw * 0.75, 4, 0, 0, 6.283); g.fill();
       let gr = g.createLinearGradient(-sw / 2, 0, sw / 2, 0); gr.addColorStop(0, '#2a2f38'); gr.addColorStop(0.5, '#3d4452'); gr.addColorStop(1, '#20242b'); g.fillStyle = gr;
       g.beginPath(); g.roundRect ? g.roundRect(-sw / 2, -sh, sw, sh, 6) : g.rect(-sw / 2, -sh, sw, sh); g.fill(); g.strokeStyle = '#11141a'; g.lineWidth = 1.5; g.stroke();
@@ -366,7 +372,7 @@
         // dance: feet stay planted, the body above bends like rubber (hip groove + shoulder shimmy), knees dip on every beat, the head nods hard
         const hgt = 1.8 * u, iw = im.width, ih = im.height, sc = hgt / ih, wid = iw * sc, b = beatPos * 6.2832, sw = Math.sin(b / 2), dip = Math.pow(Math.max(0, Math.cos(b)), 2);
         const neck = 0.3 * ih, ys = 1 - 0.05 * dip, bend = (f) => sw * 0.085 * hgt * f * f + Math.sin(b * 2 + f * 4) * 0.004 * hgt * Math.sin(f * 3.14);
-        g.save(); g.translate(this.X(-1.45), gy + 0.12 * u); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, wid * 0.5, 4.5, 0, 0, 6.283); g.fill();
+        g.save(); g.translate(this.X(-1.45), gy + 0.15 * u); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, wid * 0.5, 4.5, 0, 0, 6.283); g.fill();
         const step = Math.max(2, Math.round(2.2 / sc));                 // source rows per slice
         for (let y0 = ih - step; y0 > neck - step; y0 -= step) {
           const f = 1 - (y0 + step / 2) / ih, h = Math.min(step, ih - y0);
@@ -381,11 +387,11 @@
     propsFront(g, gy) {                             // in front of the slab: bricks on a pallet, traffic cones
       const { ppu } = this, P = TowerProps;
       this.drawCrew(g, gy, this._t || 0);
-      this.sprite(g, P.pallet(ppu), 3.0, gy + 0.1 * ppu); const c = P.cone(ppu); this.sprite(g, c, -2.85, gy + 0.14 * ppu); this.sprite(g, c, 2.4, gy + 0.14 * ppu);
+      this.sprite(g, P.pallet(ppu), 3.0, gy + 0.15 * ppu); const c = P.cone(ppu); this.sprite(g, c, -2.85, gy + 0.15 * ppu); this.sprite(g, c, 2.4, gy + 0.15 * ppu);
     }
     drawTractor(g, wx, gy) {
       const u = this.ppu, x = this.X(wx), bob = Math.sin(this.tw * 3.1) * 0.012 * u;
-      g.save(); g.translate(x, gy + 0.02 * u + bob);
+      g.save(); g.translate(x, gy + 0.15 * u + bob);
       g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0.02 * u, 1.9 * u, 0.1 * u, 0, 0, 6.283); g.fill();
       const rr = (X, Y, W, H, R) => { g.beginPath(); g.roundRect ? g.roundRect(X, Y, W, H, R) : g.rect(X, Y, W, H); };
       // tracks
