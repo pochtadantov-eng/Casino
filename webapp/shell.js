@@ -7,7 +7,7 @@ const fmtTime = (ms) => { const m = Math.max(0, Math.ceil(ms / 60000)); return m
 // ---------- views ----------
 let view = 'play', tab = 'play';
 function show(name) {
-  if (name !== 'game') { clearTimeout(state.pollTimer); cancelAnimationFrame(state.raf); state.scene = null; state.tscene = null; state.tpending = false; Music.play('menu'); $('#stage').className = ''; $('#stage').innerHTML = ''; const rp = $('#rfeed-panel'); if (rp) { rp.hidden = true; $('#rfeed').innerHTML = ''; } state.rfeed = null; }
+  if (name !== 'game') { RC.stop(); clearTimeout(state.pollTimer); cancelAnimationFrame(state.raf); state.scene = null; state.tscene = null; state.tpending = false; Music.play('menu'); $('#stage').className = ''; $('#stage').innerHTML = ''; const rp = $('#rfeed-panel'); if (rp) { rp.hidden = true; $('#rfeed').innerHTML = ''; } state.rfeed = null; }
   view = name;
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('on', v.id === 'view-' + name));
   const inGame = name === 'game'; document.body.classList.toggle('ingame', inGame);
@@ -19,6 +19,7 @@ function show(name) {
   if (name === 'profile') loadProfile();
 }
 function openGame(g) {
+  RC.stop(); $('#go').textContent = 'Играть'; $('#go').disabled = false; $('#go').hidden = false; $('#cash').hidden = true;
   state.game = g; state.round = null; unlockPlay(); state.tscene = null; state.tpending = false; Music.stop(); $('#stage').className = '';
   { const rp = $('#rfeed-panel'); if (rp) { rp.hidden = g !== 'rocket'; if (g !== 'rocket') $('#rfeed').innerHTML = ''; } state.rfeed = null; }
   $('#gtitle').textContent = TITLES[g]; document.querySelector('.ctrl').dataset.game = g;

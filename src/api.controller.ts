@@ -42,6 +42,11 @@ export class ApiController {
     return this.games.history(req.user.id);
   }
 
+  @Get('games/rocket/round')
+  rocketRound() {
+    return this.games.rocketRound();
+  }
+
   @Get('games/:game')
   async current(@Req() req: any, @Param('game') game: string) {
     const [round, balance] = [await this.games.current(req.user.id, game), await this.wallet.balance(req.user.id)];

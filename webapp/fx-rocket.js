@@ -11,7 +11,7 @@ class RocketScene {
     this.img.src = window.ROCKET_SRC || 'rocket.svg';
     this.parts = []; this.trail = [];
     this.m = 1; this.shake = 0; this.flash = 0; this.flashColor = '255,255,255';
-    this.rx = 0.5; this.ry = 0.5; this.gone = false; this.hue = 232;
+    this.pad = 0.64; this.rx = 0.5; this.ry = this.pad; this.gone = false; this.hue = 232;      // pad: where the rocket stands on the ground
     this.last = performance.now();
     this.resize();
     this._loop = this._loop.bind(this);
@@ -25,7 +25,7 @@ class RocketScene {
     this.c.width = this.w * d; this.c.height = this.h * d;
     this.g.setTransform(d, 0, 0, d, 0, 0);
   }
-  _reset() { this.after = 0; this.parts = []; this.trail = []; this.gone = false; this.ry = 0.5; this.rx = 0.5; this.shake = 0; this.flash = 0; }
+  _reset() { this.after = 0; this.parts = []; this.trail = []; this.gone = false; this.ry = this.pad; this.rx = 0.5; this.shake = 0; this.flash = 0; }
   idle() { if (this.mode !== 'idle') this._reset(); this.mode = 'idle'; this.m = 1; this.onTick = null; }
   fly(startedAt, offset, growth, onTick) {
     if (this.mode !== 'flying') { this._reset(); this.polled = false; }
@@ -105,17 +105,25 @@ class RocketScene {
 
     // rocket motion
     const t = now / 1000;
+    const gy = h * 0.905 + Math.max(0, this.pad - this.ry) * h * 2.6;                         // the ground sinks away as the rocket climbs
+    if (gy < h + 4 && !(this.mode === 'return' && this.rt < 0.9) && !(this.mode === 'crashed' && this.after > 1.2)) {
+      const gg = g.createLinearGradient(0, gy, 0, h); gg.addColorStop(0, '#26304c'); gg.addColorStop(1, '#0d1222'); g.fillStyle = gg; g.fillRect(-20, gy, w + 40, h - gy + 40);
+      g.fillStyle = 'rgba(120,150,255,.25)'; g.fillRect(-20, gy, w + 40, 2);
+      const pw = h * 0.5 * 0.5 * 2.6; g.fillStyle = '#39456a'; g.fillRect(w / 2 - pw / 2, gy, pw, 7); g.fillStyle = '#1b2440'; g.fillRect(w / 2 - pw / 2 + 4, gy + 7, pw - 8, 4);
+      for (let i = 0; i < 7; i++) { g.fillStyle = (Math.floor(t * 2) + i) % 2 ? 'rgba(255,200,60,.95)' : 'rgba(255,90,60,.9)'; g.beginPath(); g.arc(w / 2 - pw / 2 + 8 + (pw - 16) * i / 6, gy + 3.5, 1.7, 0, 6.283); g.fill(); }
+      g.strokeStyle = 'rgba(70,86,130,.9)'; g.lineWidth = 2; for (const sx of [-1, 1]) { const bx = w / 2 + sx * pw * 0.62; g.beginPath(); g.moveTo(bx, gy); g.lineTo(bx, gy - h * 0.34); g.moveTo(bx, gy - h * 0.34); g.lineTo(bx - sx * pw * 0.22, gy - h * 0.34); g.stroke(); for (let j = 1; j < 6; j++) { g.beginPath(); g.moveTo(bx, gy - h * 0.34 * j / 6); g.lineTo(bx + sx * 5, gy - h * 0.34 * (j - 0.5) / 6); g.stroke(); } }      // gantry towers
+    }
     if (this.mode === 'flying' || this.mode === 'idle') {
-      const ty = this.mode === 'flying' ? 0.5 - Math.min(0.2, lm * 0.12) : 0.5 + Math.sin(t * 2) * 0.012;
-      this.ry += (ty - this.ry) * Math.min(1, dt * 3);
+      const ty = this.mode === 'flying' ? 0.5 - Math.min(0.2, lm * 0.12) : this.pad + Math.sin(t * 2) * 0.003;
+      this.ry += (ty - this.ry) * Math.min(1, dt * (this.mode === 'flying' ? 1.6 : 3));      // lifts off the ground gently
       this.rx = 0.5 + (this.mode === 'flying' ? Math.sin(t * 3.1) * 0.025 * Math.min(1, lm + 0.3) : 0);
     } else if (this.mode === 'won' && !this.gone) {
       this.vy -= dt * 1.6; this.ry += this.vy * dt * 2.2;
       if (this.ry < -0.25) this.gone = true;
     } else if (this.mode === 'return') {
       this.rt += dt; const k = 1 - Math.pow(1 - Math.min(1, this.rt / 1.25), 3);   // ease-out: arrives smoothly at the launch pad
-      this.ry = 1.3 + (0.5 - 1.3) * k; this.rx = 0.5;
-      if (this.rt >= 1.25) { this.mode = 'idle'; this.ry = 0.5; }
+      this.ry = 1.3 + (this.pad - 1.3) * k; this.rx = 0.5;
+      if (this.rt >= 1.25) { this.mode = 'idle'; this.ry = this.pad; }
     }
     if ((this.mode === 'won' && this.gone) || this.mode === 'crashed') {
       this.after = (this.after || 0) + dt;

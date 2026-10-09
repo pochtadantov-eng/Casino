@@ -3,6 +3,7 @@ import { Rng, hashSeed } from '../src/fair/fair';
 import { crashPoint, multiplierAt, rocket } from '../src/games/engines/rocket';
 import { mines, minePositions, minesMultiplier } from '../src/games/engines/mines';
 import { seagull, stepsMultiplier } from '../src/games/engines/steps';
+import { roundAt, publicRound, crashOfRound, BET_MS, PAUSE_MS } from '../src/games/engines/rocket-schedule';
 import { tower, swingX, tolAt, periodAt, towerMultiplier, levelRanges, TOWER } from '../src/games/engines/tower';
 import { verifyInitData } from '../src/auth/telegram-auth';
 import { createHmac } from 'node:crypto';
@@ -166,5 +167,28 @@ describe('tower (skill)', () => {
   it('cash-out needs a landed house and pays the ladder', () => {
     const s = start(); expect(() => tower.cashout(s, 0)).toThrow();
     expect(tower.cashout({ ...s, picks: 3 }, 0).multiplier).toBe(towerMultiplier(3));
+  });
+});
+
+describe('rocket shared rounds', () => {
+  const secret = 'test-secret', t0 = Date.UTC(2026, 9, 5);
+  it('every client sees the same round and the timeline is contiguous', () => {
+    const a = roundAt(t0, secret);
+    const n = roundAt(a.nextStart, secret);
+    expect(n.k).toBe(a.k + 1); expect(n.betStart).toBe(a.nextStart);
+    expect(a.flightStart - a.betStart).toBe(BET_MS); expect(a.nextStart - a.crashAt).toBe(PAUSE_MS);
+    expect(roundAt(t0, secret)).toEqual(a);                                    // deterministic
+  });
+  it('the crash point stays hidden until the crash happens', () => {
+    const r = roundAt(t0, secret);
+    expect((publicRound(r.betStart + 100, secret) as any).crash).toBeUndefined();
+    if (r.crashAt > r.flightStart) expect((publicRound(r.crashAt - 1, secret) as any).crash).toBeUndefined();
+    expect((publicRound(r.crashAt, secret) as any).crash).toBe(r.crash);
+    expect(crashOfRound(r.k, secret)).toBe(r.crash);
+  });
+  it('RTP of cashing out at 2x is ~92%', () => {
+    let ret = 0; const N = 100_000;
+    for (let k = 0; k < N; k++) if (crashOfRound(k, secret) >= 2) ret += 2;
+    expect(ret / N).toBeGreaterThan(0.88); expect(ret / N).toBeLessThan(0.96);
   });
 });

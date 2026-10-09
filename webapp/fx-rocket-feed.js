@@ -132,66 +132,53 @@
     return 15 + Math.abs(gaussian(r)) * 40;
   }
 
+  const HOURGLASS = '<svg class="hg" viewBox="0 0 24 24" width="22" height="22"><path d="M6 2h12v4.2c0 1.7-.9 3.2-2.4 4.1L13.4 12l2.2 1.7c1.5.9 2.4 2.4 2.4 4.1V22H6v-4.2c0-1.7.9-3.2 2.4-4.1L10.6 12 8.4 10.3C6.9 9.4 6 7.9 6 6.2z" fill="rgba(255,216,74,.18)" stroke="#ffd84a" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.6 5h6.8M9.5 19.2c.6-1.2 1.6-1.8 2.5-1.8s1.9.6 2.5 1.8" stroke="#ffd84a" stroke-width="1.4" stroke-linecap="round" fill="none"/></svg>';
+
+  // One shared Rocket round as the player sees it: bots join during the 5 s betting window (the same bots for everybody: they are seeded by the
+  // round number), then everybody waits (hourglass), cashes out at their own multiplier (tick) or loses when the rocket crashes (cross).
   class RocketFeed {
-    constructor(root) {
-      this.root = root; this.entries = []; this.queue = []; this.t0 = 0; this.seedBase = Date.now(); this.liveM = 1; this.me = null;
+    constructor(root, histEl) { this.root = root; this.histEl = histEl; this.reset(); }
+    reset() { for (const e of this.rows || []) e.el.remove(); this.rows = []; this.bots = []; this.shown = 0; this.me = null; this.k = null; }
+    begin(k, betStart) {
+      this.reset(); this.k = k; this.betStart = betStart;
+      const r = rng(k * 7919 + 13), n = 8 + Math.floor(Math.pow(r(), 1.2) * 43);              // 8..50 players this round
+      this.bots = Array.from({ length: n }, (_, i) => { const br = rng(k * 100003 + i * 7 + 1); return { joinAt: Math.pow(br(), 1.5) * 4400, bet: sampleBet(br), target: sampleTarget(br), nick: makeNick(br), seed: k * 101 + i, state: 'wait' }; })
+        .sort((x, y) => x.joinAt - y.joinAt);
     }
-    reset() { for (const e of this.entries) e.el.remove(); this.entries = []; this.queue = []; this.me = null; this.liveM = 1; }
-    // user = { name, photo, bet, auto } — the player is always the first row; other players join after
-    start(user) {
-      this.t0 = performance.now();
-      if (user) this.addMe(user);
-      const n = 8 + Math.floor(Math.pow(Math.random(), 1.2) * 43);   // 8..50 people this round
-      const spread = 3000 + Math.random() * 7000;
-      this.queue = Array.from({ length: n }, () => Math.pow(Math.random(), 1.6) * spread).sort((a, b) => a - b);
-    }
-    makeRow(entry, nick, avatarCss) {
-      const el = document.createElement('div'); el.className = 'rrow enter' + (entry.me ? ' me' : '');
-      el.innerHTML = `<div class="rav" style="background-image:url('${avatarCss}')"></div><div class="rmid"><div class="rnick"></div><div class="rbet"><span>${entry.bet} ⭐</span>${entry.target ? `<span class="rtarget">цель x${entry.target.toFixed(2)}</span>` : ''}</div></div><div class="rst"></div>`;
-      el.querySelector('.rnick').textContent = nick;
-      entry.el = el; entry.stEl = el.querySelector('.rst');
+    makeRow(e, nick, avatar) {
+      const el = document.createElement('div'); el.className = 'rrow enter' + (e.me ? ' me' : '');
+      el.innerHTML = `<div class="rav" style="background-image:url('${avatar}')"></div><div class="rmid"><div class="rnick"></div><div class="rbet"><span>${e.bet} ⭐</span>${e.me && e.target ? `<span class="rtarget">авто x${e.target.toFixed(2)}</span>` : ''}</div></div><div class="rst"></div>`;
+      el.querySelector('.rnick').textContent = nick; e.el = el; e.stEl = el.querySelector('.rst'); this.paint(e);
       requestAnimationFrame(() => el.classList.remove('enter'));
     }
+    paint(e) {
+      if (e.state === 'wait') e.stEl.innerHTML = `<span class="r-wait">${HOURGLASS}</span>`;
+      else if (e.state === 'won') e.stEl.innerHTML = `<span class="r-win"><span><i class="ric ok">✓</i>+${Math.floor(e.bet * e.atX - e.bet)} ⭐</span><em>x${e.atX.toFixed(2)}</em></span>`;
+      else e.stEl.innerHTML = `<span class="r-lose"><i class="ric no">✕</i>−${e.bet} ⭐</span>`;
+    }
+    join(b) {
+      const e = { bet: b.bet, target: b.target, state: 'wait', atX: null, bot: b }; this.makeRow(e, b.nick, makeAvatar(b.seed));
+      this.root.insertBefore(e.el, this.me ? this.root.children[1] || null : this.root.firstChild); this.rows.push(e);
+    }
     addMe(u) {
-      const e = { id: 0, me: true, bet: u.bet, target: u.auto || 0, state: 'in', atX: null };
-      const av = u.photo || makeAvatar(7);
-      this.makeRow(e, u.name || 'Вы', av);
-      this.me = e; this.setStatus(e, 1); this.entries.unshift(e); this.root.prepend(e.el);
+      if (this.me) return;
+      const e = { me: true, bet: u.bet, target: u.auto || 0, state: 'wait', atX: null }; this.makeRow(e, u.name || 'Вы', u.photo || makeAvatar(7));
+      this.me = e; this.rows.unshift(e); this.root.prepend(e.el);
     }
-    userWon(m) { const e = this.me; if (e && e.state === 'in') { e.state = 'won'; e.atX = m; this.setStatus(e, m); } }
-    spawn(mNow = 1) {
-      const id = ++this.seedBase, r = rng(id);
-      const target = sampleTarget(r); let bet = sampleBet(r);
-      if (target > 4) bet = Math.max(10, Math.round(bet / 2));
-      const won = target <= mNow;                                  // joined late and already out
-      const entry = { id, bet, target, state: won ? 'won' : 'in', atX: won ? target : null };
-      this.makeRow(entry, makeNick(r), makeAvatar(id));
-      this.setStatus(entry, mNow);
-      this.entries.push(entry);
-      const first = this.root.children[this.me ? 1 : 0];            // newest right after the player's own row
-      this.root.insertBefore(entry.el, first || null);
-      const idx = this.entries.indexOf(this.me); if (idx > -1) { this.entries.splice(idx, 1); this.entries.unshift(this.me); }
-    }
-    setStatus(e, m) {
-      if (e.state === 'in') e.stEl.innerHTML = `<span class="r-in">x${m.toFixed(2)}</span>`;
-      else if (e.state === 'won') e.stEl.innerHTML = `<span class="r-win">+${Math.floor(e.bet * e.atX - e.bet)} ⭐<em>x${e.atX.toFixed(2)}</em></span>`;
-      else e.stEl.innerHTML = `<span class="r-lose">−${e.bet} ⭐</span>`;
-    }
-    tick(m, flying) {
-      if (flying) {
-        const dt = performance.now() - this.t0;
-        while (this.queue.length && this.queue[0] <= dt) { this.queue.shift(); this.spawn(m); }
-        for (const e of this.entries) {
-          if (e.state === 'in' && e.target && m >= e.target) { e.state = 'won'; e.atX = e.target; this.setStatus(e, m); }
-          else if (e.state === 'in') this.setStatus(e, m);
-        }
+    userWon(m) { const e = this.me; if (e && e.state === 'wait') { e.state = 'won'; e.atX = m; this.paint(e); } }
+    /** elapsedBet = ms since the betting window opened; m = live multiplier; phase = bet | fly | crash */
+    sync(elapsedBet, m, phase, crash) {
+      while (this.shown < this.bots.length && this.bots[this.shown].joinAt <= elapsedBet) this.join(this.bots[this.shown++]);
+      if (phase === 'bet') return;
+      for (const e of this.rows) {
+        if (e.state !== 'wait') continue;
+        if (!e.me && m >= e.target && (phase === 'fly' || e.target <= crash)) { e.state = 'won'; e.atX = e.target; this.paint(e); }
+        else if (phase === 'crash') { e.state = 'lost'; this.paint(e); }
       }
-      this.liveM = m;
     }
-    crash(cp) {
-      this.queue = [];
-      for (const e of this.entries) if (e.state === 'in') { e.state = 'lost'; e.atX = cp; this.setStatus(e, cp); }
-      this.liveM = cp;
+    setHistory(list) {
+      if (!this.histEl) return; const key = (list || []).join(','); if (this.histKey === key) return; this.histKey = key;
+      this.histEl.innerHTML = (list || []).map((c) => `<i class="hc ${c < 2 ? 'lo' : c < 5 ? 'mid' : 'hi'}">${c.toFixed(2)}</i>`).join('');
     }
   }
   window.RocketFeed = RocketFeed;

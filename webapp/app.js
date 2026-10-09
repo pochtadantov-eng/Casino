@@ -71,37 +71,68 @@ const startParams = () => ({
 const R = {};
 
 const tier = (m) => (m < 2 ? '' : m < 5 ? ' t2' : m < 10 ? ' t3' : ' t4');
+// Rocket is one shared endless sequence of rounds: 5 s betting window -> flight -> crash -> short pause -> next round.
+// The server owns the timeline; every client polls it and animates the same round. Bots (seeded by the round number) bet, cash out or crash with you.
+const RC = {
+  rr: null, off: 0, k: null, phase: null, poll: null, timer: null, lastSettle: 0,
+  start() { this.stop(); this.poll = setInterval(() => this.fetch(), 250); this.timer = setInterval(() => this.tick(), 100); this.fetch(); },
+  stop() { clearInterval(this.poll); clearInterval(this.timer); this.poll = this.timer = null; this.rr = null; this.k = null; this.phase = null; },
+  async fetch() { try { const j = await api('games/rocket/round'); if (state.game !== 'rocket') return; this.rr = j; this.off = j.serverNow - Date.now(); } catch {} },
+  now() { return Date.now() + this.off; },
+  async settle() { if (Date.now() - this.lastSettle < 400) return; this.lastSettle = Date.now(); try { apply(await api('games/rocket/act', {})); } catch (e) { /* no active round */ } },
+  tick() {
+    const rr = this.rr, sc = state.scene, feed = state.rfeed, el = $('#mult');
+    if (state.game !== 'rocket' || !rr || !sc || !feed || !el) return;
+    const now = this.now();
+    if (rr.k !== this.k) { this.k = rr.k; this.phase = null; feed.begin(rr.k, rr.betStart); sc.polled = false; }
+    feed.setHistory(rr.history);
+    const phase = now < rr.flightStart ? 'bet' : rr.crash != null ? 'crash' : 'fly', prev = this.phase; this.phase = phase;
+    const round = state.round, mine = round && round.status === 'active' && round.view?.k === rr.k;
+    if (mine && !feed.me) feed.addMe({ name: tgUser ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') : 'Вы', photo: tgUser?.photo_url, bet: round.bet, auto: round.view.auto });
+    if (phase === 'bet') {
+      el.textContent = 'Старт через ' + Math.max(0, (rr.flightStart - now) / 1000).toFixed(1) + ' с'; el.className = 'big mult-over waiting';
+      feed.sync(now - rr.betStart, 1, 'bet');
+    } else if (phase === 'fly') {
+      if (prev !== 'fly' || sc.mode !== 'flying') {
+        sc.fly(rr.flightStart, this.off, rr.growth, (m) => {
+          if (this.phase !== 'fly') return;
+          el.textContent = m.toFixed(2) + 'x'; el.className = 'big mult-over ' + tier(m).trim();
+          feed.sync(this.now() - rr.betStart, m, 'fly');
+          const v = state.round?.view;
+          if (state.round?.status === 'active' && v?.auto && m >= v.auto && !sc.polled) { sc.polled = true; this.settle(); }
+          if (state.game === 'rocket' && state.round?.status === 'active') $('#cash').textContent = 'Забрать ' + Math.floor(state.round.bet * m) + ' ⭐';
+        });
+      }
+    } else if (prev !== 'crash') {                                      // the rocket has crashed
+      if (sc.mode === 'flying') sc.finish('lost');
+      el.textContent = rr.crash.toFixed(2) + 'x'; el.className = 'big mult-over crashed';
+      feed.sync(now - rr.betStart, rr.crash, 'crash', rr.crash);
+      if (state.round?.status === 'active') this.settle();
+    }
+    // the bet / cash-out buttons follow the phase
+    const go = $('#go'), cash = $('#cash'), active = state.round?.status === 'active';
+    go.hidden = active; cash.hidden = !active;
+    if (!active) { go.disabled = phase !== 'bet'; go.textContent = phase === 'bet' ? 'Поставить' : phase === 'fly' ? 'Идёт раунд…' : 'Ракета упала'; }
+    else if (phase === 'bet') { cash.disabled = true; cash.textContent = 'Ставка принята'; }
+    else if (phase === 'fly') cash.disabled = false;
+    else cash.disabled = true;
+  },
+};
 R.rocket = (round) => {
-  clearTimeout(state.pollTimer);
   const st = $('#stage');
   let sc = state.scene;
   if (!sc || !st.contains(sc.canvas ?? sc.c)) { // keep one running scene; rebuild only after another game replaced the stage
     st.classList.add('rocketstage');
-    st.innerHTML = '<canvas id="fx"></canvas><div class="big mult-over" id="mult">1.00x</div>';
+    st.innerHTML = '<canvas id="fx"></canvas><div class="big mult-over waiting" id="mult">…</div>';
     sc = state.scene = new RocketScene($('#fx'));
-    state.rfeed = new RocketFeed($('#rfeed'));
+    state.rfeed = new RocketFeed($('#rfeed'), $('#rhist'));
+    RC.k = null;
   }
-  const feed = state.rfeed, panel = $('#rfeed-panel'); if (panel) panel.hidden = false;
-  const el = $('#mult'), v = round?.view;
-  const paint = (m, cls = '') => { el.textContent = m.toFixed(2) + 'x'; el.className = 'big mult-over ' + cls + tier(m); };
-  const poll = async () => { // learn the real outcome from the server
-    try { apply(await api('games/rocket/act', {})); } catch (e) { say(e.message, 'lose'); }
-  };
-  if (!round) { sc.idle(); paint(1); feed?.reset(); return; }
-  if (round.status === 'active') {
-    const offset = v.serverNow - Date.now(); // align local clock with server
-    if (!feed._started || feed._roundId !== round.id) { feed._started = true; feed._roundId = round.id; feed.reset(); feed.start({ name: tgUser ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') : 'Вы', photo: tgUser?.photo_url, bet: round.bet, auto: v.auto }); }
-    sc.fly(v.startedAt, offset, v.growth, (m) => {
-      paint(m); feed.tick(m, true);
-      if (v.auto && m >= v.auto && !sc.polled) { sc.polled = true; poll(); }
-    });
-    state.pollTimer = setTimeout(poll, 250); // each poll re-renders and re-arms the timer; short interval so the on-screen x never runs far past the real crash point
-  } else {
-    const final = round.status === 'won' ? round.multiplier : v.crash;
-    paint(final, round.status === 'lost' ? 'crashed' : 'won');
-    sc.finish(round.status);
-    if (feed._roundId === round.id) { feed._roundId = null; feed._started = false; if (round.status === 'lost') feed.crash(final); else { feed.userWon(final); feed.tick(final, false); } }
-  }
+  const panel = $('#rfeed-panel'); if (panel) panel.hidden = false;
+  if (!RC.poll) RC.start();
+  const feed = state.rfeed, v = round?.view;
+  if (round && round.status === 'won') feed?.userWon(round.multiplier);
+  if (round && round.status === 'active' && v.k === RC.k && !feed.me) RC.tick();
 };
 
 // solid fills only (no gradient ids: 25 copies of one id make WebKit pick a hidden, dull copy)
@@ -202,7 +233,7 @@ function showResult(r, delay, kind) {          // "win" / "loss" plaque over the
     : `<b>${RES_LOSS[state.game] || 'ПРОИГРЫШ'}</b><span>−${r.bet} ⭐</span>`;
   $('#stage').append(el);
   setTimeout(() => el.remove(), (delay + (state.game === 'mines' ? 2.0 : 3.4)) * 1000);
-  lockPlay((delay + (state.game === 'tower' ? 3.4 : state.game === 'mines' ? 1.7 : 2.95)) * 1000);               // no new round while the result animation is still playing
+  if (state.game !== 'rocket') lockPlay((delay + (state.game === 'tower' ? 3.4 : state.game === 'mines' ? 1.7 : 2.95)) * 1000);               // no new round while the result animation is still playing
 }
 // Play button stays disabled until the animation has finished
 function lockPlay(ms) {

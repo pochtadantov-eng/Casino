@@ -7,6 +7,7 @@ import { Rng, hashSeed, newServerSeed } from '../fair/fair';
 import { WalletService } from '../wallet/wallet.service';
 import { engines } from './engines';
 import { Engine, GameError, RoundStatus, StepResult } from './engines/types';
+import { publicRound, roundAt } from './engines/rocket-schedule';
 
 @Injectable()
 export class GamesService {
@@ -61,6 +62,9 @@ export class GamesService {
     });
   }
 
+  /** Public timeline of the shared Rocket rounds (no secrets: the crash point appears only after the crash). */
+  rocketRound() { return publicRound(Date.now(), config.rocketSecret); }
+
   async start(userId: number, game: string, params: any) {
     const engine = this.engine(game);
     const bet = Number(params?.bet);
@@ -77,7 +81,13 @@ export class GamesService {
       const nonce = u.rows[0].round_count as number;
       const serverSeed = newServerSeed();
       const now = Date.now();
-      const { state, multiplier } = engine.init(params, new Rng(serverSeed, clientSeed, nonce), now);
+      let initParams = params;
+      if (game === 'rocket') {                                                  // Rocket is one shared round sequence: bets are only taken in the betting window
+        const rr = roundAt(now, config.rocketSecret);
+        if (now >= rr.flightStart) throw new GameError('Betting is closed, wait for the next round');
+        initParams = { ...params, _round: { k: rr.k, crash: rr.crash, flightStart: rr.flightStart } };
+      }
+      const { state, multiplier } = engine.init(initParams, new Rng(serverSeed, clientSeed, nonce), now);
 
       await this.wallet.apply(c, userId, -bet, 'bet');
       const ins = await c.query(

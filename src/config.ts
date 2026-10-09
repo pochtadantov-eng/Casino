@@ -10,6 +10,7 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL ?? 'postgres://casino:casino@localhost:5432/casino',
   minBet: int('MIN_BET', 50),
   maxBet: int('MAX_BET', 100000),
+  rocketSecret: process.env.ROCKET_SECRET ?? 'dev-rocket-secret-change-me',   // derives every shared Rocket crash point: keep it private and unique in production
   maxPayout: int('MAX_PAYOUT', 1000000),
   minDeposit: int('MIN_DEPOSIT', 1),
   minWithdraw: int('MIN_WITHDRAW', 100),

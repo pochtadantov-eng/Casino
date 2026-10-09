@@ -15,6 +15,8 @@ export function crashPoint(rng: Rng): number {
 }
 
 interface State {
+  /** shared round this bet belongs to */
+  k?: number;
   crash: number;
   startedAt: number;
   auto: number | null;
@@ -35,24 +37,27 @@ function settle(s: State, now: number): { status: 'active' | 'lost' | 'won'; mul
 export const rocket: Engine<State> = {
   id: 'rocket',
   init(params, rng, now) {
+    const shared = params?._round as { k: number; crash: number; flightStart: number } | undefined;      // set by GamesService from the shared timeline, never from the client
     let auto: number | null = null;
     if (params?.autoCashout != null) {
       auto = Number(params.autoCashout);
       if (!Number.isFinite(auto) || auto < 1.01 || auto > MAX_CRASH) throw new GameError('Bad auto cashout');
       auto = floor2(auto);
     }
+    if (shared) return { state: { k: shared.k, crash: shared.crash, startedAt: shared.flightStart, auto }, multiplier: 1 };
     return { state: { crash: crashPoint(rng), startedAt: now, auto }, multiplier: 1 };
   },
   act(state, _input, now) {
     return settle(state, now);
   },
   cashout(state, now) {
+    if (now < state.startedAt) throw new GameError('Wait for the launch');
     const r = settle(state, now);
     if (r.status !== 'active') return r;
     return { status: 'won', multiplier: r.multiplier, state: { ...state, cashedAt: r.multiplier } };
   },
   view(state, status, now) {
-    const base = { growth: GROWTH, startedAt: state.startedAt, serverNow: now, auto: state.auto };
+    const base = { growth: GROWTH, startedAt: state.startedAt, serverNow: now, auto: state.auto, k: state.k ?? null };
     return status === 'active' ? base : { ...base, crash: state.crash, cashedAt: state.cashedAt ?? null };
   },
   debug(state, now) {

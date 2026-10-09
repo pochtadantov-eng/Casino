@@ -38,9 +38,17 @@
   const multAt = (ms) => floor2(Math.exp(GROWTH * Math.max(0, ms)));
   const crashPoint = () => Math.min(1000, Math.max(1, floor2((1 - EDGE) / (1 - rnd()))));
 
+  // Rocket as one shared endless sequence of rounds (mirrors src/games/engines/rocket-schedule.ts; the demo derives crash points from a plain PRNG)
+  const RK = { BET: 5000, PAUSE: 3500, EPOCH: Date.UTC(2026, 9, 1) };
+  const rkCrash = (k) => { let s = ((k + 1) * 2654435761) >>> 0; s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; const u = ((t ^ (t >>> 14)) >>> 0) / 4294967296; return Math.min(1000, Math.max(1, floor2((1 - EDGE) / (1 - u)))); };
+  const rkBuild = (k, start) => { const crash = rkCrash(k), fs = start + RK.BET, ca = fs + Math.ceil(Math.log(crash) / GROWTH); return { k, betStart: start, flightStart: fs, crashAt: ca, nextStart: ca + RK.PAUSE, crash }; };
+  let rkc = { k: 0, start: RK.EPOCH };
+  const rkAt = (now) => { let r = rkBuild(rkc.k, rkc.start); while (r.nextStart <= now) { r = rkBuild(r.k + 1, r.nextStart); rkc = { k: r.k, start: r.betStart }; } return r; };
+  const rkPublic = (now) => { const r = rkAt(now), crashed = now >= r.crashAt; return { k: r.k, serverNow: now, betStart: r.betStart, flightStart: r.flightStart, nextStart: r.nextStart, growth: GROWTH, phase: now < r.flightStart ? 'bet' : crashed ? 'crash' : 'fly', ...(crashed ? { crash: r.crash, crashAt: r.crashAt } : {}), history: Array.from({ length: Math.min(14, r.k + (crashed ? 1 : 0)) }, (_, i) => rkCrash(r.k + (crashed ? 0 : -1) - i)) }; };
+
   const view = (r, now) => {
     const s = r.state, done = r.status !== 'active';
-    if (r.game === 'rocket') return { growth: GROWTH, startedAt: s.startedAt, serverNow: now, auto: s.auto, ...(done ? { crash: s.crash, cashedAt: s.cashedAt ?? null } : {}) };
+    if (r.game === 'rocket') return { growth: GROWTH, startedAt: s.startedAt, serverNow: now, auto: s.auto, k: s.k ?? null, ...(done ? { crash: s.crash, cashedAt: s.cashedAt ?? null } : {}) };
     if (r.game === 'tower') return { picks: s.picks, maxSteps: TW.maxSteps, last: s.last, serverNow: now, multipliers: Array.from({ length: TW.maxSteps }, (_, i) => twMult(i + 1)), offsets: s.offsets || [], hw: TW_HW, limits: twRanges(s.offsets).lv, stress: twStress(s.offsets), range: [twRanges(s.offsets).lo, twRanges(s.offsets).hi], swing: { start: s.swingStart, period: twPeriod(s.picks), amp: TW.amp, tol: Math.max(0, (twRanges(s.offsets).hi - twRanges(s.offsets).lo) / 2) } };
     if (r.game === 'mines') return { count: s.count, revealed: s.revealed, size: SIZE, ...(done ? { mines: s.mines } : {}) };
     return { variant: s.variant, choices: s.choices, bad: s.bad, maxSteps: s.max, picks: s.picks,
@@ -89,6 +97,7 @@
     if (!['rocket', 'mines', 'tower', 'seagull'].includes(g)) fail('Unknown game');
     let r = active(g);
     const now = Date.now();
+    if (g === 'rocket' && o === 'round') return rkPublic(now);
     if (!o) { if (r && g === 'rocket') settleRocket(r, now); return reply(r || null); }
     if (o === 'start') {
       const bet = Number(body.bet);
@@ -99,7 +108,8 @@
       if (g === 'rocket') {
         let auto = null;
         if (body.autoCashout != null) { auto = floor2(Number(body.autoCashout)); if (!(auto >= 1.01 && auto <= 1000)) fail('Bad auto cashout'); }
-        state = { crash: crashPoint(), startedAt: now, auto };
+        const rr = rkAt(now); if (now >= rr.flightStart) fail('Betting is closed, wait for the next round');
+        state = { k: rr.k, crash: rr.crash, startedAt: rr.flightStart, auto };
       } else if (g === 'mines') {
         const count = Number(body.mines); if (!Number.isInteger(count) || count < 3 || count > 24) fail('mines must be 3..24');
         const board = [...Array(SIZE).keys()]; for (let i = 0; i < count; i++) { const j = i + int(SIZE - i); [board[i], board[j]] = [board[j], board[i]]; }
@@ -143,7 +153,7 @@
       return reply(r);
     }
     if (o === 'cashout') {
-      if (g === 'rocket') { settleRocket(r, now); if (r.status === 'active') { s.cashedAt = r.multiplier; finish(r, 'won', r.multiplier); } }
+      if (g === 'rocket') { if (now < s.startedAt) fail('Wait for the launch'); settleRocket(r, now); if (r.status === 'active') { s.cashedAt = r.multiplier; finish(r, 'won', r.multiplier); } }
       else if (g === 'mines') { if (!s.revealed.length) fail('Open at least one tile'); finish(r, 'won', minesMult(s.count, s.revealed.length)); }
       else if (g === 'tower') { if (s.picks < 1) fail('Make at least one move'); finish(r, 'won', twMult(s.picks)); }
       else { if (!s.picks.length) fail('Make at least one move'); finish(r, 'won', stepsMult(s.choices, s.bad, s.picks.length)); }
