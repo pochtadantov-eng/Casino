@@ -73,25 +73,31 @@ R.rocket = (round) => {
   const st = $('#stage');
   let sc = state.scene;
   if (!sc || !st.contains(sc.canvas ?? sc.c)) { // keep one running scene; rebuild only after another game replaced the stage
+    st.classList.add('rocketstage');
     st.innerHTML = '<canvas id="fx"></canvas><div class="big mult-over" id="mult">1.00x</div>';
     sc = state.scene = new RocketScene($('#fx'));
+    state.rfeed = new RocketFeed($('#rfeed'));
   }
+  const feed = state.rfeed, panel = $('#rfeed-panel'); if (panel) panel.hidden = false;
   const el = $('#mult'), v = round?.view;
   const paint = (m, cls = '') => { el.textContent = m.toFixed(2) + 'x'; el.className = 'big mult-over ' + cls + tier(m); };
   const poll = async () => { // learn the real outcome from the server
     try { apply(await api('games/rocket/act', {})); } catch (e) { say(e.message, 'lose'); }
   };
-  if (!round) { sc.idle(); paint(1); return; }
+  if (!round) { sc.idle(); paint(1); feed?.reset(); return; }
   if (round.status === 'active') {
     const offset = v.serverNow - Date.now(); // align local clock with server
+    if (!feed._started || feed._roundId !== round.id) { feed._started = true; feed._roundId = round.id; feed.reset(); feed.start(); }
     sc.fly(v.startedAt, offset, v.growth, (m) => {
-      paint(m);
+      paint(m); feed.tick(m, true);
       if (v.auto && m >= v.auto && !sc.polled) { sc.polled = true; poll(); }
     });
     state.pollTimer = setTimeout(poll, 1500); // each poll re-renders and re-arms the timer
   } else {
-    paint(round.status === 'won' ? round.multiplier : v.crash, round.status === 'lost' ? 'crashed' : 'won');
+    const final = round.status === 'won' ? round.multiplier : v.crash;
+    paint(final, round.status === 'lost' ? 'crashed' : 'won');
     sc.finish(round.status);
+    if (feed._roundId === round.id) { feed._roundId = null; feed._started = false; if (round.status === 'lost') feed.crash(final); else feed.tick(final, false); }
   }
 };
 

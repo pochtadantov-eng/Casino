@@ -246,6 +246,7 @@ button,input,select{font-size:inherit;letter-spacing:0}
 .ctrl .actions{margin:0}
 .ctrl input,.ctrl select{padding:11px}
 #stage{margin-top:4px;min-height:max(260px,calc(100dvh - 130px - var(--ctrl-h,250px)))}
+#stage.rocketstage{min-height:220px;height:240px}
 body.ingame{padding-bottom:0}
 
 /* Tower game: the whole stage is the construction-site canvas */
@@ -266,3 +267,19 @@ button.place{flex:1.15;border:0;border-radius:14px;padding:16px 10px;font-size:1
 
 .loadgate{position:fixed;inset:0;z-index:999;background:transparent;touch-action:none;cursor:wait}
 .resban.tw{top:29%}
+#rfeed-panel{background:var(--card);border-radius:18px;margin-top:10px;padding:10px 10px 12px}
+#rfeed-panel[hidden]{display:none}
+.rfh{margin:0 0 8px 2px;font:800 11.5px/1 'Unbounded',system-ui,sans-serif;color:rgba(234,240,255,.6);letter-spacing:.6px;text-transform:uppercase}
+#rfeed{display:flex;flex-direction:column;gap:5px;overflow:hidden;transition:none}
+.rrow{display:flex;align-items:center;gap:9px;padding:6px 10px 6px 6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;transition:transform .35s ease,opacity .35s}
+.rrow.enter{transform:translateY(-8px);opacity:0}
+.rrow .rav{width:32px;height:32px;border-radius:50%;flex:0 0 auto;box-shadow:0 1px 4px rgba(0,0,0,.35);background:#1b1f28}
+.rrow .rmid{flex:1;min-width:0}
+.rrow .rnick{color:#eaf0ff;font:700 14px/1.1 system-ui,-apple-system,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrow .rbet{color:rgba(220,228,245,.55);font:600 11.5px/1.2 system-ui,sans-serif;font-variant-numeric:tabular-nums;margin-top:3px;display:flex;gap:8px;align-items:center}
+.rrow .rbet .rtarget{color:rgba(255,216,74,.9);font-weight:700}
+.rrow .rst{font:800 15px/1 'Unbounded',system-ui,sans-serif;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;min-width:72px}
+.rrow .r-in{color:#ffd84a}
+.rrow .r-win{color:#4ade80;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.rrow .r-win em{font-style:normal;font-weight:700;font-size:10.5px;color:rgba(74,222,128,.75)}
+.rrow .r-lose{color:#f87171}
