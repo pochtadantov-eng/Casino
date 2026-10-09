@@ -150,12 +150,16 @@ R.steps = (round) => {
 R.seagull = R.steps;
 // background track for the tower game: starts on entering the game (a user gesture), loops, stops on leaving / when the app is hidden
 const Music = (() => {
-  let a = null, want = false, cur = null;
+  const LISTS = { tower: ['tower', 'tower2'] };      // the tower plays its first track, then the second, then starts over
+  let a = null, want = false, cur = null, idx = 0;
   const url = (n) => (window.MUSIC_SRC && window.MUSIC_SRC[n]) || `audio/${n}.mp3` + (window.BUILD ? '?v=' + window.BUILD : '');
+  const list = () => LISTS[cur] || [cur];
+  const load = () => { a = new Audio(url(list()[idx])); a.loop = list().length === 1; a.volume = 0.5; a.onended = () => { if (!want) return; idx = (idx + 1) % list().length; load(); }; a.play().catch(() => {}); };
   return {
-    play(name = 'tower') { try { if (a && cur === name) { want = true; a.play().catch(() => {}); return; } if (a) { a.pause(); a = null; } cur = name; want = true; a = new Audio(url(name)); a.loop = true; a.volume = 0.5; a.play().catch(() => {}); } catch {} },
+    play(name = 'tower') { try { if (a && cur === name) { want = true; a.play().catch(() => {}); return; } if (a) { a.onended = null; a.pause(); a = null; } cur = name; idx = 0; want = true; load(); } catch {} },
     time() { return a && want && cur === 'tower' && !a.paused && a.currentTime > 0 ? a.currentTime : null; },
-    stop() { want = false; try { if (a) { a.pause(); a.currentTime = 0; } } catch {} },
+    track() { return cur === 'tower' ? list()[idx] : null; },
+    stop() { want = false; try { if (a) { a.onended = null; a.pause(); a.currentTime = 0; } } catch {} },
     pause(on) { try { if (a && want) { on ? a.pause() : a.play().catch(() => {}); } } catch {} },
   };
 })();
