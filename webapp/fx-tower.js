@@ -361,9 +361,20 @@
       g.restore();
       const im = TowerFx.worker;
       if (im && im.width) {
-        const hgt = 1.8 * u, wid = hgt * im.width / im.height, bob = Math.abs(Math.sin(ph * Math.PI)) * 0.09 * u;
-        g.save(); g.translate(this.X(-1.45), gy + 0.12 * u); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, wid * 0.5, 4.5, 0, 0, 6.283); g.fill();
-        g.translate(Math.sin(t * 3.14) * 0.03 * u, -bob); g.rotate(Math.sin(t * 6.283) * 0.07); g.scale(1 + 0.025 * pulse, 1 - 0.03 * pulse); g.drawImage(im, -wid / 2, -hgt, wid, hgt); g.restore();
+        // the foreman is a jointed puppet cut from one picture: legs, torso (arms crossed) and head move on their own pivots
+        const hgt = 1.8 * u, iw = im.width, ih = im.height, sc = hgt / ih, wid = iw * sc, b = t * 12.566, w1 = Math.sin(b / 2), w2 = Math.sin(b / 2 + 3.1416);
+        const cut = 0.62 * ih, neck = 0.295 * ih, split = 0.52 * iw, hip = (Math.abs(w1)) * 0.045 * hgt;
+        g.save(); g.translate(this.X(-1.45), gy + 0.12 * u); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, wid * 0.5 * (1 - Math.abs(w1) * 0.06), 4.5, 0, 0, 6.283); g.fill();
+        const piece = (sx, sy, sw, sh, px, py, rot, dx, dy) => { g.save(); g.translate((px - iw / 2) * sc + dx, (py - ih) * sc + dy); g.rotate(rot); g.drawImage(im, sx, sy, sw, sh, (sx - px) * sc, (sy - py) * sc, sw * sc, sh * sc); g.restore(); };
+        const legTop = cut - 0.05 * ih, shiftX = w1 * 0.03 * wid;
+        piece(0, legTop, split + 2, ih - legTop, 0.42 * iw, cut, 0.075 * w1, shiftX * 0.5, -Math.max(0, w1) * 0.035 * hgt);          // left leg
+        piece(split - 2, legTop, iw - split + 2, ih - legTop, 0.6 * iw, cut, 0.075 * w2, shiftX * 0.5, -Math.max(0, w2) * 0.035 * hgt);   // right leg, opposite step
+        const tr = 0.055 * Math.sin(b / 2 + 0.6), tdx = shiftX + w1 * 0.01 * wid, tdy = -hip - pulse * 0.012 * hgt;
+        piece(0, neck - 0.05 * ih, iw, cut + 0.012 * ih - (neck - 0.05 * ih), 0.5 * iw, cut, tr, tdx, tdy);                                // torso
+        const hr = 0.05 * Math.sin(b) + 0.05 * Math.sin(b / 2 + 1.2);
+        const hy = (cut - ih) * sc; g.save(); g.translate(tdx, hy + tdy); g.rotate(tr); g.translate(0, -hy);                                  // head rides on the torso
+        piece(0, 0, iw, neck + 0.015 * ih, 0.5 * iw, neck, hr, 0, 0);
+        g.restore(); g.restore();
       }
     }
     propsFront(g, gy) {                             // in front of the slab: bricks on a pallet, traffic cones
