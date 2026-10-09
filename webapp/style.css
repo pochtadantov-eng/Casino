@@ -274,6 +274,8 @@ button.place{flex:1.15;border:0;border-radius:14px;padding:16px 10px;font-size:1
 .rrow{display:flex;align-items:center;gap:9px;padding:6px 10px 6px 6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;transition:transform .35s ease,opacity .35s}
 .rrow.enter{transform:translateY(-8px);opacity:0}
 .rrow .rav{width:32px;height:32px;border-radius:50%;flex:0 0 auto;box-shadow:0 1px 4px rgba(0,0,0,.35);background:#1b1f28}
+.rrow .rav{background-size:cover;background-position:center}
+.rrow.me{border-color:rgba(255,216,74,.45);background:rgba(255,216,74,.08)}
 .rrow .rmid{flex:1;min-width:0}
 .rrow .rnick{color:#eaf0ff;font:700 14px/1.1 system-ui,-apple-system,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rrow .rbet{color:rgba(220,228,245,.55);font:600 11.5px/1.2 system-ui,sans-serif;font-variant-numeric:tabular-nums;margin-top:3px;display:flex;gap:8px;align-items:center}

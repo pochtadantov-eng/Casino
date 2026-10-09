@@ -87,7 +87,7 @@ R.rocket = (round) => {
   if (!round) { sc.idle(); paint(1); feed?.reset(); return; }
   if (round.status === 'active') {
     const offset = v.serverNow - Date.now(); // align local clock with server
-    if (!feed._started || feed._roundId !== round.id) { feed._started = true; feed._roundId = round.id; feed.reset(); feed.start(); }
+    if (!feed._started || feed._roundId !== round.id) { feed._started = true; feed._roundId = round.id; feed.reset(); feed.start({ name: tgUser ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') : 'Вы', photo: tgUser?.photo_url, bet: round.bet, auto: v.auto }); }
     sc.fly(v.startedAt, offset, v.growth, (m) => {
       paint(m); feed.tick(m, true);
       if (v.auto && m >= v.auto && !sc.polled) { sc.polled = true; poll(); }
@@ -97,7 +97,7 @@ R.rocket = (round) => {
     const final = round.status === 'won' ? round.multiplier : v.crash;
     paint(final, round.status === 'lost' ? 'crashed' : 'won');
     sc.finish(round.status);
-    if (feed._roundId === round.id) { feed._roundId = null; feed._started = false; if (round.status === 'lost') feed.crash(final); else feed.tick(final, false); }
+    if (feed._roundId === round.id) { feed._roundId = null; feed._started = false; if (round.status === 'lost') feed.crash(final); else { feed.userWon(final); feed.tick(final, false); } }
   }
 };
 

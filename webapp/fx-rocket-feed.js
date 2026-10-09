@@ -115,41 +115,62 @@
     const url = c.toDataURL(); avCache.set('p' + seed, url); return url;
   }
 
-  // target + bet together: most play safe and take 1.2-2x, a few hold for 2-4x, very few go higher
-  // (losers tend to have small bets, as the user asked — small amounts, few people)
-  function samplePlayer(r) {
+  // varied stakes: a mix of round numbers (50, 100, 500...) and odd ones (1378, 938, 294...)
+  function sampleBet(r) {
+    if (r() < 0.35) return pick([10, 20, 25, 50, 50, 100, 100, 200, 250, 300, 500, 500, 1000, 1500, 2000], r);
+    let v = 12 * Math.pow(300, Math.pow(r(), 1.15));                 // ~12..3600, log-spread
+    const k = r(); if (k < 0.3) v = Math.round(v / 10) * 10; else if (k < 0.45) v = Math.round(v / 5) * 5; else v = Math.round(v);
+    return Math.max(10, v);
+  }
+  // cash-out target: some bail out immediately, some in the middle, some hold high, some chase moon (and usually lose)
+  function sampleTarget(r) {
     const u = r();
-    if (u < 0.5)  return { target: 1.15 + r() * 0.25, bet: pick([50, 75, 100, 150, 200, 300, 500, 750], r) };  // ~out at 1.2-1.4 (nearly always wins, bigger bets)
-    if (u < 0.75) return { target: 1.4  + r() * 0.5,  bet: pick([30, 50, 75, 100, 150, 250], r) };             // ~out at 1.5-1.9
-    if (u < 0.9)  return { target: 1.9  + r() * 1.3,  bet: pick([25, 50, 75, 100, 150], r) };                  // ~out at 2-3.2
-    if (u < 0.97) return { target: 3.2  + r() * 2.8,  bet: pick([20, 30, 50, 75], r) };                        // reach 3-6
-    return { target: 6 + Math.abs(gaussian(r)) * 8, bet: pick([10, 15, 20, 25, 40], r) };                     // moon shot, tiny bets
+    if (u < 0.30) return 1.05 + r() * 0.45;
+    if (u < 0.58) return 1.5 + r() * 1.0;
+    if (u < 0.80) return 2.5 + r() * 2.5;
+    if (u < 0.93) return 5 + r() * 10;
+    return 15 + Math.abs(gaussian(r)) * 40;
   }
 
   class RocketFeed {
     constructor(root) {
-      this.root = root; this.entries = []; this.lastSpawn = 0; this.seedBase = Date.now(); this.liveM = 1;
+      this.root = root; this.entries = []; this.queue = []; this.t0 = 0; this.seedBase = Date.now(); this.liveM = 1; this.me = null;
     }
-    reset() { for (const e of this.entries) e.el.remove(); this.entries = []; this.lastSpawn = 0; this.liveM = 1; }
-    start() { this.lastSpawn = performance.now() - 500; for (let i = 0; i < 4; i++) this.spawn(1); }
+    reset() { for (const e of this.entries) e.el.remove(); this.entries = []; this.queue = []; this.me = null; this.liveM = 1; }
+    // user = { name, photo, bet, auto } — the player is always the first row; other players join after
+    start(user) {
+      this.t0 = performance.now();
+      if (user) this.addMe(user);
+      const n = 8 + Math.floor(Math.pow(Math.random(), 1.2) * 43);   // 8..50 people this round
+      const spread = 3000 + Math.random() * 7000;
+      this.queue = Array.from({ length: n }, () => Math.pow(Math.random(), 1.6) * spread).sort((a, b) => a - b);
+    }
+    makeRow(entry, nick, avatarCss) {
+      const el = document.createElement('div'); el.className = 'rrow enter' + (entry.me ? ' me' : '');
+      el.innerHTML = `<div class="rav" style="background-image:url('${avatarCss}')"></div><div class="rmid"><div class="rnick"></div><div class="rbet"><span>${entry.bet} ⭐</span>${entry.target ? `<span class="rtarget">цель x${entry.target.toFixed(2)}</span>` : ''}</div></div><div class="rst"></div>`;
+      el.querySelector('.rnick').textContent = nick;
+      entry.el = el; entry.stEl = el.querySelector('.rst');
+      requestAnimationFrame(() => el.classList.remove('enter'));
+    }
+    addMe(u) {
+      const e = { id: 0, me: true, bet: u.bet, target: u.auto || 0, state: 'in', atX: null };
+      const av = u.photo || makeAvatar(7);
+      this.makeRow(e, u.name || 'Вы', av);
+      this.me = e; this.setStatus(e, 1); this.entries.unshift(e); this.root.prepend(e.el);
+    }
+    userWon(m) { const e = this.me; if (e && e.state === 'in') { e.state = 'won'; e.atX = m; this.setStatus(e, m); } }
     spawn(mNow = 1) {
       const id = ++this.seedBase, r = rng(id);
-      // mix: a few in-flight (target ahead of current), many already-cashed below current (feed looks lively with wins)
-      let bet, target, state = 'in', atX = null;
-      if (mNow > 1.05 && r() < 0.7) {                             // mid-flight: pretend they cashed just now, below current m
-        target = Math.max(1.05, mNow - r() * 0.3); state = 'won'; atX = target;
-        bet = pick([30, 50, 75, 100, 150, 200, 300, 500], r);
-      } else {
-        ({ bet, target } = samplePlayer(r));
-      }
-      const nick = makeNick(r), avatar = makeAvatar(id);
-      const el = document.createElement('div'); el.className = 'rrow enter';
-      el.innerHTML = `<img class="rav" src="${avatar}" alt=""><div class="rmid"><div class="rnick">${nick}</div><div class="rbet"><span>${bet} ⭐</span><span class="rtarget">цель x${target.toFixed(2)}</span></div></div><div class="rst"></div>`;
-      const entry = { id, bet, target, state, atX, el, stEl: el.querySelector('.rst') };
+      const target = sampleTarget(r); let bet = sampleBet(r);
+      if (target > 4) bet = Math.max(10, Math.round(bet / 2));
+      const won = target <= mNow;                                  // joined late and already out
+      const entry = { id, bet, target, state: won ? 'won' : 'in', atX: won ? target : null };
+      this.makeRow(entry, makeNick(r), makeAvatar(id));
       this.setStatus(entry, mNow);
-      this.entries.unshift(entry); this.root.prepend(el);
-      requestAnimationFrame(() => el.classList.remove('enter'));
-      while (this.entries.length > 6) { const old = this.entries.pop(); old.el.remove(); }
+      this.entries.push(entry);
+      const first = this.root.children[this.me ? 1 : 0];            // newest right after the player's own row
+      this.root.insertBefore(entry.el, first || null);
+      const idx = this.entries.indexOf(this.me); if (idx > -1) { this.entries.splice(idx, 1); this.entries.unshift(this.me); }
     }
     setStatus(e, m) {
       if (e.state === 'in') e.stEl.innerHTML = `<span class="r-in">x${m.toFixed(2)}</span>`;
@@ -158,16 +179,17 @@
     }
     tick(m, flying) {
       if (flying) {
-        const now = performance.now();
-        if (now - this.lastSpawn > 500 + Math.random() * 700) { this.lastSpawn = now; this.spawn(m); }
+        const dt = performance.now() - this.t0;
+        while (this.queue.length && this.queue[0] <= dt) { this.queue.shift(); this.spawn(m); }
         for (const e of this.entries) {
-          if (e.state === 'in' && m >= e.target) { e.state = 'won'; e.atX = e.target; this.setStatus(e, m); }
+          if (e.state === 'in' && e.target && m >= e.target) { e.state = 'won'; e.atX = e.target; this.setStatus(e, m); }
           else if (e.state === 'in') this.setStatus(e, m);
         }
       }
       this.liveM = m;
     }
     crash(cp) {
+      this.queue = [];
       for (const e of this.entries) if (e.state === 'in') { e.state = 'lost'; e.atX = cp; this.setStatus(e, cp); }
       this.liveM = cp;
     }
