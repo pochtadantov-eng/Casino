@@ -121,7 +121,7 @@
     newHang() { this.hang = { v: this.ci++ }; }
     _setReady(v) { if (v !== this._ready) { this._ready = v; this.onReady?.(v); } }
     landTop() { return SLAB_H + (this.landed + this.base) * INC; }
-    camTarget() { return Math.max(-0.7, this.landTop() - 0.42 * this.hv); }
+    camTarget() { return Math.max(-0.7, this.landTop() - 0.38 * this.hv); }
     pivotY() { return this.landTop() + PIVOT_UP; }
     tap() {
       if (this.state !== 'sway' || this.roundStatus !== 'active' || !this.hang || this.fall || !this.swing) return false;
@@ -174,7 +174,7 @@
       if (this.state === 'done' && this.roundStatus === 'lost') this.lostT += dt;
       if (this.lostT > 1.7) {                                  // the result plaque is up: the camera drops to the first house, faster and faster
         const floor = -0.7; if (this.camBottom > floor) { this.camV += 17 * dt; this.camBottom = Math.max(floor, this.camBottom - this.camV * dt); if (this.camBottom <= floor) { this.camV = 0; this.shake = Math.max(this.shake, 0.35); } }
-      } else { const ct = this.camTarget(); this.camBottom = this.camSet ? this.camBottom + (ct - this.camBottom) * Math.min(1, dt * 1.5) : ct; }
+      } else { const ct = this.camTarget(); this.camBottom = this.camSet ? this.camBottom + (ct - this.camBottom) * Math.min(1, dt * 2.0) : ct; }
       this.camSet = true;
       this.shake = Math.max(0, this.shake - dt * 2.2);
       for (const p of this.puffs) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.r += dt * 0.5; } this.puffs = this.puffs.filter((p) => p.life > 0);
@@ -194,7 +194,7 @@
         if (f.y - HH / 2 <= top) {
           if (f.ok) {
             const impact = -f.vy, pw = clamp((impact - 6) / 9), under = this.floors[this.floors.length - 1], col = PAL[(f.v % 42) % PAL.length].wall;
-            const nf = { v: f.v, ox: f.ox, tilt: f.tilt, sq: clamp(impact / 130, 0.03, 0.09), dmg: f.dmg }; if (pw > 0.25) { this.hit(nf, 'bottom', f.x - under.ox || (Math.random() - 0.5), pw, 'W'); this.hit(under, 'top', clamp((f.x - under.ox) / HW, -0.3, 0.3), pw, 'T'); } this.spray(f.ox, top + 0.12, 5 + Math.round(pw * 8), col);
+            const nf = { v: f.v, ox: f.ox, tilt: f.tilt, sq: clamp(impact / 130, 0.03, 0.09), dmg: f.dmg }; this.puff(f.ox - 0.7, top + 0.08, 4, 0.5); this.puff(f.ox + 0.7, top + 0.08, 4, 0.5);
             this.floors.push(nf); this.landed++; this.fall = null; this.wv += 1.3 + impact * 0.08;
             this.puff(f.ox, top + 0.1, 12, 1.0); this.state = 'land'; this.u = 0; this.shake = 0.25;
             const m = this.mults[this.landed - 1]; if (m != null && this.popFor !== this.landed) { this.popFor = this.landed; this.pops.push({ txt: 'x' + m.toFixed(2), x: -0.2, y0: top + INC + 0.5, life: 1.5, max: 1.5 }); }
@@ -274,11 +274,11 @@
       for (const c of this.clouds) { const span = h * 1.15, base = c.fy * h + (cam + 0.9) * ppu * c.z * 0.35, y = ((base % span) + span) % span - h * 0.07; this.cloud(g, this.X(c.x), y, c.s, 0.55 + c.z * 0.45); }
       for (const b of this.birds) { const x = this.X(b.x), y = this.Y(b.y) - (cam + 0.9) * ppu * 0.3, f = Math.sin(b.t * 9) * 4; g.strokeStyle = 'rgba(20,50,90,.7)'; g.lineWidth = 1.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 7, y - f); g.quadraticCurveTo(x - 3, y - 4, x, y); g.quadraticCurveTo(x + 3, y - 4, x + 7, y - f); g.stroke(); }
       this.cityLayer(g, 0, 0.16); this.cityLayer(g, 1, 0.3);
-      const gy = this.Y(0);
-      if (gy < h + 4) {
-        const gg = g.createLinearGradient(0, gy, 0, h); gg.addColorStop(0, '#5fbf4a'); gg.addColorStop(0.07, '#3f9a3a'); gg.addColorStop(0.1, '#9a7a56'); gg.addColorStop(1, '#6d5238'); g.fillStyle = gg; g.fillRect(0, gy, w, h - gy + 4);
-        g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0, gy, w, 2); g.fillStyle = 'rgba(0,0,0,.12)'; for (let i = 0; i < 18; i++) { g.beginPath(); g.ellipse(((i * 97) % 211) / 211 * w, gy + 0.45 * ppu + ((i * 53) % 37) / 37 * 0.9 * ppu, 5 + (i % 4) * 2, 2.5, 0, 0, 6.283); g.fill(); }
-        this.props(g, gy);
+      const gy = this.Y(0); this.camBottom = -0.7; const gp = this.Y(0); this.camBottom = cam;      // landscape stays put: the tower slides down in front of it
+      if (gp < h + 4) {
+        const gg = g.createLinearGradient(0, gp, 0, h); gg.addColorStop(0, '#5fbf4a'); gg.addColorStop(0.07, '#3f9a3a'); gg.addColorStop(0.1, '#9a7a56'); gg.addColorStop(1, '#6d5238'); g.fillStyle = gg; g.fillRect(0, gp, w, h - gp + 4);
+        g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0, gp, w, 2); g.fillStyle = 'rgba(0,0,0,.12)'; for (let i = 0; i < 18; i++) { g.beginPath(); g.ellipse(((i * 97) % 211) / 211 * w, gp + 0.45 * ppu + ((i * 53) % 37) / 37 * 0.9 * ppu, 5 + (i % 4) * 2, 2.5, 0, 0, 6.283); g.fill(); }
+        this.props(g, gp);
       }
       const sy = this.Y(SLAB_H), sw = SLAB_W * ppu;
       if (sy < h + 40) {
@@ -287,7 +287,7 @@
         const bandH = (gy - sy) * 0.3, by = sy + (gy - sy) * 0.18; g.save(); g.beginPath(); g.rect(x, by, sw, bandH); g.clip(); for (let i = -2, ix = x; ix < x + sw + 40; i++, ix += 22) { g.fillStyle = i % 2 ? '#2b333c' : '#f6b50b'; g.beginPath(); g.moveTo(ix, by + bandH); g.lineTo(ix + 11, by + bandH); g.lineTo(ix + 22, by); g.lineTo(ix + 11, by); g.fill(); } g.restore();
         g.fillStyle = '#6f7c89'; for (const bx of [x + 8, x + sw - 8]) { g.beginPath(); g.arc(bx, by + bandH + (gy - sy) * 0.18, 2.6, 0, 6.283); g.fill(); }
       }
-      if (gy < h + 4) this.propsFront(g, gy);
+      if (gp < h + 4) this.propsFront(g, gp);
       const n = this.floors.length;
       this.floors.forEach((f, i) => { const k = n > 1 ? i / (n - 1) : 1, kf = 0.1 + 0.9 * k, wy = SLAB_H + i * INC + HH / 2; if (this.Y(wy) < -HH * ppu) return; this.drawHouse(g, f.v, f.ox + this.wob * 0.2 * kf, wy, f.tilt - this.wob * 0.02 * kf, f.sq, f.dmg); });
       if (this.intro) this.drawHouse(g, this.intro.v, this.intro.x, this.intro.y, this.intro.rot);
