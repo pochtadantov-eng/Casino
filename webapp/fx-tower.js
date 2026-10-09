@@ -449,57 +449,25 @@
         const sx = ((t * 0.5) % 1.7 - 0.35) * w, sh = oc.createLinearGradient(sx - 36, y1 - 40, sx + 36, y1 + 120); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.75)'); sh.addColorStop(1, 'rgba(255,255,255,0)'); oc.fillStyle = sh; oc.fillRect(0, 0, w, h); oc.globalCompositeOperation = 'source-over';
         o2.setTransform(1, 0, 0, 1, 0, 0); o2.drawImage(this.tcv, 0, 0);       // outline + fill merged into one layer, so fading never shows the outline through the letters
         g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = ta; { const k = DP.a; g.translate((cx + dx) * k, (topY + dy) * k); g.rotate(swing); g.translate(-cx * k, -topY * k); } g.drawImage(this.tcv2, 0, 0); g.restore();
-        // rigging: a cargo cable from the belly of the helicopter to a ring, two ropes from the ring to a rod above "NOVA", short strings from the rod
-        // to every letter of the top word, and chains tying the top word to the bottom word (everything follows the swaying title)
+        // rigging: only black ropes. A cargo cable from the belly of the helicopter to a ring; from the ring one rope to the top of EVERY letter of "NOVA"
+        // (tied at a solid part of the letter); short ropes tie the top word to the bottom word, each from a solid part of one letter to a solid part of the other.
         g.save(); g.globalAlpha = ta; g.lineCap = 'round'; g.lineJoin = 'round';
-        const rope = (x1, y1, x2, y2, sag, w = 1.8, col = 'rgba(32,28,26,.96)') => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x1, y1); g.quadraticCurveTo((x1 + x2) / 2 + Math.sin(t * 2.2 + x1 * 0.05) * 2, (y1 + y2) / 2 + sag, x2, y2); g.stroke(); };
-        const ringAt = (x, y, r = 3) => { g.strokeStyle = '#d5d8de'; g.lineWidth = 1.7; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke(); g.strokeStyle = 'rgba(30,30,34,.7)'; g.lineWidth = 0.7; g.beginPath(); g.arc(x, y, r + 0.9, 0, 6.283); g.stroke(); };
+        const ROPE = 'rgba(22,19,18,.97)';
+        const rope = (x1, y1, x2, y2, sag, w = 2, ph = 0) => { g.strokeStyle = ROPE; g.lineWidth = w; g.beginPath(); g.moveTo(x1, y1); g.quadraticCurveTo((x1 + x2) / 2 + Math.sin(t * 2.2 + ph) * 1.6, (y1 + y2) / 2 + sag, x2, y2); g.stroke(); };
+        const knot = (x, y, r = 2.7) => { g.fillStyle = ROPE; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.strokeStyle = 'rgba(255,255,255,.28)'; g.lineWidth = 0.8; g.beginPath(); g.arc(x - 0.5, y - 0.6, r * 0.5, 3.4, 5.2); g.stroke(); };
         const top = letters.slice(0, 4), low = letters.slice(4);
-        const rodY = Math.min(...top.map((L) => L.y - L.fs * 0.5)) - 11, rl = top[0].x - fs1 * 0.5, rr = top[3].x + fs1 * 0.5;
-        const [ax, ay] = xf(rl, rodY), [bx, by] = xf(rr, rodY);
+        // solid parts: N left stem, O top arc, V left arm, A apex (as a fraction of the font size from the letter centre)
+        const topAt = [-0.27, 0, -0.27, 0], botAt = [-0.27, 0, 0, 0.3];
+        const lowTop = [-0.27, -0.0, -0.3, 0.0, 0.28];                               // Б left stem, А apex, Ш left stem, Н (unused), И right stem
         const hookX = hx + 0.9 * hs, beltY = hy + 1.4 * hs, ringX = hookX + Math.sin(t * 1.3) * 1.5, ringY = hy + 3.5 * hs;
-        // cable from the cargo hook under the fuselage down to the lifting ring
         g.fillStyle = '#2a2d33'; g.fillRect(hookX - 0.28 * hs, beltY - 0.1 * hs, 0.56 * hs, 0.34 * hs);
-        rope(hookX, beltY + 0.2 * hs, ringX, ringY - 4, 0, 2.2);
-        ringAt(ringX, ringY, 4.5);
-        // the two sling ropes: ring -> both ends of the rod
-        rope(ringX, ringY + 3, ax, ay, 3, 1.9); rope(ringX, ringY + 3, bx, by, 3, 1.9);
-        // everything below is drawn in the title's own frame, so it swings with the letters
-        const inTitle = (fn) => { g.save(); g.translate(cx + dx, topY + dy); g.rotate(swing); g.translate(-cx, -topY); fn(); g.restore(); };
-        const bolt = (x, y, r = 1.5) => { g.fillStyle = '#c9ced6'; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.strokeStyle = 'rgba(20,22,28,.8)'; g.lineWidth = 0.6; g.stroke(); g.fillStyle = 'rgba(255,255,255,.8)'; g.fillRect(x - r * 0.9, y - 0.3, r * 1.8, 0.6); };
-        const plate = (x, y, w, h, nb = 2) => {                                // a steel mounting plate with rivets
-          const gr = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0); gr.addColorStop(0, '#6e747e'); gr.addColorStop(0.45, '#c3c8d0'); gr.addColorStop(1, '#6a707a');
-          g.fillStyle = gr; g.strokeStyle = 'rgba(15,17,22,.9)'; g.lineWidth = 1; g.beginPath(); g.roundRect ? g.roundRect(x - w / 2, y - h / 2, w, h, 2.2) : g.rect(x - w / 2, y - h / 2, w, h); g.fill(); g.stroke();
-          for (let i = 0; i < nb; i++) bolt(x, nb === 1 ? y : y - h / 2 + h * (i + 0.5) / nb, Math.min(1.7, w * 0.17));
-        };
-        const carabiner = (x, y1, y2) => {                                       // oval snap hook between the rod and an eyelet
-          const cy = (y1 + y2) / 2, hh = Math.max(7, (y2 - y1) / 2 + 1.5);
-          g.strokeStyle = '#e1e4ea'; g.lineWidth = 2.1; g.beginPath(); g.ellipse(x, cy, 3.4, hh, 0, 0, 6.283); g.stroke();
-          g.strokeStyle = 'rgba(30,32,38,.75)'; g.lineWidth = 0.7; g.beginPath(); g.ellipse(x, cy, 4.5, hh + 1, 0, 0, 6.283); g.stroke();
-          g.fillStyle = '#9aa0aa'; g.fillRect(x - 4.4, cy - 1.2, 2.2, 2.4);                      // gate
-        };
-        inTitle(() => {
-          // the rod
-          g.strokeStyle = '#7f858f'; g.lineWidth = 4; g.beginPath(); g.moveTo(rl, rodY); g.lineTo(rr, rodY); g.stroke();
-          g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1.1; g.beginPath(); g.moveTo(rl, rodY - 1.2); g.lineTo(rr, rodY - 1.2); g.stroke();
-          plate(rl, rodY, 7, 11, 1); plate(rr, rodY, 7, 11, 1);
-          // each letter of NOVA: a riveted eyelet plate on its top edge, a snap hook from the rod
-          for (const L of top) {
-            const ty = L.y - L.fs * 0.5 + 4;
-            carabiner(L.x, rodY + 2, ty - 5);
-            plate(L.x, ty, 12, 9, 2); g.strokeStyle = '#e1e4ea'; g.lineWidth = 1.8; g.beginPath(); g.arc(L.x, ty - 6, 3.2, Math.PI * 0.1, Math.PI * 0.9, true); g.stroke();
-          }
-          // between the words: a steel rail clamped to NOVA from above with three straps and to the bottom word with three more
-          const nb = Math.max(...top.map((L) => L.y + L.fs * 0.5)), bt = Math.min(...low.map((L) => L.y - L.fs * 0.5)), my = (nb + bt) / 2, x1 = top[0].x - fs1 * 0.15, x2 = top[3].x + fs1 * 0.15;
-          for (const [i, j] of [[0, 4], [2, 6], [3, 8]]) {
-            const U = letters[i], D = letters[j];
-            plate(U.x, (U.y + U.fs * 0.5 - 6 + my) / 2, 9, Math.max(10, my - (U.y + U.fs * 0.5 - 6)), 2);                                  // strap from the top word down to the rail
-            plate(D.x, (my + D.y - D.fs * 0.5 + 6) / 2, 9, Math.max(10, D.y - D.fs * 0.5 + 6 - my), 2);                                      // strap from the rail down to the bottom word
-          }
-          const rg = g.createLinearGradient(0, my - 3, 0, my + 3); rg.addColorStop(0, '#dfe3e9'); rg.addColorStop(0.5, '#8d939d'); rg.addColorStop(1, '#4f545d');
-          g.fillStyle = rg; g.strokeStyle = 'rgba(15,17,22,.9)'; g.lineWidth = 1; g.beginPath(); g.roundRect ? g.roundRect(x1, my - 3.2, x2 - x1, 6.4, 3) : g.rect(x1, my - 3.2, x2 - x1, 6.4); g.fill(); g.stroke();
-          bolt(x1 + 4, my); bolt(x2 - 4, my);
-        });
+        rope(hookX, beltY + 0.2 * hs, ringX, ringY - 4, 0, 2.4);
+        g.strokeStyle = '#d5d8de'; g.lineWidth = 2; g.beginPath(); g.arc(ringX, ringY, 4.5, 0, 6.283); g.stroke(); g.strokeStyle = 'rgba(30,30,34,.7)'; g.lineWidth = 0.8; g.beginPath(); g.arc(ringX, ringY, 5.6, 0, 6.283); g.stroke();
+        top.forEach((L, i) => { const [px, py] = xf(L.x + topAt[i] * L.fs, L.y - L.fs * 0.5 + 4); rope(ringX, ringY + 4, px, py, 3, 2.1, i); knot(px, py); });
+        for (const [i, j, ju] of [[0, 4, 0], [1, 5, 1], [2, 6, 2], [3, 8, 4]]) {
+          const U = letters[i], D = letters[j], [px, py] = xf(U.x + botAt[i] * U.fs, U.y + U.fs * 0.5 - 3), [qx, qy] = xf(D.x + lowTop[ju] * D.fs, D.y - D.fs * 0.5 + 3);
+          rope(px, py, qx, qy, 1.5, 2.1, i + 4); knot(px, py); knot(qx, qy);
+        }
         g.restore();
       }
       if (this.loadStart == null) this.loadStart = Date.now();
