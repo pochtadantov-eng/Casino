@@ -178,7 +178,8 @@
     }
     support(x, top) { const a = Math.abs(x); return a < HW / 2 + 0.25 ? top : a < SLAB_W / 2 ? SLAB_H : 0; }
     update(dt) {
-      this.titleA = (this.titleA == null ? 1 : this.titleA) + ((this.roundId === null ? 1 : 0) - (this.titleA == null ? 1 : this.titleA)) * Math.min(1, dt * 5);
+      const tgt = this.roundId === null || (this.state === 'done' && this.camBottom <= -0.6 && (this.roundStatus === 'won' || this.wreckT === -2)) ? 1 : 0;      // the title is back once the camera is at the bottom and the round is over
+      this.titleA = (this.titleA == null ? 1 : this.titleA) + (tgt - (this.titleA == null ? 1 : this.titleA)) * Math.min(1, dt * (tgt ? 3 : 5));
       if (this.state === 'done' && this.roundStatus === 'lost' && this.wreckT === -1 && this.lostT > 0.9) this.wreck();      // the bulldozer rolls in while the plaque is still up
       if (this.wreckT >= 0) this.stepWreck(dt);
       const tS = this.now(), sw0 = this.swing ? this.swing.start : tS, top = this.landTop();
@@ -199,7 +200,7 @@
       if (this.state === 'drop' || this.state === 'land' || this.state === 'tumble') this.stepFall(dt, top, tS, sw0);
       if (hasHouse && this.swing) { const sp = this.swingAt(tS); this.th = Math.asin(clamp(sp.x / R, -0.95, 0.95)); this.thv = sp.v / 1000 / R; } else { this.thv *= 0.9; this.th *= 0.92; }
       this._setReady(this.state === 'sway' && this.roundStatus === 'active' && !this.fall && !!this.swing && tS >= this.swing.start + 60);
-      if (this.state === 'done' && this.roundStatus === 'lost') this.lostT += dt;
+      if (this.state === 'done' && (this.roundStatus === 'lost' || this.roundStatus === 'won')) this.lostT += dt;      // after any finished round the camera drops to the base
       if (this.lostT > 0.45) {                                  // the result plaque is up: the camera drops to the first house, faster and faster
         const floor = -0.7; if (this.camBottom > floor) { this.camV += 17 * dt; this.camBottom = Math.max(floor, this.camBottom - this.camV * dt); if (this.camBottom <= floor) { this.camV = 0; this.shake = Math.max(this.shake, 0.35); } }
       } else { const ct = this.camTarget(); this.camBottom = this.camSet ? this.camBottom + (ct - this.camBottom) * Math.min(1, dt * 2.0) : ct; }
@@ -342,7 +343,7 @@
       for (const p of this.puffs) { const a = clamp(p.life / p.max), x = this.X(p.x), y = this.Y(p.y), r = p.r * ppu, gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(255,255,255,${0.95 * a})`); gr.addColorStop(0.6, `rgba(250,250,250,${0.7 * a})`); gr.addColorStop(1, 'rgba(240,240,240,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); }
       for (const p of this.pops) { const k = 1 - p.life / p.max, y = this.Y(p.y0 + 1.6 * (1 - Math.pow(1 - k, 2))), x = this.X(p.x), sc = 1 + 0.4 * Math.sin(clamp(k * 4) * Math.PI); g.save(); g.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3; g.translate(x, y); g.scale(sc, sc); g.font = "800 28px 'Unbounded',system-ui,sans-serif"; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(110,55,0,.95)'; g.strokeText(p.txt, 0, 0); const tg = g.createLinearGradient(0, -14, 0, 14); tg.addColorStop(0, '#fff2a0'); tg.addColorStop(0.5, '#ffc533'); tg.addColorStop(1, '#ff9a14'); g.fillStyle = tg; g.fillText(p.txt, 0, 0); g.restore(); }
       if (this.t0 == null) this.t0 = t;
-      const mt = typeof Music !== 'undefined' && Music.time ? Music.time() : null, since = mt != null ? mt : t - this.t0, base = clamp(since / 3.8), ta = this.titleA * base;   // starts invisible and fades in over the ~4 s song intro; then stays until Play is pressed
+      const mt = typeof Music !== 'undefined' && Music.time ? Music.time() : null, since = mt != null ? mt : t - this.t0, base = clamp(Math.max(since, t - this.t0) / 3.8), ta = this.titleA * base;   // starts invisible and fades in over the ~4 s song intro; then stays until Play is pressed
       if (ta > 0.01) {
         const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.22, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
         if (!this.tcv || this.tcv.width !== g.canvas.width || this.tcv.height !== g.canvas.height) { this.tcv = document.createElement('canvas'); this.tcv.width = g.canvas.width; this.tcv.height = g.canvas.height; }

@@ -265,3 +265,4 @@ button.place{flex:1.15;border:0;border-radius:14px;padding:16px 10px;font-size:1
 .nogl{margin:auto;padding:24px;text-align:center;color:#334155;font-size:14px;line-height:1.5}
 
 .loadgate{position:fixed;inset:0;z-index:999;background:transparent;touch-action:none;cursor:wait}
+.resban.tw{top:29%}

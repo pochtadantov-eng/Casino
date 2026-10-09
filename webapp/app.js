@@ -171,7 +171,7 @@ R.tower = (round) => {                       // flat construction-site scene; th
 const RES_LOSS = { mines: 'ПРОИГРЫШ', tower: 'ПРОИГРЫШ', seagull: 'ПРОИГРЫШ', rocket: 'РАКЕТА УЛЕТЕЛА' };
 function showResult(r, delay, kind) {          // "win" / "loss" plaque over the board (glass background, opaque text)
   document.querySelector('.resban')?.remove();
-  const el = document.createElement('div'); el.className = 'resban ' + kind; el.style.setProperty('--d', delay + 's');
+  const el = document.createElement('div'); el.className = 'resban ' + kind + (kind === 'win' && state.game === 'tower' ? ' tw' : ''); el.style.setProperty('--d', delay + 's');
   el.innerHTML = kind === 'win'
     ? `<b>ВЫИГРЫШ</b><span>+${r.payout} ⭐ <em>x${r.multiplier.toFixed(2)}</em></span>`
     : `<b>${RES_LOSS[state.game] || 'ПРОИГРЫШ'}</b><span>−${r.bet} ⭐</span>`;
