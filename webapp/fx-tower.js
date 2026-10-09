@@ -323,13 +323,13 @@
         // poured concrete foundation: bevelled top lip, board-marked formwork, steel rebar stubs and anchor bolts
         const x = this.X(-SLAB_W / 2), th = gb - sy, lip = Math.min(th * 0.28, 0.2 * ppu);
         let gr = g.createLinearGradient(0, sy, 0, gb); gr.addColorStop(0, '#c9c3b8'); gr.addColorStop(0.3, '#a9a398'); gr.addColorStop(1, '#6f6a60'); g.fillStyle = gr; g.fillRect(x, sy, sw, th);
-        g.fillStyle = '#d9d3c7'; g.beginPath(); g.moveTo(x - 4, sy + lip); g.lineTo(x + 3, sy); g.lineTo(x + sw - 3, sy); g.lineTo(x + sw + 4, sy + lip); g.closePath(); g.fill();       // top lip
-        g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(x + 3, sy, sw - 6, 1.6); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x - 4, sy + lip, sw + 8, 1.5);
+        g.fillStyle = '#d9d3c7'; g.fillRect(x, sy, sw, lip);       // top lip (flat band, flush with the ramps)
+        g.fillStyle = 'rgba(255,255,255,.5)'; g.fillRect(x, sy, sw, 1.6); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x, sy + lip, sw, 1.5);
         g.strokeStyle = 'rgba(40,36,30,.35)'; g.lineWidth = 1; const bw = 0.62 * ppu; for (let bx = x + bw; bx < x + sw; bx += bw) { g.beginPath(); g.moveTo(bx, sy + lip); g.lineTo(bx, gb); g.stroke(); }     // formwork board marks
         g.fillStyle = 'rgba(0,0,0,.18)'; for (let i = 0; i < 26; i++) { g.beginPath(); g.arc(x + ((i * 83) % 197) / 197 * sw, sy + lip + ((i * 47) % 31) / 31 * (th - lip), 1 + (i % 3) * 0.6, 0, 6.283); g.fill(); }  // pores
         g.fillStyle = '#7a4a2a'; for (const bx of [x + 0.35 * ppu, x + sw - 0.35 * ppu]) { g.fillRect(bx - 1.5, sy - 0.22 * ppu, 3, 0.22 * ppu); g.fillRect(bx + 5, sy - 0.16 * ppu, 3, 0.16 * ppu); }   // rusty rebar stubs
         g.fillStyle = '#8c949c'; for (const bx of [x + 0.9 * ppu, x + sw - 0.9 * ppu]) { g.beginPath(); g.arc(bx, sy + lip * 0.55, 2.4, 0, 6.283); g.fill(); }
-        g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x - 4, gb - 2, sw + 8, 3);
+        g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x, gb - 2, sw, 3);
       }
       if (sy < h + 60) this.drawRamps(g, gy, 1);                     // permanent plank ramps, flush with the platform's corners
       const n = this.floors.length;
@@ -440,18 +440,17 @@
     drawRamps(g, gy, a) {                       // two plank ramps up to the platform: the bulldozer drives up one side and down the other
       const u = this.ppu, base = gy + 0.15 * u, top = (SLAB_H + 0.15) * u, xl = this.X(-SLAB_W / 2), xr = this.X(SLAB_W / 2), L = RAMP * u;
       g.save(); g.globalAlpha = a;
-      const ramp = (x0, x1) => {                 // x0 = foot on the ground, x1 = edge flush with the platform; poured concrete like the platform: sloped top face + front face
-        const dp = 0.2 * u, dir = x1 > x0 ? 1 : -1;           // visual depth of the deck seen slightly from above
+      const ramp = (x0, x1) => {                 // x0 = foot on the ground, x1 = edge flush with the platform; same concrete as the platform, overlapping its side by 2 px (no seam)
+        const dp = 0.2 * u, dir = x1 > x0 ? 1 : -1, xe = x1 + dir * 2, tf = top - dp, sy = base - top;
         g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse((x0 + x1) / 2, base + 1, Math.abs(x1 - x0) / 2, 3, 0, 0, 6.283); g.fill();
-        let gr = g.createLinearGradient(0, base - top, 0, base); gr.addColorStop(0, '#a29c91'); gr.addColorStop(1, '#6b665c'); g.fillStyle = gr;          // front face (a wedge)
-        const tf = top - dp;                                  // the front face is lower by the deck depth, so the back edge of the ramp meets the platform top exactly
-        g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - tf); g.lineTo(x1, base); g.closePath(); g.fill();
-        g.strokeStyle = 'rgba(40,36,30,.35)'; g.lineWidth = 1; for (let i = 1; i < 4; i++) { const f = i / 4, x = x0 + (x1 - x0) * f; g.beginPath(); g.moveTo(x, base); g.lineTo(x, base - tf * f); g.stroke(); }
-        gr = g.createLinearGradient(0, base - top - dp, 0, base); gr.addColorStop(0, '#e2dccf'); gr.addColorStop(1, '#c6bfb1'); g.fillStyle = gr;                  // sloped top face
-        g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - tf); g.lineTo(x1, base - top); g.lineTo(x0 + dir * 0.1 * u, base - dp); g.closePath(); g.fill();
-        g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0 + dir * 0.1 * u, base - dp); g.lineTo(x1, base - top); g.stroke();
-        g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - tf); g.stroke();
-        g.fillStyle = 'rgba(0,0,0,.16)'; for (let i = 0; i < 6; i++) { const f = 0.15 + i * 0.14, x = x0 + (x1 - x0) * f; g.beginPath(); g.arc(x, base - tf * f - dp * 0.5, 1 + (i % 3) * 0.5, 0, 6.283); g.fill(); }
+        let gr = g.createLinearGradient(0, sy, 0, base); gr.addColorStop(0, '#c9c3b8'); gr.addColorStop(0.3, '#a9a398'); gr.addColorStop(1, '#6f6a60'); g.fillStyle = gr;          // front face: the platform's own gradient
+        g.beginPath(); g.moveTo(x0, base); g.lineTo(xe, base - tf); g.lineTo(xe, base); g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(40,36,30,.35)'; g.lineWidth = 1; for (let i = 1; i < 3; i++) { const f = i / 3, x = x0 + (xe - x0) * f; g.beginPath(); g.moveTo(x, base); g.lineTo(x, base - tf * f); g.stroke(); }
+        g.fillStyle = '#d9d3c7';                                                                                                                                                  // sloped top face: the platform's lip colour
+        g.beginPath(); g.moveTo(x0, base); g.lineTo(xe, base - tf); g.lineTo(xe, base - top); g.lineTo(x0 + dir * 0.1 * u, base - dp); g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0 + dir * 0.1 * u, base - dp); g.lineTo(xe, base - top); g.stroke();
+        g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0, base); g.lineTo(xe, base - tf); g.stroke();
+        g.fillStyle = 'rgba(0,0,0,.16)'; for (let i = 0; i < 5; i++) { const f = 0.2 + i * 0.16, x = x0 + (xe - x0) * f; g.beginPath(); g.arc(x, base - tf * f - dp * 0.5, 1 + (i % 3) * 0.5, 0, 6.283); g.fill(); }
       };
       ramp(xl - L, xl); ramp(xr + L, xr); g.restore();
     }
