@@ -102,7 +102,7 @@
     sync(round) {
       const first = (this.syncs = (this.syncs || 0) + 1) === 1;      // very first look at the scene: an already-running round is only resumed, the first house does not drop again
       if (!round) { if (this.roundId !== null) { this.reset(); this.roundId = null; } this._setReady(false); return; }
-      const v = round.view, succ = v.picks; this.swing = v.swing; this.limits = v.limits || []; this.stress = v.stress || 0; this.range = v.range || null; this.lastV = v.last || null; this.clockOffset = v.serverNow - Date.now();
+      const v = round.view, succ = v.picks; this.swing = v.swing; this.limits = v.limits || []; this.stress = v.stress || 0; this.range = v.range || null; this.lastV = v.last || null; this.clockOffset = v.serverNow + Math.min(250, (typeof state !== 'undefined' && state.rtt ? state.rtt : 0) / 2) - Date.now();      // serverNow was stamped one way-trip ago
       if (round.id !== this.roundId) {
         this.reset(); this.roundId = round.id;
         const fresh = round.status === 'active' && succ === 0 && !first, total = succ + (fresh ? 0 : 1);
@@ -140,9 +140,11 @@
     tap() {
       if (this.state !== 'sway' || this.roundStatus !== 'active' || !this.hang || this.fall || !this.swing) return false;
       const t = this.now(); if (t < this.swing.start + 40) return false;
-      const x = this.swingAt(t).x; this.pendingVerdicts++;
-      const top = this.floors.length ? this.floors[this.floors.length - 1].ox : 0, miss = Math.abs(x - top) > HW * 0.9, lv = this.limits || [];      // same balance rule as the server
-      const j = miss ? -1 : lv.findIndex((q) => x < q[0] || x > q[1]), ok = !miss && j === -1; this.predQ.push(ok); this.release({ ok: !miss, x, collapse: j >= 0 ? j : null }); return true;
+      this.pendingVerdicts++;
+      const top = this.floors.length ? this.floors[this.floors.length - 1].ox : 0, lv = this.limits || [];      // same balance rule and the same +-GRACE ms forgiveness as the server
+      const judge = (x) => { const miss = Math.abs(x - top) > HW * 0.9, j = miss ? -1 : lv.findIndex((q) => x < q[0] || x > q[1]); return { x, miss, j, ok: !miss && j === -1 }; };
+      const cands = [t, t - 40, t + 40].map((tt) => judge(this.swingAt(Math.max(this.swing.start, tt)).x)), pick = cands.find((c) => c.ok) || cands[0];
+      this.predQ.push(pick.ok); this.release({ ok: !pick.miss, x: pick.x, collapse: pick.j >= 0 ? pick.j : null }); return true;
     }
     release(item) {
       if (!this.hang) return; const sp = this.swingAt(this.now()), x = R * Math.sin(this.th), y = this.pivotY() - R * Math.cos(this.th);

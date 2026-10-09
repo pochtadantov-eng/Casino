@@ -20,7 +20,7 @@
   const fail = (m) => { throw new Error(m); };
 
   // Tower (skill) - mirrors src/games/engines/tower.ts. The swing is a function of (server) time.
-  const TW = { maxSteps: 20, spaceFrom: 10, spaceGrowth: 1.1, ladderGrowth: 1.2, easyFloors: 5, easyMult: 2, amp: 1.6, firstDelay: 2700, nextDelay: 2500, maxLat: 250 };
+  const TW = { grace: 40, maxSteps: 20, spaceFrom: 10, spaceGrowth: 1.1, ladderGrowth: 1.2, easyFloors: 5, easyMult: 2, amp: 1.6, firstDelay: 2700, nextDelay: 2500, maxLat: 250 };
   const TW_EASY = !!window.EASY_TOWER || /[?&]easy(=|&|$)/.test(location.search);        // demo shortcut: every drop lands, to look at the space floors
   const twPeriod = (k) => (k === 0 ? 3000 : k === 1 ? 2400 : k === 2 ? 2100 : k < TW.spaceFrom ? Math.max(1250, 2000 - 90 * (k - 3)) : Math.max(1050, 1400 - 35 * (k - TW.spaceFrom)));
   const twTol = (k) => TW_EASY ? 3 : twLim(k) * TW_HW / 2;
@@ -137,9 +137,10 @@
       } else if (g === 'tower') {
         if (body.tap) {
           if (now < s.swingStart) fail('Too early');
-          const lat = Math.min(TW.maxLat, Math.max(0, Number(body.lat) || 0)), t = Math.max(s.swingStart, now - lat), x = twX(t, s.swingStart, s.picks);
-          const offs = s.offsets || (s.offsets = []), top = offs.length ? offs[offs.length - 1] : 0, { lv, lo, hi } = twRanges(offs), xr = Math.round(x * 1000) / 1000;
-          const miss = !TW_EASY && Math.abs(x - top) > TW_HW * 0.9, j = TW_EASY || miss ? -1 : lv.findIndex((q) => x < q[0] || x > q[1]), ok = !miss && j === -1;
+          const lat = Math.min(TW.maxLat, Math.max(0, Number(body.lat) || 0)), t = Math.max(s.swingStart, now - lat);
+          const offs = s.offsets || (s.offsets = []), top = offs.length ? offs[offs.length - 1] : 0, { lv, lo, hi } = twRanges(offs);
+          const judge = (tt) => { const x = twX(Math.max(s.swingStart, tt), s.swingStart, s.picks), miss = !TW_EASY && Math.abs(x - top) > TW_HW * 0.9, j = TW_EASY || miss ? -1 : lv.findIndex((q) => x < q[0] || x > q[1]); return { x, miss, j, ok: !miss && j === -1 }; };
+          const cands = [t, t - TW.grace, t + TW.grace].map(judge), pk = cands.find((c) => c.ok) || cands[0], x = pk.x, miss = pk.miss, j = pk.j, ok = pk.ok, xr = Math.round(x * 1000) / 1000;
           s.last = { x: xr, ok, miss, collapse: j >= 0 ? j : null, tol: Math.round(((hi - lo) / 2) * 1000) / 1000 };
           if (!ok) finish(r, 'lost', 0);
           else { s.picks++; offs.push(xr); r.multiplier = twMult(s.picks); s.swingStart = now + TW.nextDelay; if (s.picks >= TW.maxSteps) finish(r, 'won', r.multiplier); }

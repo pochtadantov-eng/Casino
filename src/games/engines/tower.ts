@@ -20,6 +20,7 @@ export const TOWER = {
   ladderGrowth: 1.2,        // per floor between the pink house (x2) and floor 10
   firstDelay: 2700,         // ms from round start until the first swing is live (intro + crane arrival)
   nextDelay: 2500,          // ms from a landing until the next swing is live
+  grace: 40,                // ms of forgiveness around a tap (timing jitter between phone, network and server)
   maxLat: 250,              // ms of network latency the server compensates for
 };
 
@@ -76,11 +77,16 @@ export const tower: Engine<State> = {
     if (now < state.swingStart) throw new GameError('Too early');
     const lat = Math.min(TOWER.maxLat, Math.max(0, Number(input.lat) || 0));
     const t = Math.max(state.swingStart, now - lat);
-    const x = swingX(t, state.swingStart, state.picks), top = (state.offsets ?? [])[(state.offsets ?? []).length - 1] ?? 0;
-    const { lv, lo, hi } = ranges(state.offsets), xr = Math.round(x * 1000) / 1000;
-    const miss = Math.abs(x - top) > TOWER.hw * 0.9;                    // no overlap with the house below: it just falls beside the tower
-    const j = miss ? -1 : lv.findIndex((r) => x < r[0] || x > r[1]);   // lowest level that cannot carry the new weight: everything above it falls
-    const ok = !miss && j === -1;
+    const top = (state.offsets ?? [])[(state.offsets ?? []).length - 1] ?? 0, { lv, lo, hi } = ranges(state.offsets);
+    const judge = (tt: number) => {
+      const x = swingX(Math.max(state.swingStart, tt), state.swingStart, state.picks);
+      const miss = Math.abs(x - top) > TOWER.hw * 0.9;                  // no overlap with the house below: it just falls beside the tower
+      const j = miss ? -1 : lv.findIndex((r) => x < r[0] || x > r[1]);   // lowest level that cannot carry the new weight: everything above it falls
+      return { x, miss, j, ok: !miss && j === -1 };
+    };
+    // a tap is judged at its estimated moment and at +-GRACE ms around it (network jitter must never decide a round): the best of the three counts
+    const cands = [t, t - TOWER.grace, t + TOWER.grace].map(judge), pick = cands.find((c) => c.ok) ?? cands[0];
+    const { x, miss, j, ok } = pick, xr = Math.round(x * 1000) / 1000;
     const last = { x: xr, ok, miss, collapse: j >= 0 ? j : null, tol: Math.round(((hi - lo) / 2) * 1000) / 1000 };
     if (!ok) return { status: 'lost', multiplier: 0, state: { ...state, last } };
     const picks = state.picks + 1;
