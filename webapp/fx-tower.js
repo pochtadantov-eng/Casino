@@ -9,7 +9,7 @@
   const sm = (t) => t * t * t * (t * (t * 6 - 15) + 10);
   const rand = (a, b) => a + Math.random() * (b - a);
 
-  const HW = 1.9, HH = 1.55, INC = 1.66, SLAB_H = 0.55, SLAB_W = 4.4, LOW = 0.12;       // house width/height, floor step, foundation slab (world units)
+  const HW = 1.9, HH = 1.55, INC = 1.66, SLAB_H = 0.55, SLAB_W = 4.4, LOW = 0.3;       // house width/height, floor step, foundation slab (world units)
   const R = 5.4, SLING = 0.95, PIVOT_UP = 8.8;                               // pendulum: the pivot hangs above the frame
   const LROPE_HOVER = R - SLING - HH / 2, LROPE_HIDE = -3.4;
 
@@ -310,7 +310,7 @@
       const sy = this.Y(SLAB_H), sw = SLAB_W * ppu, gb = gy + 0.15 * ppu;                           // everything on the site stands on the same baseline gb
       if (sy < h + 60) {
         // poured concrete platform seen a little from above: a lighter deck the house stands in the middle of, and a darker front face with formwork marks
-        const x = this.X(-SLAB_W / 2), dT = sy - 0.16 * ppu, dB = sy + 0.4 * ppu, inset = 0.16 * ppu, th = Math.max(4, gb - dB);
+        const x = this.X(-SLAB_W / 2), dT = sy - 0.1 * ppu, dB = sy + 0.5 * ppu, inset = 0.16 * ppu, th = Math.max(4, gb - dB);
         let gr = g.createLinearGradient(0, dB, 0, gb); gr.addColorStop(0, '#a29c91'); gr.addColorStop(1, '#6b665c'); g.fillStyle = gr; g.fillRect(x, dB, sw, th);
         g.strokeStyle = 'rgba(40,36,30,.35)'; g.lineWidth = 1; const bw = 0.62 * ppu; for (let bx = x + bw; bx < x + sw; bx += bw) { g.beginPath(); g.moveTo(bx, dB); g.lineTo(bx, gb); g.stroke(); }
         gr = g.createLinearGradient(0, dT, 0, dB); gr.addColorStop(0, '#e2dccf'); gr.addColorStop(1, '#c6bfb1'); g.fillStyle = gr;
