@@ -144,11 +144,11 @@ R.steps = (round) => {
 R.seagull = R.steps;
 // background track for the tower game: starts on entering the game (a user gesture), loops, stops on leaving / when the app is hidden
 const Music = (() => {
-  let a = null, want = false;
-  const url = () => (window.MUSIC_SRC && window.MUSIC_SRC.tower) || 'audio/tower.mp3' + (window.BUILD ? '?v=' + window.BUILD : '');
+  let a = null, want = false, cur = null;
+  const url = (n) => (window.MUSIC_SRC && window.MUSIC_SRC[n]) || `audio/${n}.mp3` + (window.BUILD ? '?v=' + window.BUILD : '');
   return {
-    play() { want = true; try { if (!a) { a = new Audio(url()); a.loop = true; a.volume = 0.5; } a.play().catch(() => {}); } catch {} },
-    time() { return a && want && !a.paused && a.currentTime > 0 ? a.currentTime : null; },
+    play(name = 'tower') { try { if (a && cur === name) { want = true; a.play().catch(() => {}); return; } if (a) { a.pause(); a = null; } cur = name; want = true; a = new Audio(url(name)); a.loop = true; a.volume = 0.5; a.play().catch(() => {}); } catch {} },
+    time() { return a && want && cur === 'tower' && !a.paused && a.currentTime > 0 ? a.currentTime : null; },
     stop() { want = false; try { if (a) { a.pause(); a.currentTime = 0; } } catch {} },
     pause(on) { try { if (a && want) { on ? a.pause() : a.play().catch(() => {}); } } catch {} },
   };
