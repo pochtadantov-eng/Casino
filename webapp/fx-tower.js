@@ -427,7 +427,7 @@
         const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.4, y2 = y1 + fs1 * 1.1, DP = g.getTransform();
         // the helicopter flies in from the left, hovers and holds the title on two ropes; when the round starts it flies away to the right with it
         const hs = Math.min(w * 0.044, 23), bob = Math.sin(t * 1.4) * 5 + Math.sin(t * 2.9) * 3 + Math.sin(t * 6.1) * 0.8;
-        const hx = cx - 1.2 * hs + this.heliOff, hy = h * 0.155 + bob - clamp(this.heliOff / w) * h * 0.05, dx = this.heliOff, dy = bob - clamp(this.heliOff / w) * h * 0.05;
+        const hx = cx - 0.9 * hs + this.heliOff, hy = h * 0.155 + bob - clamp(this.heliOff / w) * h * 0.05, dx = this.heliOff, dy = bob - clamp(this.heliOff / w) * h * 0.05;
         const swing = Math.sin(t * 1.3) * 0.045 + Math.sin(t * 3.1) * 0.018 + clamp((this.hvel || 0) / w * 0.12, -0.14, 0.14), topY = y1 - fs1 * 0.58, halfW = fs1 * 1.55, ropeY = hy + 2.15 * hs;
         const xf = (px, py) => { const c = Math.cos(swing), sn = Math.sin(swing), ax = px - cx, ay = py - topY; return [cx + dx + ax * c - ay * sn, topY + dy + ax * sn + ay * c]; };
         g.save(); g.globalAlpha = ta; this.drawHeli(g, hx, hy, hs, t); g.restore();
@@ -457,16 +457,19 @@
         const knot = (x, y, r = 2.7) => { g.fillStyle = ROPE; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.strokeStyle = 'rgba(255,255,255,.28)'; g.lineWidth = 0.8; g.beginPath(); g.arc(x - 0.5, y - 0.6, r * 0.5, 3.4, 5.2); g.stroke(); };
         const top = letters.slice(0, 4), low = letters.slice(4);
         // solid parts: N left stem, O top arc, V left arm, A apex (as a fraction of the font size from the letter centre)
-        const topAt = [-0.27, 0, -0.27, 0], botAt = [-0.27, 0, 0, 0.3];
+        const topAt = [-0.27, -0.05, 0.27, 0.0], botAt = [-0.27, 0, 0, 0.3];
         const lowTop = [-0.27, -0.0, -0.3, 0.0, 0.28];                               // Б left stem, А apex, Ш left stem, Н (unused), И right stem
         const hookX = hx + 0.9 * hs, beltY = hy + 1.4 * hs, ringX = hookX + Math.sin(t * 1.3) * 1.5, ringY = hy + 3.5 * hs;
         g.fillStyle = '#2a2d33'; g.fillRect(hookX - 0.28 * hs, beltY - 0.1 * hs, 0.56 * hs, 0.34 * hs);
         rope(hookX, beltY + 0.2 * hs, ringX, ringY - 4, 0, 2.4);
         g.strokeStyle = '#d5d8de'; g.lineWidth = 2; g.beginPath(); g.arc(ringX, ringY, 4.5, 0, 6.283); g.stroke(); g.strokeStyle = 'rgba(30,30,34,.7)'; g.lineWidth = 0.8; g.beginPath(); g.arc(ringX, ringY, 5.6, 0, 6.283); g.stroke();
         top.forEach((L, i) => { const [px, py] = xf(L.x + topAt[i] * L.fs, L.y - L.fs * 0.5 + 4); rope(ringX, ringY + 4, px, py, 3, 2.1, i); knot(px, py); });
-        for (const [i, j, ju] of [[0, 4, 0], [1, 5, 1], [2, 6, 2], [3, 8, 4]]) {
-          const U = letters[i], D = letters[j], [px, py] = xf(U.x + botAt[i] * U.fs, U.y + U.fs * 0.5 - 3), [qx, qy] = xf(D.x + lowTop[ju] * D.fs, D.y - D.fs * 0.5 + 3);
-          rope(px, py, qx, qy, 1.5, 2.1, i + 4); knot(px, py); knot(qx, qy);
+        for (const [i, j, ju, side] of [[0, 4, 0, -1], [3, 8, 4, 1]]) {          // left: N -> Б, right: A -> И; a double strand each, so they look like one sturdy lashing
+          const U = letters[i], D = letters[j];
+          for (const o of [-3.2, 3.2]) {
+            const [px, py] = xf(U.x + botAt[i] * U.fs + o, U.y + U.fs * 0.5 - 3), [qx, qy] = xf(D.x + lowTop[ju] * D.fs + o, D.y - D.fs * 0.5 + 3);
+            rope(px, py, qx, qy, 0.8, 1.9, i + o); knot(px, py, 2.1); knot(qx, qy, 2.1);
+          }
         }
         g.restore();
       }
