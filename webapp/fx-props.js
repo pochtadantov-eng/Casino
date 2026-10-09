@@ -113,6 +113,10 @@
       const clamp01 = (v) => Math.max(0, Math.min(0.999, v));
       for (const [dx, dy, rr] of clusters) { g.fillStyle = 'rgba(20,50,15,.35)'; g.beginPath(); g.ellipse(cx + dx * k + 0.03 * k, fy0 + dy * k + 0.05 * k, rr * k, rr * k * 0.9, 0, 0, 6.283); g.fill(); drawLeaves(cx + dx * k, fy0 + dy * k, rr * k, 0.5); }
       for (const [dx, dy, rr] of clusters) drawLeaves(cx + dx * k, fy0 + dy * k - 0.04 * k, rr * k * 0.72, 0);
+      // roots flare into the ground, dark contact shadow and grass tufts so the trunk visibly stands in the soil
+      { const by = Ho - 0.02 * k; g.fillStyle = 'rgba(25,18,10,.45)'; g.beginPath(); g.ellipse(cx, by + 0.02 * k, tw * 2.6, 0.06 * k, 0, 0, 6.283); g.fill();
+        g.fillStyle = birch ? '#cfcfc6' : '#5a4630'; g.beginPath(); g.moveTo(cx - tw * 2.1, by + 0.03 * k); g.quadraticCurveTo(cx - tw * 1.1, by - 0.02 * k, cx - tw * 0.8, by - 0.18 * k); g.lineTo(cx + tw * 0.8, by - 0.18 * k); g.quadraticCurveTo(cx + tw * 1.1, by - 0.02 * k, cx + tw * 2.1, by + 0.03 * k); g.closePath(); g.fill();
+        for (let i = 0; i < 40; i++) { const x = cx + (r() - 0.5) * tw * 6.5, hh = (0.05 + r() * 0.1) * k, lean = (r() - 0.5) * 0.08 * k; g.strokeStyle = ['#3f8a35', '#5aa845', '#2f6f2a', '#7fc65a'][i % 4]; g.lineWidth = Math.max(1, 0.018 * k); g.beginPath(); g.moveTo(x, by + 0.03 * k); g.quadraticCurveTo(x + lean * 0.4, by - hh * 0.5, x + lean, by - hh); g.stroke(); } }
       return { cv: c, w: W / DPR, h: Ht / DPR, anchorX: cx / DPR, tree: true, crownY: 1.4 * k / DPR };
     })());
   }

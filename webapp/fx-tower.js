@@ -291,7 +291,7 @@
       const { ppu } = this, c = TowerProps.city(layer, ppu, 30), off = (this.camBottom + 0.7) * ppu * par, by = this.Y(0) - off + 0.25 * ppu, y = by - c.base;
       if (y > this.h) return; g.drawImage(c.cv, this.X(-15), y, c.w, c.h);
     }
-    sprite(g, s, wx, baseY, flip = false, sway = 0) { const ax = s.anchorX != null ? s.anchorX : s.w / 2; g.save(); g.translate(this.X(wx), baseY); if (flip) g.scale(-1, 1); if (sway) g.transform(1, 0, sway, 1, 0, 0); g.drawImage(s.cv, -ax, -s.h, s.w, s.h); g.restore(); }
+    sprite(g, s, wx, baseY, flip = false, sway = 0) { const ax = s.anchorX != null ? s.anchorX : s.w / 2; g.save(); g.translate(this.X(wx), baseY); if (flip) g.scale(-1, 1); if (sway && s.tree) { const N = 44, hs = s.h / N, sh = s.cv.height / N, H0 = s.h; for (let i = 0; i < N; i++) { const f = 1 - (i + 0.5) / N, dx = sway * H0 * f * f * 1.4; g.drawImage(s.cv, 0, i * sh, s.cv.width, sh + 1, -ax + dx, -s.h + i * hs, s.w, hs + 0.6); } g.restore(); return; } if (sway) g.transform(1, 0, sway, 1, 0, 0); g.drawImage(s.cv, -ax, -s.h, s.w, s.h); g.restore(); }
     draw(g, t) {
       this._t = t;
       const { w, h, ppu } = this, cam = this.camBottom;
@@ -339,8 +339,8 @@
       const { ppu } = this, P = TowerProps, f = P.fence(ppu);
       for (let i = -2; i <= 1; i++) this.sprite(g, f, i * 3.2 + 1.6, gy + 0.12 * ppu);
       const tt = this._t || 0, gust = 0.5 + 0.5 * Math.sin(tt * 0.5);       // wind: slow sway plus a gust; the crown leans more than the trunk base
-      this.sprite(g, P.tree('birch', ppu), -3.15, gy + 0.05 * ppu, false, (Math.sin(tt * 1.7) * 0.022 + Math.sin(tt * 3.1 + 1) * 0.008) * (0.6 + gust));
-      this.sprite(g, P.tree('linden', ppu), 3.35, gy + 0.05 * ppu, false, (Math.sin(tt * 1.3 + 2) * 0.018 + Math.sin(tt * 2.7) * 0.007) * (0.6 + gust));
+      this.sprite(g, P.tree('birch', ppu), -3.15, gy + 0.2 * ppu, false, (Math.sin(tt * 1.7) * 0.022 + Math.sin(tt * 3.1 + 1) * 0.008) * (0.6 + gust));
+      this.sprite(g, P.tree('linden', ppu), 3.35, gy + 0.2 * ppu, false, (Math.sin(tt * 1.3 + 2) * 0.018 + Math.sin(tt * 2.7) * 0.007) * (0.6 + gust));
       const l = P.lamp(ppu); this.sprite(g, l, -2.95 + (l.anchorX != null ? 0 : 0), gy + 0.02 * ppu);
     }
     // the foreman and his speaker on the ground in front: he sways to the beat, the speaker cone pumps and notes float up
@@ -361,20 +361,19 @@
       g.restore();
       const im = TowerFx.worker;
       if (im && im.width) {
-        // the foreman is a jointed puppet cut from one picture: legs, torso (arms crossed) and head move on their own pivots
-        const hgt = 1.8 * u, iw = im.width, ih = im.height, sc = hgt / ih, wid = iw * sc, b = t * 12.566, w1 = Math.sin(b / 2), w2 = Math.sin(b / 2 + 3.1416);
-        const cut = 0.62 * ih, neck = 0.295 * ih, split = 0.52 * iw, hip = (Math.abs(w1)) * 0.045 * hgt;
-        g.save(); g.translate(this.X(-1.45), gy + 0.12 * u); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, wid * 0.5 * (1 - Math.abs(w1) * 0.06), 4.5, 0, 0, 6.283); g.fill();
-        const piece = (sx, sy, sw, sh, px, py, rot, dx, dy) => { g.save(); g.translate((px - iw / 2) * sc + dx, (py - ih) * sc + dy); g.rotate(rot); g.drawImage(im, sx, sy, sw, sh, (sx - px) * sc, (sy - py) * sc, sw * sc, sh * sc); g.restore(); };
-        const legTop = cut - 0.05 * ih, shiftX = w1 * 0.03 * wid;
-        piece(0, legTop, split + 2, ih - legTop, 0.42 * iw, cut, 0.075 * w1, shiftX * 0.5, -Math.max(0, w1) * 0.035 * hgt);          // left leg
-        piece(split - 2, legTop, iw - split + 2, ih - legTop, 0.6 * iw, cut, 0.075 * w2, shiftX * 0.5, -Math.max(0, w2) * 0.035 * hgt);   // right leg, opposite step
-        const tr = 0.055 * Math.sin(b / 2 + 0.6), tdx = shiftX + w1 * 0.01 * wid, tdy = -hip - pulse * 0.012 * hgt;
-        piece(0, neck - 0.05 * ih, iw, cut + 0.012 * ih - (neck - 0.05 * ih), 0.5 * iw, cut, tr, tdx, tdy);                                // torso
-        const hr = 0.05 * Math.sin(b) + 0.05 * Math.sin(b / 2 + 1.2);
-        const hy = (cut - ih) * sc; g.save(); g.translate(tdx, hy + tdy); g.rotate(tr); g.translate(0, -hy);                                  // head rides on the torso
-        piece(0, 0, iw, neck + 0.015 * ih, 0.5 * iw, neck, hr, 0, 0);
-        g.restore(); g.restore();
+        // dance: feet stay planted, the body above bends like rubber (hip groove + shoulder shimmy), knees dip on every beat, the head nods hard
+        const hgt = 1.8 * u, iw = im.width, ih = im.height, sc = hgt / ih, wid = iw * sc, b = t * 12.566, sw = Math.sin(b / 2), dip = Math.pow(Math.max(0, Math.cos(b)), 2);
+        const neck = 0.3 * ih, ys = 1 - 0.05 * dip, bend = (f) => sw * 0.085 * hgt * f * f + Math.sin(b * 2 + f * 4) * 0.004 * hgt * Math.sin(f * 3.14);
+        g.save(); g.translate(this.X(-1.45), gy + 0.12 * u); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, wid * 0.5, 4.5, 0, 0, 6.283); g.fill();
+        const step = Math.max(2, Math.round(2.2 / sc));                 // source rows per slice
+        for (let y0 = ih - step; y0 > neck - step; y0 -= step) {
+          const f = 1 - (y0 + step / 2) / ih, h = Math.min(step, ih - y0);
+          g.drawImage(im, 0, y0, iw, h, -wid / 2 + bend(f), (y0 - ih) * sc * ys, wid, h * sc * ys + 0.6);
+        }
+        const fn = 1 - neck / ih, nx = bend(fn), ny = (neck - ih) * sc * ys;
+        g.translate(nx, ny); g.rotate(0.13 * Math.sin(b) + 0.08 * sw + 0.04 * sw * sw);                  // head: nod on the beat, lean with the groove
+        g.drawImage(im, 0, 0, iw, neck + step, -wid / 2, -neck * sc * ys, wid, (neck + step) * sc * ys);
+        g.restore();
       }
     }
     propsFront(g, gy) {                             // in front of the slab: bricks on a pallet, traffic cones
