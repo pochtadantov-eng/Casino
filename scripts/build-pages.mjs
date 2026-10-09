@@ -14,7 +14,7 @@ const BUILD = (process.env.GITHUB_SHA || Date.now().toString(36)).slice(0, 10);
 writeFileSync(`${out}/version.json`, JSON.stringify({ v: BUILD }));
 const loader = `<script>window.BUILD='${BUILD}';(function(){var B='${BUILD}';try{var q=new URLSearchParams(location.search);fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j.v&&j.v!==B&&q.get('v')!==j.v){q.set('v',j.v);location.replace(location.pathname+'?'+q.toString()+location.hash)}}).catch(function(){})}catch(e){}})();</script>`;
 mkdirSync(`${out}/audio`, { recursive: true }); for (const n of ['tower', 'mines', 'rocket']) copyFileSync(src(`audio/${n}.mp3`), `${out}/audio/${n}.mp3`);
-mkdirSync(`${out}/img/props`, { recursive: true }); mkdirSync(`${out}/img/avatars`, { recursive: true }); try { for (const f of readdirSync(new URL('../webapp/img/avatars/', import.meta.url))) { if (f.endsWith('.webp') || f.endsWith('.png') || f.endsWith('.jpg')) copyFileSync(src('img/avatars/' + f), `${out}/img/avatars/${f}`); } } catch {}
+mkdirSync(`${out}/img/props`, { recursive: true }); mkdirSync(`${out}/img/avatars`, { recursive: true }); try { for (const f of readdirSync(new URL('../webapp/img/avatars/', import.meta.url))) { if (/\.(webp|png|jpe?g|svg)$/i.test(f)) copyFileSync(src('img/avatars/' + f), `${out}/img/avatars/${f}`); } } catch {}
 try { for (const f of readdirSync(new URL('../webapp/img/props/', import.meta.url))) copyFileSync(src('img/props/' + f), `${out}/img/props/${f}`); } catch {}
 const html = readFileSync(src('index.html'), 'utf8')
   .replace('<script src="app.js"></script>', '<script src="mock-api.js"></script>\n<script src="app.js"></script>')

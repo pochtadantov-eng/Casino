@@ -22,22 +22,20 @@
     if (form < 0.55) return n + Math.floor(1 + r() * 999);        // ivan23
     if (form < 0.7)  return n + '.' + 'rkmvbtlpdg'[Math.floor(r() * 10)];  // kate.m
     if (form < 0.85) return n + '_' + pick(CITIES, r);            // misha_spb
-    return pick(FIRST, r) + '_' + n;                              // ivan_daria
+    let n2 = pick(FIRST, r); if (n2 === n) n2 = FIRST[(FIRST.indexOf(n2) + 1) % FIRST.length]; return n2 + '_' + n;
   }
 
-  // avatars: a painted cartoon face with varied skin, hair, eyes; cached per player id
-  const avCache = new Map(), photos = {}, loaded = {};
-  const loadPhoto = (name) => { if (name in photos) return; photos[name] = null; const img = new Image(); img.onload = () => { photos[name] = img; }; img.onerror = () => { photos[name] = null; }; img.src = (window.AV_SRC && window.AV_SRC[name]) || `img/avatars/${name}.webp` + (window.BUILD ? '?v=' + window.BUILD : ''); };
-  for (let i = 0; i < 40; i++) loadPhoto('av' + i);
+  // avatars: real portrait SVGs bundled with the app (webapp/img/avatars/av0.svg..av39.svg).
+  // When they haven't finished loading we fall back to a painted cartoon face so nothing is empty.
+  const avCache = new Map();
+  const avUrl = (i) => (window.AV_SRC && window.AV_SRC['av' + i]) || `img/avatars/av${i}.svg` + (window.BUILD ? '?v=' + window.BUILD : '');
 
   function makeAvatar(seed) {
     if (avCache.has(seed)) return avCache.get(seed);
-    const ph = photos['av' + (seed % 40)]; if (ph && ph.width) {
-      const sz = 72, c = document.createElement('canvas'); c.width = c.height = sz; const g = c.getContext('2d');
-      g.save(); g.beginPath(); g.arc(sz / 2, sz / 2, sz / 2, 0, 6.283); g.clip(); const r = Math.min(sz / ph.width, sz / ph.height), w = ph.width * r, h = ph.height * r;
-      g.drawImage(ph, (sz - w) / 2, (sz - h) / 2, w, h); g.restore();
-      const u = c.toDataURL(); avCache.set(seed, u); return u;
-    }
+    const real = avUrl(seed % 40); avCache.set(seed, real); return real;
+  }
+  function paintedAvatar(seed) {                                   // fallback when SVGs are missing — not normally reached
+    if (avCache.has('p' + seed)) return avCache.get('p' + seed);
     const r = rng(seed + 1), size = 72, c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d');
     const bgA = pick(['#8b9bb4', '#c2a080', '#8ab09a', '#b89aa5', '#8aa0c2'], r), bgB = pick(['#5c6b85', '#8f7360', '#5c8878', '#916e7d', '#5c7290'], r);
     const bg = g.createLinearGradient(0, 0, 0, size); bg.addColorStop(0, bgA); bg.addColorStop(1, bgB); g.fillStyle = bg; g.fillRect(0, 0, size, size);
@@ -95,17 +93,18 @@
       g.beginPath(); g.arc(cx + rx * 0.35, cy + ry * 0.05, size * 0.085, 0, 6.283); g.stroke();
       g.beginPath(); g.moveTo(cx - rx * 0.26, cy + ry * 0.05); g.lineTo(cx + rx * 0.26, cy + ry * 0.05); g.stroke();
     }
-    const url = c.toDataURL(); avCache.set(seed, url); return url;
+    const url = c.toDataURL(); avCache.set('p' + seed, url); return url;
   }
 
-  // target + bet together: whales play safe, greedy ones have small bets, mix of 1.3x / 2x / "hold till the end"
+  // target + bet together: most play safe and take 1.2-2x, a few hold for 2-4x, very few go higher
+  // (losers tend to have small bets, as the user asked — small amounts, few people)
   function samplePlayer(r) {
     const u = r();
-    if (u < 0.3) return { target: 1.2 + r() * 0.3, bet: pick([50, 75, 100, 150, 200, 300, 500], r) };          // very safe, out at ~1.3
-    if (u < 0.55) return { target: 1.5 + r() * 0.7, bet: pick([30, 50, 75, 100, 150, 250], r) };               // out around 2x
-    if (u < 0.78) return { target: 2.2 + r() * 1.8, bet: pick([30, 50, 75, 100, 200], r) };                    // out at 2-4
-    if (u < 0.93) return { target: 4 + r() * 4, bet: pick([20, 30, 50, 75, 100], r) };                         // greedy 4-8
-    return { target: 8 + Math.abs(gaussian(r)) * 10, bet: pick([10, 15, 20, 25, 50], r) };                    // moon shot, tiny bets
+    if (u < 0.5)  return { target: 1.15 + r() * 0.25, bet: pick([50, 75, 100, 150, 200, 300, 500, 750], r) };  // ~out at 1.2-1.4 (nearly always wins, bigger bets)
+    if (u < 0.75) return { target: 1.4  + r() * 0.5,  bet: pick([30, 50, 75, 100, 150, 250], r) };             // ~out at 1.5-1.9
+    if (u < 0.9)  return { target: 1.9  + r() * 1.3,  bet: pick([25, 50, 75, 100, 150], r) };                  // ~out at 2-3.2
+    if (u < 0.97) return { target: 3.2  + r() * 2.8,  bet: pick([20, 30, 50, 75], r) };                        // reach 3-6
+    return { target: 6 + Math.abs(gaussian(r)) * 8, bet: pick([10, 15, 20, 25, 40], r) };                     // moon shot, tiny bets
   }
 
   class RocketFeed {
