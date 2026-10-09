@@ -424,7 +424,7 @@
           g.restore(); this.streaks = this.streaks.filter((q) => q.x - q.len < w);
         } else this.streaks = []; }
       if (ta > 0.01) {
-        const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.4, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
+        const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.4, y2 = y1 + fs1 * 1.1, DP = g.getTransform();
         // the helicopter flies in from the left, hovers and holds the title on two ropes; when the round starts it flies away to the right with it
         const hs = Math.min(w * 0.044, 23), bob = Math.sin(t * 1.4) * 5 + Math.sin(t * 2.9) * 3 + Math.sin(t * 6.1) * 0.8;
         const hx = cx - 1.2 * hs + this.heliOff, hy = h * 0.155 + bob - clamp(this.heliOff / w) * h * 0.05, dx = this.heliOff, dy = bob - clamp(this.heliOff / w) * h * 0.05;
@@ -464,17 +464,42 @@
         ringAt(ringX, ringY, 4.5);
         // the two sling ropes: ring -> both ends of the rod
         rope(ringX, ringY + 3, ax, ay, 3, 1.9); rope(ringX, ringY + 3, bx, by, 3, 1.9);
-        // the rod with end rings
-        g.strokeStyle = '#8f949d'; g.lineWidth = 3.2; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
-        g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(ax, ay - 1); g.lineTo(bx, by - 1); g.stroke();
-        ringAt(ax, ay, 3.2); ringAt(bx, by, 3.2);
-        // every letter of "NOVA" hangs from the rod on its own string
-        for (const L of top) { const [px, py] = xf(L.x, rodY), [qx, qy] = xf(L.x, L.y - L.fs * 0.5 + 2); rope(px, py, qx, qy, 1, 1.4); ringAt(px, py, 1.9); }
-        // chains between the two words: N-B, V-Sh, A-I (each link is a small ring)
-        for (const [i, j] of [[0, 4], [2, 6], [3, 8]]) {
-          const U = letters[i], D = letters[j], [px, py] = xf(U.x, U.y + U.fs * 0.5 - 2), [qx, qy] = xf(D.x, D.y - D.fs * 0.5 + 2), n = Math.max(2, Math.round(Math.hypot(qx - px, qy - py) / 7));
-          for (let k = 0; k <= n; k++) { const f = k / n; g.strokeStyle = k % 2 ? '#aeb3bb' : '#d8dbe1'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(px + (qx - px) * f, py + (qy - py) * f, k % 2 ? 1.2 : 2.1, k % 2 ? 2.2 : 1.4, Math.atan2(qy - py, qx - px) + 1.5708, 0, 6.283); g.stroke(); }
-        }
+        // everything below is drawn in the title's own frame, so it swings with the letters
+        const inTitle = (fn) => { g.save(); g.translate(cx + dx, topY + dy); g.rotate(swing); g.translate(-cx, -topY); fn(); g.restore(); };
+        const bolt = (x, y, r = 1.5) => { g.fillStyle = '#c9ced6'; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.strokeStyle = 'rgba(20,22,28,.8)'; g.lineWidth = 0.6; g.stroke(); g.fillStyle = 'rgba(255,255,255,.8)'; g.fillRect(x - r * 0.9, y - 0.3, r * 1.8, 0.6); };
+        const plate = (x, y, w, h, nb = 2) => {                                // a steel mounting plate with rivets
+          const gr = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0); gr.addColorStop(0, '#6e747e'); gr.addColorStop(0.45, '#c3c8d0'); gr.addColorStop(1, '#6a707a');
+          g.fillStyle = gr; g.strokeStyle = 'rgba(15,17,22,.9)'; g.lineWidth = 1; g.beginPath(); g.roundRect ? g.roundRect(x - w / 2, y - h / 2, w, h, 2.2) : g.rect(x - w / 2, y - h / 2, w, h); g.fill(); g.stroke();
+          for (let i = 0; i < nb; i++) bolt(x, nb === 1 ? y : y - h / 2 + h * (i + 0.5) / nb, Math.min(1.7, w * 0.17));
+        };
+        const carabiner = (x, y1, y2) => {                                       // oval snap hook between the rod and an eyelet
+          const cy = (y1 + y2) / 2, hh = Math.max(7, (y2 - y1) / 2 + 1.5);
+          g.strokeStyle = '#e1e4ea'; g.lineWidth = 2.1; g.beginPath(); g.ellipse(x, cy, 3.4, hh, 0, 0, 6.283); g.stroke();
+          g.strokeStyle = 'rgba(30,32,38,.75)'; g.lineWidth = 0.7; g.beginPath(); g.ellipse(x, cy, 4.5, hh + 1, 0, 0, 6.283); g.stroke();
+          g.fillStyle = '#9aa0aa'; g.fillRect(x - 4.4, cy - 1.2, 2.2, 2.4);                      // gate
+        };
+        inTitle(() => {
+          // the rod
+          g.strokeStyle = '#7f858f'; g.lineWidth = 4; g.beginPath(); g.moveTo(rl, rodY); g.lineTo(rr, rodY); g.stroke();
+          g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 1.1; g.beginPath(); g.moveTo(rl, rodY - 1.2); g.lineTo(rr, rodY - 1.2); g.stroke();
+          plate(rl, rodY, 7, 11, 1); plate(rr, rodY, 7, 11, 1);
+          // each letter of NOVA: a riveted eyelet plate on its top edge, a snap hook from the rod
+          for (const L of top) {
+            const ty = L.y - L.fs * 0.5 + 4;
+            carabiner(L.x, rodY + 2, ty - 5);
+            plate(L.x, ty, 12, 9, 2); g.strokeStyle = '#e1e4ea'; g.lineWidth = 1.8; g.beginPath(); g.arc(L.x, ty - 6, 3.2, Math.PI * 0.1, Math.PI * 0.9, true); g.stroke();
+          }
+          // between the words: a steel rail clamped to NOVA from above with three straps and to the bottom word with three more
+          const nb = Math.max(...top.map((L) => L.y + L.fs * 0.5)), bt = Math.min(...low.map((L) => L.y - L.fs * 0.5)), my = (nb + bt) / 2, x1 = top[0].x - fs1 * 0.15, x2 = top[3].x + fs1 * 0.15;
+          for (const [i, j] of [[0, 4], [2, 6], [3, 8]]) {
+            const U = letters[i], D = letters[j];
+            plate(U.x, (U.y + U.fs * 0.5 - 6 + my) / 2, 9, Math.max(10, my - (U.y + U.fs * 0.5 - 6)), 2);                                  // strap from the top word down to the rail
+            plate(D.x, (my + D.y - D.fs * 0.5 + 6) / 2, 9, Math.max(10, D.y - D.fs * 0.5 + 6 - my), 2);                                      // strap from the rail down to the bottom word
+          }
+          const rg = g.createLinearGradient(0, my - 3, 0, my + 3); rg.addColorStop(0, '#dfe3e9'); rg.addColorStop(0.5, '#8d939d'); rg.addColorStop(1, '#4f545d');
+          g.fillStyle = rg; g.strokeStyle = 'rgba(15,17,22,.9)'; g.lineWidth = 1; g.beginPath(); g.roundRect ? g.roundRect(x1, my - 3.2, x2 - x1, 6.4, 3) : g.rect(x1, my - 3.2, x2 - x1, 6.4); g.fill(); g.stroke();
+          bolt(x1 + 4, my); bolt(x2 - 4, my);
+        });
         g.restore();
       }
       if (this.loadStart == null) this.loadStart = Date.now();
