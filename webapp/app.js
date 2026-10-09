@@ -211,7 +211,19 @@ function lockPlay(ms) {
   state.lockTimer = setTimeout(() => { state.lockUntil = 0; $('#go').disabled = false; }, ms);
 }
 function unlockPlay() { clearTimeout(state.lockTimer); state.lockUntil = 0; $('#go').disabled = false; }
+// after a lost Mines round the board flips face down and the tiles shuffle around before the next game
+function mixMines() {
+  const grid = document.querySelector('#stage .grid'); if (!grid || state.game !== 'mines' || state.round?.status === 'active') return;
+  const tiles = [...grid.children].filter((t) => t.classList.contains('tile')), base = tiles.map((t) => t.getBoundingClientRect());
+  grid.classList.remove('shake');
+  const open = tiles.map((t) => t.classList.contains('open')); tiles.forEach((t, i) => { const inn = t.querySelector('.inner'); inn.style.animation = 'none'; inn.style.transform = open[i] ? 'rotateY(180deg)' : 'rotateY(0deg)'; t.classList.remove('anim', 'ghost', 'boom'); t.querySelector('.fx')?.remove(); t.disabled = true; });
+  grid.offsetWidth; grid.classList.add('mix');
+  tiles.forEach((t) => { t.querySelector('.inner').style.transform = 'rotateY(0deg)'; });                                    // everything flips back face down
+  const shuffle = () => { const p = tiles.map((_, i) => i); for (let i = p.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [p[i], p[k]] = [p[k], p[i]]; } tiles.forEach((t, i) => { const j = p[i]; t.style.transform = `translate(${base[j].left - base[i].left}px,${base[j].top - base[i].top}px) rotate(${(Math.random() * 16 - 8).toFixed(1)}deg)`; }); };
+  state.mixTimers = [setTimeout(shuffle, 420), setTimeout(shuffle, 900), setTimeout(() => { tiles.forEach((t) => { t.style.transform = ''; }); }, 1380), setTimeout(() => { if (state.game === 'mines' && state.round?.status !== 'active') R.mines(null); }, 1900)];
+}
 function apply(j) {
+  clearTimeout(state.mixTimer); (state.mixTimers || []).forEach(clearTimeout); state.mixTimers = [];
   if (j.balance !== undefined) setBalance(j.balance);
   const prev = state.round;
   state.round = j.round;
@@ -231,6 +243,7 @@ function apply(j) {
     else {
       const delay = state.game === 'mines' ? 0.6 : state.game === 'tower' ? 1.7 : 0.15;                  // mines: wait for the flip and the blast
       showResult(r, delay, 'loss');
+      if (state.game === 'mines') state.mixTimer = setTimeout(mixMines, (delay + 1.1) * 1000);
       setTimeout(() => tg?.HapticFeedback?.notificationOccurred('error'), delay * 1000);
     }
   } else if (active) say('');

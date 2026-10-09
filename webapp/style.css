@@ -321,3 +321,8 @@ button.cash.dim{background:#3a3d46;color:rgba(255,255,255,.45)}
 .ctrl[data-game="mines"] #go:disabled{animation:none;opacity:.55}
 
 .resban.mn{animation:banIn .32s cubic-bezier(.2,1.5,.4,1) var(--d,.1s) forwards,banOut .3s ease-in calc(var(--d,.1s) + 1.5s) forwards}
+
+/* Mines: after a loss the tiles flip face down and shuffle */
+.grid.mix .tile{transition:transform .46s cubic-bezier(.55,0,.25,1)}
+.grid.mix .tile .inner{transition:transform .38s ease;animation:none}
+.grid.mix .tile.open .inner{transform:rotateY(180deg)}
