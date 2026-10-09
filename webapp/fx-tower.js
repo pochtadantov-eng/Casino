@@ -89,7 +89,7 @@
       this.birds = [{ x: -8, y: 7.2, v: 0.9, t: 0 }];
     }
     reset() {
-      this.state = 'idle'; this.u = 0; this.floors = []; this.base = 0; this.landed = 0; this.targetSucc = 0; this.queue = []; this.failQueued = false; this.pendingVerdicts = 0;
+      this.state = 'idle'; this.u = 0; this.floors = []; this.base = 0; this.landed = 0; this.targetSucc = 0; this.queue = []; this.predQ = []; this.failQueued = false; this.pendingVerdicts = 0;
       this.debris = []; this.lostT = 0; this.camV = 0; this.wreckT = -1; this.pieces = []; this.tractorX = 0; this.tractorY = 0; this.tractorRot = 0; this.struck = false;
       this.wob = 0; this.wv = 0; this.shake = 0; this.puffs = []; this.pops = []; this.fall = null; this.tumble = null; this.rest = null; this.intro = null; this.hang = null; this.popFor = 0;
       this.th = 0; this.thv = 0; this.lrope = LROPE_HIDE; this.roundStatus = 'idle'; this.maxSteps = 10; this.mults = []; this.camBottom = -0.7; this.camSet = false;
@@ -118,7 +118,17 @@
       if (round.status === 'lost' && !this.failQueued) { if (this.pendingVerdicts > 0) { this.pendingVerdicts--; this.reconcile(false); } else this.queue.push({ ok: false }); this.failQueued = true; }
       if (round.status === 'won' && !this.queue.length && ['sway', 'arrive'].includes(this.state)) { this.state = 'leave'; this.u = 0; this.leaveFrom = this.lrope; }
     }
-    reconcile(ok) { if (this.fall && this.fall.ok !== ok) { this.fall.ok = ok; this.fall.kicked = false; } }       // the server's verdict is final
+    reconcile(ok) {
+      const pred = this.predQ.length ? this.predQ.shift() : ok;
+      if (this.fall) { if (this.fall.ok !== ok) { this.fall.ok = ok; this.fall.kicked = false; } return; }
+      if (pred === ok) return;
+      if (!ok && this.floors.length > 1) {                                   // it already landed on screen, but the server says it missed: knock it off the tower
+        const f = this.floors.pop(); this.landed = Math.max(0, this.landed - 1); const top = this.landTop(), side = Math.random() < 0.5 ? -1 : 1;
+        this.tumble = { dmg: f.dmg, x: f.ox, y: top + HH / 2, vx: side * 1.6, vy: 1.8, rot: f.tilt, vr: -side * 2.6, side, hit: 0, v: f.v }; this.wv += side * 2.6; this.puff(f.ox, top + 0.1, 8, 0.8); this.state = 'tumble';
+      } else if (ok && (this.tumble || this.rest)) {                         // it was knocked off on screen but the server counted it
+        const q = this.tumble || this.rest; this.tumble = null; this.rest = null; this.floors.push({ v: q.v, ox: 0, tilt: 0.01, sq: 0.05, dmg: q.dmg || [] }); this.landed++; this.state = 'land'; this.u = 0;
+      }
+    }       // the server's verdict is final
     startIntro() { this.intro = { x: 0.1, y: Math.max(SLAB_H + 6, this.camBottom + this.hv) + HH, vy: -1, rot: 0.25, vr: -0.9, v: this.ci++ }; this.state = 'intro'; this.u = 0; }
     newHang() { this.hang = { v: this.ci++ }; }
     _setReady(v) { if (v !== this._ready) { this._ready = v; this.onReady?.(v); } }
@@ -128,7 +138,7 @@
     tap() {
       if (this.state !== 'sway' || this.roundStatus !== 'active' || !this.hang || this.fall || !this.swing) return false;
       const t = this.now(); if (t < this.swing.start + 40) return false;
-      const x = this.swingAt(t).x; this.pendingVerdicts++; this.release({ ok: Math.abs(x) <= this.swing.tol }); return true;
+      const x = this.swingAt(t).x; this.pendingVerdicts++; const ok = Math.abs(x) <= this.swing.tol; this.predQ.push(ok); this.release({ ok }); return true;
     }
     release(item) {
       if (!this.hang) return; const sp = this.swingAt(this.now()), x = R * Math.sin(this.th), y = this.pivotY() - R * Math.cos(this.th);
@@ -154,22 +164,27 @@
     spray(x, y, n, col) { for (let i = 0; i < n; i++) this.debris.push({ x: x + rand(-0.25, 0.25), y: y + rand(-0.05, 0.15), vx: rand(-2.2, 2.2), vy: rand(1.2, 4.2), rot: rand(0, 6), vr: rand(-9, 9), s: rand(0.035, 0.09), col: Math.random() < 0.65 ? col : '#8d949b', life: rand(0.6, 1.2) }); }
     puff(x, y, n = 10, spread = 0.9) { for (let i = 0; i < n; i++) { const s = i % 2 ? 1 : -1; this.puffs.push({ x: x + s * spread * rand(0.7, 1.1), y: y + rand(0, 0.12), vx: s * rand(0.5, 1.9), vy: rand(0.05, 0.5), r: rand(0.22, 0.45), life: rand(0.5, 0.95), max: 0.95 }); } }
     // after a loss: once the plaque is gone a bulldozer drives in from the left, knocks the tower over and the houses fall apart and vanish
-    wreck() { if (this.state !== 'done' || (this.roundStatus !== 'lost' && this.roundStatus !== 'won') || this.wreckT !== -1) return; this.wreckT = 0; this.struck = false; this.tractorX = -(this.w / 2 / this.ppu + 2.0); }
+    wreck() { if (this.state !== 'done' || (this.roundStatus !== 'lost' && this.roundStatus !== 'won') || this.wreckT !== -1) return; this.wreckT = 0; this.struck = false; this.tractorY = 0; this.tractorRot = 0; this.tractorX = -(this.w / 2 / this.ppu + 2.0); }
+    terrainH(x) {                                  // height of the ground the bulldozer drives on: flat, ramp up, platform, ramp down
+      const top = SLAB_H + 0.15, sm = (q) => { q = clamp(q); return q * q * (3 - 2 * q); }, xl = -SLAB_W / 2, xr = SLAB_W / 2;
+      return top * sm((x - (xl - RAMP)) / RAMP) * (1 - sm((x - xr) / RAMP));
+    }
     stepWreck(dt) {
       this.wreckT += dt; const v = 4.2; this.tractorX += v * dt;
-      { const top = SLAB_H + 0.15, sm3 = (q) => { q = clamp(q); return q * q * (3 - 2 * q); }, xl = -SLAB_W / 2, xr = SLAB_W / 2, Hh = (x) => top * sm3((x - (xl - RAMP)) / RAMP) * (1 - sm3((x - xr) / RAMP)), hf = Hh(this.tractorX + 1.1), hr = Hh(this.tractorX - 1.1);
-        this.tractorY = (hf + hr) / 2; this.tractorRot = Math.atan2(hf - hr, 2.2); }       // it climbs onto the platform, shoves the tower from there and drives down the far side
+      { const hf = this.terrainH(this.tractorX + 1.1), hr = this.terrainH(this.tractorX - 1.1), k = Math.min(1, dt * 9);     // pose follows the surface profile, low-passed so it never snaps
+        this.tractorY += ((hf + hr) / 2 - this.tractorY) * k; this.tractorRot += (Math.atan2(hf - hr, 2.2) - this.tractorRot) * k; }
       this.tw = (this.tw || 0) + v * dt * 1.6;
-      if (Math.random() < dt * 14) this.puffs.push({ x: this.tractorX - 1.9, y: 0.12, vx: -rand(0.3, 0.9), vy: rand(0.4, 0.9), r: rand(0.18, 0.32), life: 0.7, max: 0.7 });
-      if (!this.struck && this.tractorX + 1.95 >= -HW / 2 - 0.05) {
-        this.struck = true; this.shake = 0.9; this.puff(-HW / 2, 0.2, 14, 0.9);
-        this.floors.forEach((f, i) => this.pieces.push({ v: f.v, dmg: f.dmg, x: f.ox, y: SLAB_H + i * INC + HH / 2, vx: 6 + rand(0, 3) + i * 0.3, vy: rand(1.5, 4.5) + Math.min(i, 5) * 0.4, rot: f.tilt, vr: -rand(2, 5), age: 0, down: 0 }));
-        if (this.rest) this.pieces.push({ v: this.rest.v, dmg: this.rest.dmg, x: this.rest.x, y: 1, vx: 6, vy: 3, rot: this.rest.rot, vr: -3, age: 0, down: 0 });
+      if (Math.random() < dt * 14) this.puffs.push({ x: this.tractorX - 1.7, y: this.terrainH(this.tractorX - 1.7) - 0.05, vx: -rand(0.3, 0.9), vy: rand(0.4, 0.9), r: rand(0.18, 0.32), life: 0.7, max: 0.7 });
+      if (!this.struck && this.tractorX + 1.95 >= -HW / 2 - 0.02) {
+        this.struck = true; this.shake = 0.7; this.puff(-HW / 2, 0.2, 14, 0.9);
+        this.floors.forEach((f, i) => this.pieces.push({ v: f.v, dmg: f.dmg, x: f.ox, y: SLAB_H + i * INC + HH / 2, vx: 4.6 + rand(0, 1.2) + i * 0.35, vy: rand(1.0, 3.2) + Math.min(i, 5) * 0.35, rot: f.tilt, vr: -rand(1.5, 3.5), age: 0, down: 0 }));
+        if (this.rest) this.pieces.push({ v: this.rest.v, dmg: this.rest.dmg, x: this.rest.x, y: 1, vx: 4.6, vy: 2.5, rot: this.rest.rot, vr: -2.5, age: 0, down: 0 });
         this.floors = []; this.rest = null; this.spray(-HW / 2, 1.2, 26, '#c9b79a');
       }
       const tip = this.tractorX + 1.95, late = this.struck && this.tractorX > 1.5;
       for (const q of this.pieces) {
-        if (tip > q.x - HW / 2 && q.x < tip + HW) { q.x = Math.max(q.x, tip + HW / 2 * Math.abs(Math.cos(q.rot)) + 0.02); q.vx = Math.max(q.vx, 4.2 * 1.8); }    // the blade shoves everything ahead of it
+        { const edge = q.x - (HW / 2) * Math.abs(Math.cos(q.rot)) - (HH / 2) * Math.abs(Math.sin(q.rot)), pen = tip - edge;                 // blade overlaps the piece: push it out smoothly and give it the blade's speed
+          if (pen > 0 && pen < HW + 0.8 && q.y < this.terrainH(this.tractorX) + 1.6) { q.x += pen * Math.min(1, dt * 14); q.vx = Math.max(q.vx, 4.2 * 1.25); } }
         if (late) q.age += dt * 1.5;
         q.vy -= 22 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt;
         const low = (HW / 2) * Math.abs(Math.sin(q.rot)) + (HH / 2) * Math.abs(Math.cos(q.rot)), gnd = Math.abs(q.x) < SLAB_W / 2 ? SLAB_H : 0;
@@ -455,9 +470,11 @@
       ramp(xl - L, xl); ramp(xr + L, xr); g.restore();
     }
     drawTractor(g, wx, gy) {
-      const u = this.ppu, x = this.X(wx), bob = Math.sin(this.tw * 3.1) * 0.012 * u;
+      const wx0 = wx, u = this.ppu, x = this.X(wx), bob = Math.sin(this.tw * 3.1) * 0.012 * u;
+      { const base = gy + 0.15 * u, pts = [];                                  // shadow lies ON the surface: it follows the ramp/platform profile under the tracks
+        for (let i = 0; i <= 16; i++) { const wx = wx0 - 1.75 + (3.5 * i) / 16; pts.push([this.X(wx), base - this.terrainH(wx) * u]); }
+        g.save(); for (const [grow, al] of [[0.16, 0.1], [0.11, 0.14], [0.06, 0.2]]) { g.fillStyle = `rgba(0,0,0,${al})`; g.beginPath(); pts.forEach(([px, py], i) => (i ? g.lineTo(px, py + 1) : g.moveTo(px, py + 1))); for (let i = pts.length - 1; i >= 0; i--) g.lineTo(pts[i][0], pts[i][1] + grow * u); g.closePath(); g.fill(); } g.restore(); }
       g.save(); g.translate(x, gy + 0.15 * u + bob - (this.tractorY || 0) * u); g.rotate(-(this.tractorRot || 0));
-      g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0.02 * u, 1.9 * u, 0.1 * u, 0, 0, 6.283); g.fill();
       const rr = (X, Y, W, H, R) => { g.beginPath(); g.roundRect ? g.roundRect(X, Y, W, H, R) : g.rect(X, Y, W, H); };
       // tracks
       g.fillStyle = '#23272d'; rr(-1.45 * u, -0.62 * u, 2.9 * u, 0.62 * u, 0.31 * u); g.fill();
