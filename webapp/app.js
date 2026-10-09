@@ -175,8 +175,8 @@ function showResult(r, delay, kind) {          // "win" / "loss" plaque over the
     ? `<b>ВЫИГРЫШ</b><span>+${r.payout} ⭐ <em>x${r.multiplier.toFixed(2)}</em></span>`
     : `<b>${RES_LOSS[state.game] || 'ПРОИГРЫШ'}</b><span>−${r.bet} ⭐</span>`;
   $('#stage').append(el);
-  setTimeout(() => { el.remove(); if (kind === 'loss' && state.game === 'tower') state.tscene?.wreck?.(); }, (delay + 3.4) * 1000);
-  lockPlay((delay + (kind === 'loss' && state.game === 'tower' ? 6.2 : 2.95)) * 1000);               // no new round while the result animation is still playing
+  setTimeout(() => el.remove(), (delay + 3.4) * 1000);
+  lockPlay((delay + (kind === 'loss' && state.game === 'tower' ? 3.4 : 2.95)) * 1000);               // no new round while the result animation is still playing
 }
 // Play button stays disabled until the animation has finished
 function lockPlay(ms) {

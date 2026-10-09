@@ -154,15 +154,18 @@
     // after a loss: once the plaque is gone a bulldozer drives in from the left, knocks the tower over and the houses fall apart and vanish
     wreck() { if (this.state !== 'done' || this.roundStatus !== "lost" || this.wreckT !== -1) return; this.wreckT = 0; this.struck = false; this.tractorX = -(this.w / 2 / this.ppu + 2.0); }
     stepWreck(dt) {
-      this.wreckT += dt; const v = 3.6; this.tractorX += v * dt; this.tw = (this.tw || 0) + v * dt * 1.6;
+      this.wreckT += dt; const v = 4.6; this.tractorX += v * dt; this.tw = (this.tw || 0) + v * dt * 1.6;
       if (Math.random() < dt * 14) this.puffs.push({ x: this.tractorX - 1.9, y: 0.12, vx: -rand(0.3, 0.9), vy: rand(0.4, 0.9), r: rand(0.18, 0.32), life: 0.7, max: 0.7 });
       if (!this.struck && this.tractorX + 1.95 >= -HW / 2 - 0.05) {
         this.struck = true; this.shake = 0.9; this.puff(-HW / 2, 0.2, 14, 0.9);
-        this.floors.forEach((f, i) => this.pieces.push({ v: f.v, dmg: f.dmg, x: f.ox, y: SLAB_H + i * INC + HH / 2, vx: 3.2 + rand(0, 1.8) + i * 0.15, vy: rand(1.5, 4.5) + Math.min(i, 5) * 0.2, rot: f.tilt, vr: -rand(1.5, 4.2), age: 0, down: 0 }));
-        if (this.rest) this.pieces.push({ v: this.rest.v, dmg: this.rest.dmg, x: this.rest.x, y: 1, vx: 2.5, vy: 3, rot: this.rest.rot, vr: -2.5, age: 0, down: 0 });
+        this.floors.forEach((f, i) => this.pieces.push({ v: f.v, dmg: f.dmg, x: f.ox, y: SLAB_H + i * INC + HH / 2, vx: 6 + rand(0, 3) + i * 0.3, vy: rand(1.5, 4.5) + Math.min(i, 5) * 0.4, rot: f.tilt, vr: -rand(2, 5), age: 0, down: 0 }));
+        if (this.rest) this.pieces.push({ v: this.rest.v, dmg: this.rest.dmg, x: this.rest.x, y: 1, vx: 6, vy: 3, rot: this.rest.rot, vr: -3, age: 0, down: 0 });
         this.floors = []; this.rest = null; this.spray(-HW / 2, 1.2, 26, '#c9b79a');
       }
+      const tip = this.tractorX + 1.95, late = this.struck && this.tractorX > 1.5;
       for (const q of this.pieces) {
+        if (tip > q.x - HW / 2 && q.x < tip + HW) { q.x = Math.max(q.x, tip + HW / 2 * Math.abs(Math.cos(q.rot)) + 0.02); q.vx = Math.max(q.vx, 4.6 * 1.7); }    // the blade shoves everything ahead of it
+        if (late) q.age += dt * 1.5;
         q.vy -= 22 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt;
         const low = (HW / 2) * Math.abs(Math.sin(q.rot)) + (HH / 2) * Math.abs(Math.cos(q.rot)), gnd = Math.abs(q.x) < SLAB_W / 2 ? SLAB_H : 0;
         if (q.y - low <= gnd && q.vy < 0) { q.y = gnd + low; q.vy = -q.vy * 0.28; q.vx *= 0.7; q.vr *= 0.6; if (Math.abs(q.vy) > 1.2 && q.down < 3) { this.puff(q.x, gnd + 0.1, 5, 0.6); this.shake = Math.max(this.shake, 0.25); this.spray(q.x, gnd + 0.2, 6, '#c9b79a'); } q.down++; }
@@ -173,6 +176,7 @@
     }
     support(x, top) { const a = Math.abs(x); return a < HW / 2 + 0.25 ? top : a < SLAB_W / 2 ? SLAB_H : 0; }
     update(dt) {
+      if (this.state === 'done' && this.roundStatus === 'lost' && this.wreckT === -1 && this.lostT > 0.9) this.wreck();      // the bulldozer rolls in while the plaque is still up
       if (this.wreckT >= 0) this.stepWreck(dt);
       const tS = this.now(), sw0 = this.swing ? this.swing.start : tS, top = this.landTop();
       this.u += dt; this.wv += (-60 * this.wob - 5.5 * this.wv) * dt; this.wob += this.wv * dt;
