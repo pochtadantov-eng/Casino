@@ -2,3 +2,5 @@ node_modules
 dist
 .env
 _site
+pages/
+preview.html
