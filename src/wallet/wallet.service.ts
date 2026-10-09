@@ -3,6 +3,7 @@ import { PoolClient } from 'pg';
 import { DbService } from '../db/db.service';
 import { config } from '../config';
 import { GameError } from '../games/engines/types';
+import { ChestPrize, drawPrize, publicPrizes } from './chest';
 
 export interface TgUser {
   id: number;
@@ -132,11 +133,11 @@ export class WalletService {
   async dailyStatus(userId: number) {
     const { rows } = await this.db.pool.query('select last_daily from users where id = $1', [userId]);
     const next = rows[0]?.last_daily ? new Date(rows[0].last_daily.getTime() + 86_400_000) : null;
-    return { reward: config.dailyBonus, availableAt: next && next.getTime() > Date.now() ? next.toISOString() : null };
+    return { enabled: config.dailyBonus > 0, availableAt: next && next.getTime() > Date.now() ? next.toISOString() : null, prizes: publicPrizes() };
   }
 
-  /** Once per 24h. The UPDATE is the lock: a concurrent second claim matches no row. */
-  async claimDaily(userId: number): Promise<number> {
+  /** Opens the daily chest, once per 24 h. The UPDATE is the lock: a concurrent second claim matches no row. Stars are credited at once; a gift is queued for an admin. */
+  async openChest(userId: number): Promise<{ prize: ChestPrize; giftId: number | null }> {
     if (config.dailyBonus <= 0) throw new GameError('Бонус сейчас недоступен');
     return this.db.tx(async (c) => {
       const r = await c.query(
@@ -144,8 +145,21 @@ export class WalletService {
         [userId],
       );
       if (!r.rowCount) throw new GameError('Бонус уже получен, приходите позже');
-      await this.apply(c, userId, config.dailyBonus, 'bonus', `daily:${userId}:${Date.now()}`);
-      return config.dailyBonus;
+      const prize = drawPrize();
+      let giftId: number | null = null;
+      if (prize.stars) await this.apply(c, userId, prize.stars, 'bonus', `chest:${userId}:${Date.now()}`);
+      if (prize.gift) giftId = Number((await c.query('insert into user_gifts (user_id, gift) values ($1, $2) returning id', [userId, prize.gift])).rows[0].id);
+      return { prize, giftId };
     });
+  }
+
+  async pendingGifts() {
+    const { rows } = await this.db.pool.query("select id, user_id, gift, created_at from user_gifts where status = 'pending' order by id limit 30");
+    return rows;
+  }
+
+  async markGiftSent(id: number): Promise<{ userId: number; gift: string } | null> {
+    const { rows } = await this.db.pool.query("update user_gifts set status = 'sent', sent_at = now() where id = $1 and status = 'pending' returning user_id, gift", [id]);
+    return rows[0] ? { userId: Number(rows[0].user_id), gift: rows[0].gift } : null;
   }
 }

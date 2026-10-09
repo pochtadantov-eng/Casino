@@ -50,3 +50,13 @@ create table if not exists withdrawals (
 );
 
 alter table users add column if not exists last_daily timestamptz;
+
+-- Telegram gifts won in the daily chest; an admin sends them (/gifts, /sent <id>)
+create table if not exists user_gifts (
+  id         bigserial primary key,
+  user_id    bigint not null references users(id),
+  gift       text   not null,
+  status     text   not null default 'pending',   -- pending | sent
+  created_at timestamptz not null default now(),
+  sent_at    timestamptz
+);

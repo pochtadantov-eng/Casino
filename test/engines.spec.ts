@@ -4,6 +4,7 @@ import { crashPoint, multiplierAt, rocket } from '../src/games/engines/rocket';
 import { mines, minePositions, minesMultiplier } from '../src/games/engines/mines';
 import { seagull, stepsMultiplier } from '../src/games/engines/steps';
 import { roundAt, publicRound, crashOfRound, BET_MS, PAUSE_MS } from '../src/games/engines/rocket-schedule';
+import { CHEST_PRIZES, drawPrize, chestEv } from '../src/wallet/chest';
 import { tower, swingX, tolAt, periodAt, towerMultiplier, levelRanges, TOWER } from '../src/games/engines/tower';
 import { verifyInitData } from '../src/auth/telegram-auth';
 import { createHmac } from 'node:crypto';
@@ -190,5 +191,18 @@ describe('rocket shared rounds', () => {
     let ret = 0; const N = 100_000;
     for (let k = 0; k < N; k++) if (crashOfRound(k, secret) >= 2) ret += 2;
     expect(ret / N).toBeGreaterThan(0.88); expect(ret / N).toBeLessThan(0.96);
+  });
+});
+
+describe('daily chest', () => {
+  it('prizes match the promised list and draw frequencies follow the weights', () => {
+    expect(CHEST_PRIZES.filter((p) => p.stars).map((p) => p.stars)).toEqual([15, 25, 50, 100, 150, 500, 1000]);
+    expect(CHEST_PRIZES.some((p) => p.gift)).toBe(true);
+    const N = 100_000, cnt: Record<string, number> = {};
+    for (let i = 0; i < N; i++) { const p = drawPrize(); cnt[p.id] = (cnt[p.id] ?? 0) + 1; }
+    const total = CHEST_PRIZES.reduce((a, p) => a + p.weight, 0);
+    expect(Math.abs(cnt.s15 / N - 55 / total)).toBeLessThan(0.01);
+    expect(Math.abs(cnt.s25 / N - 25 / total)).toBeLessThan(0.01);
+    expect(chestEv()).toBeGreaterThan(20); expect(chestEv()).toBeLessThan(60);
   });
 });

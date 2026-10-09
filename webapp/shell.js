@@ -92,25 +92,59 @@ function paintUser() {
 }
 
 // ---------- bonus ----------
+let chestPrizes = [];
 async function loadBonus() {
   const btn = $('#bonus-claim'), txt = $('#bonus-text');
   try {
     const b = await api('bonus');
+    chestPrizes = b.prizes || [];
     const wait = b.availableAt ? new Date(b.availableAt).getTime() - Date.now() : 0;
-    if (b.reward <= 0) { txt.textContent = 'Бонус сейчас недоступен.'; btn.disabled = true; return; }
+    if (b.enabled === false) { txt.textContent = 'Сундук сейчас недоступен.'; btn.disabled = true; return; }
     btn.disabled = wait > 0; $('#bonus-panel').classList.toggle('ready', wait <= 0);
-    txt.textContent = wait > 0 ? `Следующий бонус через ${fmtTime(wait)}` : `Забери ${b.reward} ⭐ прямо сейчас!`;
-    btn.textContent = wait > 0 ? 'Уже получено' : `Забрать ${b.reward} ⭐`;
+    txt.textContent = wait > 0 ? `Следующий сундук через ${fmtTime(wait)}` : 'Крути рулетку: от 15 до 1000 ⭐ и NFT-подарки Telegram!';
+    btn.textContent = wait > 0 ? 'Уже открыт' : 'Открыть сундук';
   } catch (e) { txt.textContent = e.message; btn.disabled = true; }
 }
-function giftBurst() {                                           // the gift pops and a fountain of stars flies out of it
-  const g = $('#gift'); if (!g) return; g.classList.remove('burst'); void g.offsetWidth; g.classList.add('burst'); setTimeout(() => g.classList.remove('burst'), 1100);
-  for (let i = 0; i < 16; i++) { const s = document.createElement('i'); s.className = 'gstar'; const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.6, d = 60 + Math.random() * 90; s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d + 'px'); s.style.animationDelay = Math.random() * 0.15 + 's'; g.append(s); setTimeout(() => s.remove(), 1300); }
+
+// ---------- the chest roulette: the server draws the prize, the strip below only shows it ----------
+const RARITY = (p) => (p.gift ? 'gift' : p.stars >= 1000 ? 'r6' : p.stars >= 500 ? 'r5' : p.stars >= 150 ? 'r4' : p.stars >= 100 ? 'r3' : p.stars >= 50 ? 'r2' : p.stars >= 25 ? 'r1' : 'r0');
+const cardHtml = (p) => `<div class="rcard ${RARITY(p)}"><div class="rico">${p.gift ? '🎁' : '⭐'}</div><b>${p.gift ? 'NFT' : p.stars}</b><span>${p.gift ? 'подарок' : 'звёзд'}</span></div>`;
+function openChestRoulette() {
+  if (document.querySelector('.chestmodal')) return;
+  const prizes = chestPrizes.length ? chestPrizes : [{ id: 's15', stars: 15, label: '15 ⭐' }];
+  const m = document.createElement('div'); m.className = 'chestmodal';
+  m.innerHTML = `<div class="cm-box"><h3>Ежедневный сундук</h3>
+    <div class="cm-chest" id="cm-chest"><i class="rays"></i><img src="${document.querySelector('.panel.bonus .chest')?.src || 'img/chest.webp'}" alt=""></div>
+    <div class="cm-roul" id="cm-roul"><div class="cm-mark"></div><div class="cm-strip" id="cm-strip"></div></div>
+    <div class="cm-res" id="cm-res"></div><button class="primary cm-ok" id="cm-ok" hidden>Забрать</button></div>`;
+  document.body.append(m); requestAnimationFrame(() => m.classList.add('on'));
+  const hap = (t) => { try { window.Telegram?.WebApp?.HapticFeedback?.[t === 's' ? 'selectionChanged' : 'notificationOccurred'](t === 's' ? undefined : t); } catch {} };
+  const close = () => { m.classList.remove('on'); setTimeout(() => m.remove(), 250); loadBonus(); };
+  m.querySelector('#cm-ok').onclick = close;
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  (async () => {
+    let res;
+    const req = api('bonus/daily', {}).then((r) => (res = r)).catch((e) => ({ error: e.message }));
+    await wait(900);                                                 // the chest shakes while the server decides
+    const out = await req;
+    if (out.error) { m.querySelector('#cm-res').innerHTML = `<p class="cm-err">${out.error}</p>`; const ok = m.querySelector('#cm-ok'); ok.hidden = false; ok.textContent = 'Закрыть'; return; }
+    const prize = out.prize, T = 54, N = 64, W = 98, G = 8;
+    const strip = m.querySelector('#cm-strip'), pool = prizes.flatMap((p) => Array(p.gift ? 1 : p.stars >= 500 ? 1 : p.stars >= 100 ? 2 : 4).fill(p));
+    const items = Array.from({ length: N }, (_, i) => (i === T ? prizes.find((p) => p.id === prize.id) || prize : pool[Math.floor(Math.random() * pool.length)]));
+    strip.innerHTML = items.map(cardHtml).join('');
+    m.classList.add('spin'); await wait(450);                         // the chest opens, the roulette appears
+    const view = m.querySelector('#cm-roul').clientWidth, jitter = (Math.random() - 0.5) * W * 0.6;
+    const x = -(T * (W + G) + W / 2) + view / 2 + jitter;
+    strip.style.transition = 'transform 5.4s cubic-bezier(.1,.62,.08,1)'; strip.style.transform = `translateX(${x}px)`;
+    let last = -1; const tick = setInterval(() => { const cur = new DOMMatrix(getComputedStyle(strip).transform).m41, idx = Math.floor((view / 2 - cur) / (W + G)); if (idx !== last) { last = idx; hap('s'); } }, 60);
+    await wait(5600); clearInterval(tick);
+    strip.children[T].classList.add('win'); m.classList.add('done'); setBalance(out.balance); hap('success');
+    m.querySelector('#cm-res').innerHTML = prize.gift ? `<b>Вы выиграли NFT-подарок Telegram!</b><span>Мы отправим его вам в чат — ждите сообщение от бота.</span>` : `<b>Вы выиграли ${prize.stars} ⭐</b><span>Уже на вашем балансе</span>`;
+    for (let i = 0; i < 26; i++) { const s = document.createElement('i'); s.className = 'cm-conf'; const a = Math.random() * 6.283, d = 90 + Math.random() * 150; s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d - 40 + 'px'); s.style.background = ['#ffd84a', '#ff8a4a', '#6fd6a5', '#6aa8ff', '#e879f9'][i % 5]; s.style.animationDelay = Math.random() * 0.2 + 's'; m.querySelector('.cm-box').append(s); setTimeout(() => s.remove(), 1700); }
+    const ok = m.querySelector('#cm-ok'); ok.hidden = false;
+  })();
 }
-$('#bonus-claim').onclick = async () => {
-  try { const r = await api('bonus/daily', {}); setBalance(r.balance); giftBurst(); window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); } catch (e) { $('#bonus-text').textContent = e.message; }
-  loadBonus();
-};
+$('#bonus-claim').onclick = () => { if (!$('#bonus-claim').disabled) openChestRoulette(); };
 
 // ---------- profile ----------
 const CASH_LABEL = { deposit: ['⭐ Пополнение', 'w'], deposit_refund: ['↩️ Возврат пополнения', 'l'], withdraw: ['📤 Вывод (заявка)', 'l'], withdraw_refund: ['↩️ Вывод отклонён', 'w'], bonus: ['🎁 Бонус', 'w'] };

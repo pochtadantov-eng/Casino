@@ -101,6 +101,18 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       const done = await this.wallet.reverseDeposit(chargeId);
       return ctx.reply(done ? `Возвращено ${dep.amount} ⭐ пользователю ${dep.userId}, с баланса снято ${done.amount}.` : 'Возврат сделан, баланс уже скорректирован.');
     });
+    bot.command('gifts', async (ctx) => {
+      if (!admin(ctx)) return;
+      const rows = await this.wallet.pendingGifts();
+      await ctx.reply(rows.length ? rows.map((r) => `#${r.id} user ${r.user_id}: ${r.gift}`).join('\n') + '\n\nОтметить выданным: /sent <id>' : 'Нет подарков к выдаче');
+    });
+    bot.command('sent', async (ctx) => {
+      if (!admin(ctx)) return;
+      const r = await this.wallet.markGiftSent(Number(ctx.match));
+      if (!r) return ctx.reply('Не найдено или уже выдано');
+      await bot.api.sendMessage(r.userId, '🎁 Ваш подарок из ежедневного сундука отправлен! Проверьте подарки в профиле Telegram.').catch(() => {});
+      return ctx.reply('Готово');
+    });
     bot.command('pending', async (ctx) => {
       if (!admin(ctx)) return;
       const rows = await this.wallet.pendingWithdrawals();

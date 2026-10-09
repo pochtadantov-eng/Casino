@@ -33,8 +33,9 @@ export class ApiController {
 
   @Post('bonus/daily')
   async claimBonus(@Req() req: any) {
-    const reward = await this.wallet.claimDaily(req.user.id);
-    return { reward, balance: await this.wallet.balance(req.user.id) };
+    const { prize, giftId } = await this.wallet.openChest(req.user.id);
+    if (prize.gift) await this.bot.notifyAdmins(`🎁 Выигран подарок «${prize.label}» (#${giftId}): user ${req.user.id}\nОтправьте его вручную и отметьте: /sent ${giftId}   (список: /gifts)`);
+    return { prize: { id: prize.id, stars: prize.stars, gift: prize.gift, label: prize.label }, balance: await this.wallet.balance(req.user.id) };
   }
 
   /** Deposits / withdrawals / bonuses for the profile screen. */
