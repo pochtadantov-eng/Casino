@@ -89,7 +89,7 @@
     }
     reset() {
       this.state = 'idle'; this.u = 0; this.floors = []; this.base = 0; this.landed = 0; this.targetSucc = 0; this.queue = []; this.failQueued = false; this.pendingVerdicts = 0;
-      this.debris = []; this.lostT = 0; this.camV = 0;
+      this.debris = []; this.lostT = 0; this.camV = 0; this.wreckT = -1; this.pieces = []; this.tractorX = 0; this.struck = false;
       this.wob = 0; this.wv = 0; this.shake = 0; this.puffs = []; this.pops = []; this.fall = null; this.tumble = null; this.rest = null; this.intro = null; this.hang = null; this.popFor = 0;
       this.th = 0; this.thv = 0; this.lrope = LROPE_HIDE; this.roundStatus = 'idle'; this.maxSteps = 10; this.mults = []; this.camBottom = -0.7; this.camSet = false;
     }
@@ -151,8 +151,29 @@
     }
     spray(x, y, n, col) { for (let i = 0; i < n; i++) this.debris.push({ x: x + rand(-0.25, 0.25), y: y + rand(-0.05, 0.15), vx: rand(-2.2, 2.2), vy: rand(1.2, 4.2), rot: rand(0, 6), vr: rand(-9, 9), s: rand(0.035, 0.09), col: Math.random() < 0.65 ? col : '#8d949b', life: rand(0.6, 1.2) }); }
     puff(x, y, n = 10, spread = 0.9) { for (let i = 0; i < n; i++) { const s = i % 2 ? 1 : -1; this.puffs.push({ x: x + s * spread * rand(0.7, 1.1), y: y + rand(0, 0.12), vx: s * rand(0.5, 1.9), vy: rand(0.05, 0.5), r: rand(0.22, 0.45), life: rand(0.5, 0.95), max: 0.95 }); } }
+    // after a loss: once the plaque is gone a bulldozer drives in from the left, knocks the tower over and the houses fall apart and vanish
+    wreck() { if (this.state !== 'done' || this.roundStatus !== "lost" || this.wreckT !== -1) return; this.wreckT = 0; this.struck = false; this.tractorX = -(this.w / 2 / this.ppu + 2.0); }
+    stepWreck(dt) {
+      this.wreckT += dt; const v = 3.6; this.tractorX += v * dt; this.tw = (this.tw || 0) + v * dt * 1.6;
+      if (Math.random() < dt * 14) this.puffs.push({ x: this.tractorX - 1.9, y: 0.12, vx: -rand(0.3, 0.9), vy: rand(0.4, 0.9), r: rand(0.18, 0.32), life: 0.7, max: 0.7 });
+      if (!this.struck && this.tractorX + 1.95 >= -HW / 2 - 0.05) {
+        this.struck = true; this.shake = 0.9; this.puff(-HW / 2, 0.2, 14, 0.9);
+        this.floors.forEach((f, i) => this.pieces.push({ v: f.v, dmg: f.dmg, x: f.ox, y: SLAB_H + i * INC + HH / 2, vx: 3.2 + rand(0, 1.8) + i * 0.15, vy: rand(1.5, 4.5) + Math.min(i, 5) * 0.2, rot: f.tilt, vr: -rand(1.5, 4.2), age: 0, down: 0 }));
+        if (this.rest) this.pieces.push({ v: this.rest.v, dmg: this.rest.dmg, x: this.rest.x, y: 1, vx: 2.5, vy: 3, rot: this.rest.rot, vr: -2.5, age: 0, down: 0 });
+        this.floors = []; this.rest = null; this.spray(-HW / 2, 1.2, 26, '#c9b79a');
+      }
+      for (const q of this.pieces) {
+        q.vy -= 22 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt;
+        const low = (HW / 2) * Math.abs(Math.sin(q.rot)) + (HH / 2) * Math.abs(Math.cos(q.rot)), gnd = Math.abs(q.x) < SLAB_W / 2 ? SLAB_H : 0;
+        if (q.y - low <= gnd && q.vy < 0) { q.y = gnd + low; q.vy = -q.vy * 0.28; q.vx *= 0.7; q.vr *= 0.6; if (Math.abs(q.vy) > 1.2 && q.down < 3) { this.puff(q.x, gnd + 0.1, 5, 0.6); this.shake = Math.max(this.shake, 0.25); this.spray(q.x, gnd + 0.2, 6, '#c9b79a'); } q.down++; }
+        if (q.down > 0) q.age += dt;
+      }
+      this.pieces = this.pieces.filter((q) => q.age < 0.9 && q.x < this.w / 2 / this.ppu + 3);
+      if (this.tractorX - 2.0 > this.w / 2 / this.ppu && !this.pieces.length) { this.wreckT = -2; }
+    }
     support(x, top) { const a = Math.abs(x); return a < HW / 2 + 0.25 ? top : a < SLAB_W / 2 ? SLAB_H : 0; }
     update(dt) {
+      if (this.wreckT >= 0) this.stepWreck(dt);
       const tS = this.now(), sw0 = this.swing ? this.swing.start : tS, top = this.landTop();
       this.u += dt; this.wv += (-60 * this.wob - 5.5 * this.wv) * dt; this.wob += this.wv * dt;
       for (const f of this.floors) if (f.sq) { f.sq *= Math.exp(-9 * dt); if (f.sq < 0.002) f.sq = 0; }
@@ -172,7 +193,7 @@
       if (hasHouse && this.swing) { const sp = this.swingAt(tS); this.th = Math.asin(clamp(sp.x / R, -0.95, 0.95)); this.thv = sp.v / 1000 / R; } else { this.thv *= 0.9; this.th *= 0.92; }
       this._setReady(this.state === 'sway' && this.roundStatus === 'active' && !this.fall && !!this.swing && tS >= this.swing.start + 60);
       if (this.state === 'done' && this.roundStatus === 'lost') this.lostT += dt;
-      if (this.lostT > 1.7) {                                  // the result plaque is up: the camera drops to the first house, faster and faster
+      if (this.lostT > 0.45) {                                  // the result plaque is up: the camera drops to the first house, faster and faster
         const floor = -0.7; if (this.camBottom > floor) { this.camV += 17 * dt; this.camBottom = Math.max(floor, this.camBottom - this.camV * dt); if (this.camBottom <= floor) { this.camV = 0; this.shake = Math.max(this.shake, 0.35); } }
       } else { const ct = this.camTarget(); this.camBottom = this.camSet ? this.camBottom + (ct - this.camBottom) * Math.min(1, dt * 2.0) : ct; }
       this.camSet = true;
@@ -294,6 +315,8 @@
       if (this.fall) this.drawHouse(g, this.fall.v, this.fall.x, this.fall.y, this.fall.rot, 0, this.fall.dmg);
       if (this.tumble) this.drawHouse(g, this.tumble.v, this.tumble.x, this.tumble.y, this.tumble.rot, 0, this.tumble.dmg);
       if (this.rest) { const q = this.rest, sup = this.support(q.x, this.landTop()), low = (HW / 2) * Math.abs(Math.sin(q.rot)) + (HH / 2) * Math.abs(Math.cos(q.rot)); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(this.X(q.x), this.Y(sup) + 2, HW * ppu * 0.55, 5, 0, 0, 6.283); g.fill(); this.drawHouse(g, q.v, q.x, sup + low, q.rot, 0, q.dmg); }
+      for (const q of this.pieces) { g.save(); g.globalAlpha = clamp(1 - q.age / 0.9); this.drawHouse(g, q.v, q.x, q.y, q.rot, 0, q.dmg); g.restore(); }
+      if (this.wreckT >= 0) this.drawTractor(g, this.tractorX, gy);
       // the allowed release window on the roof of the tower while the swing is live
       if (this.swing && ['arrive', 'sway'].includes(this.state) && this.roundStatus === 'active') {
         const tol = this.swing.tol, x1 = this.X(-tol), x2 = this.X(tol), y = this.Y(this.landTop()), live = this.state === 'sway', pulse = 0.5 + 0.5 * Math.sin(t * 5);
@@ -315,6 +338,31 @@
     propsFront(g, gy) {                             // in front of the slab: bricks on a pallet, traffic cones
       const { ppu } = this, P = TowerProps;
       this.sprite(g, P.pallet(ppu), 3.0, gy + 0.1 * ppu); const c = P.cone(ppu); this.sprite(g, c, -2.85, gy + 0.14 * ppu); this.sprite(g, c, 2.4, gy + 0.14 * ppu);
+    }
+    drawTractor(g, wx, gy) {
+      const u = this.ppu, x = this.X(wx), bob = Math.sin(this.tw * 3.1) * 0.012 * u;
+      g.save(); g.translate(x, gy + 0.05 * u + bob);
+      g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0.02 * u, 1.9 * u, 0.1 * u, 0, 0, 6.283); g.fill();
+      const rr = (X, Y, W, H, R) => { g.beginPath(); g.roundRect ? g.roundRect(X, Y, W, H, R) : g.rect(X, Y, W, H); };
+      // tracks
+      g.fillStyle = '#23272d'; rr(-1.45 * u, -0.62 * u, 2.9 * u, 0.62 * u, 0.31 * u); g.fill();
+      g.strokeStyle = '#3a4048'; g.lineWidth = 2; g.setLineDash([6, 5]); g.lineDashOffset = -this.tw * u * 0.9; g.beginPath(); g.moveTo(-1.2 * u, -0.6 * u); g.lineTo(1.2 * u, -0.6 * u); g.moveTo(-1.2 * u, -0.02 * u); g.lineTo(1.2 * u, -0.02 * u); g.stroke(); g.setLineDash([]);
+      for (const wxp of [-1.0, -0.35, 0.3, 0.95]) { g.fillStyle = '#5a626c'; g.beginPath(); g.arc(wxp * u, -0.31 * u, 0.2 * u, 0, 6.283); g.fill(); g.fillStyle = '#2b3037'; g.beginPath(); g.arc(wxp * u, -0.31 * u, 0.08 * u, 0, 6.283); g.fill(); }
+      // body: yellow engine hood and cab
+      let gr = g.createLinearGradient(0, -1.5 * u, 0, -0.55 * u); gr.addColorStop(0, '#ffd23a'); gr.addColorStop(1, '#e0a000'); g.fillStyle = gr;
+      rr(-1.2 * u, -1.0 * u, 2.5 * u, 0.5 * u, 0.06 * u); g.fill();
+      rr(0.2 * u, -1.28 * u, 1.05 * u, 0.4 * u, 0.06 * u); g.fill();                 // hood
+      rr(-1.0 * u, -1.75 * u, 1.15 * u, 0.85 * u, 0.08 * u); g.fill();               // cab
+      g.fillStyle = '#7fc4ee'; rr(-0.88 * u, -1.64 * u, 0.9 * u, 0.55 * u, 0.05 * u); g.fill(); g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.moveTo(-0.8 * u, -1.6 * u); g.lineTo(-0.45 * u, -1.6 * u); g.lineTo(-0.7 * u, -1.1 * u); g.lineTo(-0.88 * u, -1.1 * u); g.fill();
+      g.fillStyle = '#2b3037'; rr(-1.1 * u, -1.82 * u, 1.35 * u, 0.1 * u, 0.04 * u); g.fill();                          // cab roof
+      g.fillStyle = '#3a3f46'; rr(0.82 * u, -1.62 * u, 0.1 * u, 0.36 * u, 0.03 * u); g.fill();                         // exhaust
+      g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 1.2; rr(-1.2 * u, -1.0 * u, 2.5 * u, 0.5 * u, 0.06 * u); g.stroke();
+      g.fillStyle = '#ffee9a'; g.beginPath(); g.arc(1.24 * u, -1.08 * u, 0.06 * u, 0, 6.283); g.fill();
+      // blade
+      const bg = g.createLinearGradient(1.5 * u, 0, 1.9 * u, 0); bg.addColorStop(0, '#9aa4ae'); bg.addColorStop(1, '#5b6570'); g.fillStyle = bg;
+      g.beginPath(); g.moveTo(1.48 * u, -1.22 * u); g.lineTo(1.9 * u, -1.1 * u); g.lineTo(1.98 * u, -0.1 * u); g.lineTo(1.5 * u, -0.05 * u); g.closePath(); g.fill();
+      g.strokeStyle = '#444c55'; g.lineWidth = 3; g.beginPath(); g.moveTo(1.25 * u, -0.75 * u); g.lineTo(1.55 * u, -0.7 * u); g.stroke();
+      g.restore();
     }
     drawHook(g) {
       const { ppu } = this, px = this.X(0), py = this.Y(this.pivotY()), L = this.lrope, th = this.th, sx = Math.sin(th), cs = Math.cos(th);
