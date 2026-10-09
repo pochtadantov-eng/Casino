@@ -45,14 +45,56 @@ export class WalletService {
     return after;
   }
 
-  /** Credit a Stars deposit. Returns false if this payment was already credited. */
+  /** Credit a Stars deposit. Returns false if this payment was already credited (Telegram may deliver the same update twice). */
   async creditDeposit(userId: number, amount: number, chargeId: string): Promise<boolean> {
-    return this.db.tx(async (c) => {
-      const dup = await c.query("select 1 from transactions where kind = 'deposit' and ref = $1", [chargeId]);
-      if (dup.rowCount) return false;
-      await this.apply(c, userId, amount, 'deposit', chargeId);
-      return true;
-    });
+    try {
+      return await this.db.tx(async (c) => {
+        const dup = await c.query("select 1 from transactions where kind = 'deposit' and ref = $1", [chargeId]);
+        if (dup.rowCount) return false;
+        await this.apply(c, userId, amount, 'deposit', chargeId);      // the unique index (kind, ref) makes a concurrent duplicate fail instead of double-credit
+        return true;
+      });
+    } catch (e: any) {
+      if (e?.code === '23505') return false;
+      throw e;
+    }
+  }
+
+  /** Takes a refunded deposit back from the balance (Telegram refunded the Stars to the payer). Returns the amount, or null if unknown / already refunded. */
+  async reverseDeposit(chargeId: string): Promise<{ userId: number; amount: number } | null> {
+    try {
+      return await this.db.tx(async (c) => {
+        const { rows } = await c.query("select user_id, amount from transactions where kind = 'deposit' and ref = $1", [chargeId]);
+        if (!rows[0]) return null;
+        const userId = Number(rows[0].user_id), amount = Number(rows[0].amount);
+        const bal = await c.query('select balance from users where id = $1 for update', [userId]);
+        const take = Math.min(amount, Number(bal.rows[0]?.balance ?? 0));       // never below zero: if the Stars were already played, only the remainder is taken
+        if (take > 0) await this.apply(c, userId, -take, 'deposit_refund', chargeId);
+        else await c.query("insert into transactions (user_id, kind, amount, balance_after, ref) values ($1, 'deposit_refund', 0, $2, $3)", [userId, Number(bal.rows[0]?.balance ?? 0), chargeId]);
+        return { userId, amount: take };
+      });
+    } catch (e: any) {
+      if (e?.code === '23505') return null;
+      throw e;
+    }
+  }
+
+  /** Does this charge id belong to a deposit of this user that is still refundable? */
+  async findDeposit(chargeId: string) {
+    const { rows } = await this.db.pool.query(
+      "select user_id, amount, (select count(*) from transactions r where r.kind = 'deposit_refund' and r.ref = t.ref) as refunded from transactions t where kind = 'deposit' and ref = $1",
+      [chargeId],
+    );
+    return rows[0] ? { userId: Number(rows[0].user_id), amount: Number(rows[0].amount), refunded: Number(rows[0].refunded) > 0 } : null;
+  }
+
+  /** Deposits, withdrawals and bonuses of one user (not bets), newest first. */
+  async cashHistory(userId: number, limit = 20) {
+    const { rows } = await this.db.pool.query(
+      "select kind, amount, balance_after, created_at from transactions where user_id = $1 and kind in ('deposit', 'deposit_refund', 'withdraw', 'withdraw_refund', 'bonus') order by id desc limit $2",
+      [userId, limit],
+    );
+    return rows.map((r) => ({ kind: r.kind as string, amount: Number(r.amount), balance: Number(r.balance_after), at: r.created_at as Date }));
   }
 
   async requestWithdraw(userId: number, amount: number) {

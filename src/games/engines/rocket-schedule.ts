@@ -30,6 +30,7 @@ const build = (k: number, start: number, secret: string): RocketRound => {
 /** The round that is running at `now` (betting, flying or in the pause after its crash). */
 export function roundAt(now: number, secret: string): RocketRound {
   if (cache.secret !== secret) { cache.secret = secret; cache.k = 0; cache.start = EPOCH; }
+  if (now < cache.start) { cache.k = 0; cache.start = EPOCH; }                      // asked about the past: rewind and scan forward again
   let r = build(cache.k, cache.start, secret);
   while (r.nextStart <= now) { r = build(r.k + 1, r.nextStart, secret); cache.k = r.k; cache.start = r.betStart; }
   return r;

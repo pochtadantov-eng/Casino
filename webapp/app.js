@@ -2,7 +2,7 @@ const tg = window.Telegram?.WebApp;
 tg?.ready(); tg?.expand();
 
 const $ = (s) => document.querySelector(s);
-const state = { game: 'rocket', round: null, balance: 0, limits: { minBet: 50, maxBet: 100000, minWithdraw: 100 }, busy: false, raf: 0 };
+const state = { game: 'rocket', round: null, balance: 0, limits: { minBet: 50, maxBet: 100000, minWithdraw: 100, minDeposit: 50, maxDeposit: 10000 }, busy: false, raf: 0 };
 
 const RU_ERR = {
   'No active round': 'Раунд уже завершён', 'Insufficient balance': 'Недостаточно звёзд на балансе', 'Finish your current round first': 'Сначала завершите текущий раунд',
@@ -307,15 +307,60 @@ document.querySelectorAll('.chip[data-bet]').forEach((c) => c.onclick = () => se
 $('#bet').onchange = () => setBet(betValue());
 setBet(100);
 
-$('#btn-deposit').onclick = async () => {
-  const a = await askAmount('Сколько Stars внести?', 50);
-  if (!a) return;
-  try {
-    const { link } = await api('deposit', { amount: a });
-    if (window.__mockApi) { setBalance((await api('me')).balance); say(`Демо: +${a} ⭐`, 'win'); return; }
-    tg.openInvoice(link, async (status) => { if (status === 'paid') { await new Promise((r) => setTimeout(r, 1500)); const me = await api('me'); setBalance(me.balance); } });
-  } catch (e) { say(e.message, 'lose'); }
-};
+// ---------- deposit: a bottom sheet with presets and a custom amount, pays through a Telegram Stars invoice ----------
+const PAY_PRESETS = [50, 100, 250, 500, 1000, 2500];
+function openDeposit() {
+  if (document.querySelector('.paysheet')) return;
+  const lim = state.limits, min = lim.minDeposit || 50, max = lim.maxDeposit || 10000;
+  const d = document.createElement('div'); d.className = 'paysheet';
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><h3>Пополнить баланс</h3><p class="psub">Оплата в Telegram Stars ⭐. Зачисление сразу после оплаты.</p>
+    <div class="pgrid">${PAY_PRESETS.filter((a) => a >= min && a <= max).map((a) => `<button class="pchip" data-a="${a}"><b>${a}</b><span>⭐</span></button>`).join('')}</div>
+    <label class="pcustom"><span>Своя сумма</span><span class="pin"><span class="bstar">⭐</span><input id="pamt" type="number" inputmode="numeric" min="${min}" max="${max}" placeholder="${min}–${max}"></span></label>
+    <p class="perr" id="perr"></p>
+    <button class="primary pay" id="pgo" disabled>Выберите сумму</button>
+    <button class="plink" id="pno">Отмена</button></div>`;
+  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
+  const inp = d.querySelector('#pamt'), go = d.querySelector('#pgo'), err = d.querySelector('#perr');
+  const amount = () => Math.floor(Number(inp.value) || 0), valid = (a) => a >= min && a <= max;
+  const refresh = () => {
+    const a = amount(); d.querySelectorAll('.pchip').forEach((c) => c.classList.toggle('on', Number(c.dataset.a) === a));
+    err.textContent = a && !valid(a) ? `Сумма от ${min} до ${max} ⭐` : ''; go.disabled = !valid(a); go.textContent = valid(a) ? `Оплатить ${a} ⭐` : 'Выберите сумму';
+  };
+  d.querySelectorAll('.pchip').forEach((c) => c.onclick = () => { inp.value = c.dataset.a; refresh(); });
+  inp.oninput = refresh; refresh();
+  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
+  d.onclick = (e) => { if (e.target === d) close(); }; d.querySelector('#pno').onclick = close;
+  go.onclick = async () => {
+    const a = amount(); if (!valid(a)) return; go.disabled = true; go.textContent = 'Создаём счёт…';
+    try {
+      const { link } = await api('deposit', { amount: a });
+      if (window.__mockApi) { setBalance((await api('me')).balance); close(); toast(`Демо: +${a} ⭐`, 'ok'); return; }
+      if (!tg?.openInvoice) throw new Error('Оплата доступна только внутри Telegram');
+      tg.openInvoice(link, async (status) => {
+        if (status === 'paid') { close(); await waitCredit(a); }
+        else if (status === 'cancelled') { go.disabled = false; refresh(); err.textContent = 'Оплата отменена'; }
+        else { go.disabled = false; refresh(); err.textContent = status === 'failed' ? 'Оплата не прошла, попробуйте ещё раз' : 'Статус платежа: ' + status; }
+      });
+    } catch (e) { go.disabled = false; refresh(); err.textContent = e.message; }
+  };
+}
+// the bot credits the payment when Telegram confirms it; poll the balance for a few seconds
+async function waitCredit(amount) {
+  const before = state.balance, el = toast('Зачисляем платёж…', 'wait', 0);
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, i < 4 ? 600 : 1500));
+    try { const me = await api('me'); if (me.balance > before) { setBalance(me.balance); el.remove(); toast(`+${me.balance - before} ⭐ зачислено`, 'ok'); if (typeof loadCash === 'function') loadCash(); return; } } catch {}
+  }
+  el.remove(); toast('Платёж обрабатывается, баланс обновится в течение минуты. Если нет — напишите /paysupport боту.', 'wait', 6000);
+}
+function toast(text, kind = 'ok', ms = 3200) {
+  const el = document.createElement('div'); el.className = 'ptoast ' + kind; el.textContent = text; document.body.append(el);
+  requestAnimationFrame(() => el.classList.add('on')); if (ms) setTimeout(() => { el.classList.remove('on'); setTimeout(() => el.remove(), 300); }, ms);
+  return el;
+}
+$('#btn-deposit').onclick = openDeposit;
+$('#p-deposit').onclick = openDeposit;
+
 $('#btn-withdraw').onclick = async () => {
   const a = await askAmount(`Сколько Stars вывести? (минимум ${state.limits.minWithdraw})`, state.limits.minWithdraw);
   if (!a) return;

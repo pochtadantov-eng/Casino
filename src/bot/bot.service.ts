@@ -4,6 +4,8 @@ import { config } from '../config';
 import { WalletService } from '../wallet/wallet.service';
 
 const DEPOSIT_PRESETS = [50, 100, 500, 1000];
+// invoice payload: dep:<userId>:<amount>. Both are re-checked at pre-checkout and at crediting, so a payload can never be used for another user or sum.
+const parsePayload = (p: string) => { const m = /^dep:(\d+):(\d+)$/.exec(p); return m ? { userId: Number(m[1]), amount: Number(m[2]) } : null; };
 
 @Injectable()
 export class BotService implements OnModuleInit, OnModuleDestroy {
@@ -30,10 +32,10 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
     bot.command('deposit', (ctx) => {
       const amount = Number(ctx.match);
-      if (Number.isInteger(amount) && amount >= config.minDeposit) return this.sendInvoice(ctx.chat.id, ctx.from!.id, amount);
+      if (Number.isInteger(amount) && amount >= config.minDeposit && amount <= config.maxDeposit) return this.sendInvoice(ctx.chat.id, ctx.from!.id, amount);
       const kb = new InlineKeyboard();
-      DEPOSIT_PRESETS.forEach((a) => kb.text(`${a} ⭐`, `dep:${a}`));
-      return ctx.reply('Сколько Stars внести?', { reply_markup: kb });
+      DEPOSIT_PRESETS.filter((a) => a >= config.minDeposit && a <= config.maxDeposit).forEach((a) => kb.text(`${a} ⭐`, `dep:${a}`));
+      return ctx.reply(`Сколько Stars внести? (от ${config.minDeposit} до ${config.maxDeposit}) Можно написать /deposit 250`, { reply_markup: kb });
     });
     bot.callbackQuery(/^dep:(\d+)$/, async (ctx) => {
       await ctx.answerCallbackQuery();
@@ -55,19 +57,50 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     });
 
     // --- Stars payments ---
-    bot.on('pre_checkout_query', (ctx) => ctx.answerPreCheckoutQuery(true));
-    bot.on('message:successful_payment', async (ctx) => {
-      const p = ctx.message.successful_payment;
-      if (p.currency !== 'XTR') return;
-      const m = /^dep:(\d+)$/.exec(p.invoice_payload);
-      // trust only our own payload and the payer's real id, never a client-supplied amount
-      if (!m || Number(m[1]) !== ctx.from.id) return this.log.error(`Bad payload ${p.invoice_payload}`);
-      const fresh = await this.wallet.creditDeposit(ctx.from.id, p.total_amount, p.telegram_payment_charge_id);
-      if (fresh) await ctx.reply(`✅ Зачислено ${p.total_amount} ⭐`, { reply_markup: play() });
+    // Telegram asks the bot to confirm the order within 10 s; we re-check everything because the payload comes back from the client side.
+    bot.on('pre_checkout_query', async (ctx) => {
+      const q = ctx.preCheckoutQuery, p = parsePayload(q.invoice_payload);
+      const bad = !p || q.currency !== 'XTR' || p.userId !== ctx.from.id || p.amount !== q.total_amount || p.amount < config.minDeposit || p.amount > config.maxDeposit;
+      if (bad) return ctx.answerPreCheckoutQuery(false, 'Платёж не прошёл проверку, попробуйте создать счёт заново.');
+      const u = await this.wallet.upsertUser({ id: ctx.from.id, username: ctx.from.username, first_name: ctx.from.first_name });
+      if (u.banned) return ctx.answerPreCheckoutQuery(false, 'Аккаунт недоступен.');
+      return ctx.answerPreCheckoutQuery(true);
     });
+    bot.on('message:successful_payment', async (ctx) => {
+      const pay = ctx.message.successful_payment;
+      const p = parsePayload(pay.invoice_payload);
+      // trust only our own payload and the payer's real id, never a client-supplied amount
+      if (pay.currency !== 'XTR' || !p || p.userId !== ctx.from.id || p.amount !== pay.total_amount) {
+        this.log.error(`Rejected payment ${pay.telegram_payment_charge_id}: payload ${pay.invoice_payload}, ${pay.total_amount} ${pay.currency}, from ${ctx.from.id}`);
+        await this.notifyAdmins(`⚠️ Платёж ${pay.telegram_payment_charge_id} не зачислен автоматически (payload ${pay.invoice_payload}, ${pay.total_amount} ${pay.currency}, user ${ctx.from.id}). Проверьте вручную.`);
+        return;
+      }
+      const fresh = await this.wallet.creditDeposit(ctx.from.id, pay.total_amount, pay.telegram_payment_charge_id);
+      if (fresh) await ctx.reply(`✅ Зачислено ${pay.total_amount} ⭐\nБаланс: ${await this.wallet.balance(ctx.from.id)} ⭐`, { reply_markup: play() });
+    });
+    // the payer (or an admin) got the Stars back: take them off the balance too
+    bot.on('message:refunded_payment', async (ctx) => {
+      const r = ctx.message.refunded_payment;
+      const done = await this.wallet.reverseDeposit(r.telegram_payment_charge_id);
+      if (done) await this.notifyAdmins(`↩️ Возврат ${r.telegram_payment_charge_id}: user ${done.userId}, снято с баланса ${done.amount} из ${r.total_amount} ⭐`);
+    });
+    // Telegram requires a support command for bots that accept Stars
+    bot.command('paysupport', (ctx) => ctx.reply('Вопросы по оплате: опишите проблему и приложите номер платежа (его видно в чеке Telegram). Мы ответим в этом чате. Если деньги списаны, но баланс не пополнился, возврат Stars делается по заявке.'));
+    bot.command('terms', (ctx) => ctx.reply('Баланс хранится в Telegram Stars ⭐. Пополнение через счёт Telegram, вывод — по заявке (/withdraw, минимум ' + config.minWithdraw + ' ⭐). Играйте ответственно, 18+.'));
 
     // --- admin ---
     const admin = (ctx: any) => config.adminIds.includes(ctx.from?.id);
+    // /refund <telegram_payment_charge_id>: returns the Stars to the payer through Telegram and takes the same amount off their balance
+    bot.command('refund', async (ctx) => {
+      if (!admin(ctx)) return;
+      const chargeId = String(ctx.match).trim();
+      const dep = chargeId ? await this.wallet.findDeposit(chargeId) : null;
+      if (!dep) return ctx.reply('Использование: /refund <charge_id>. Платёж не найден среди зачисленных.');
+      if (dep.refunded) return ctx.reply('Этот платёж уже возвращён.');
+      try { await bot.api.refundStarPayment(dep.userId, chargeId); } catch (e: any) { return ctx.reply(`Telegram отказал: ${e.message}`); }
+      const done = await this.wallet.reverseDeposit(chargeId);
+      return ctx.reply(done ? `Возвращено ${dep.amount} ⭐ пользователю ${dep.userId}, с баланса снято ${done.amount}.` : 'Возврат сделан, баланс уже скорректирован.');
+    });
     bot.command('pending', async (ctx) => {
       if (!admin(ctx)) return;
       const rows = await this.wallet.pendingWithdrawals();
@@ -92,14 +125,14 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   }
 
   private sendInvoice(chatId: number, userId: number, amount: number) {
-    return this.bot!.api.sendInvoice(chatId, 'Пополнение баланса', `${amount} ⭐ на игровой баланс`, `dep:${userId}`, 'XTR', [
+    return this.bot!.api.sendInvoice(chatId, 'Пополнение баланса', `${amount} ⭐ на игровой баланс`, `dep:${userId}:${amount}`, 'XTR', [
       { label: `${amount} ⭐`, amount },
     ]);
   }
 
   async createDepositLink(userId: number, amount: number): Promise<string> {
     if (!this.bot) throw new Error('Bot is not configured');
-    return this.bot.api.createInvoiceLink('Пополнение баланса', `${amount} ⭐ на игровой баланс`, `dep:${userId}`, '', 'XTR', [
+    return this.bot.api.createInvoiceLink('Пополнение баланса', `${amount} ⭐ на игровой баланс`, `dep:${userId}:${amount}`, '', 'XTR', [
       { label: `${amount} ⭐`, amount },
     ]);
   }

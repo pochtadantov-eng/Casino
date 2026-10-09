@@ -109,8 +109,16 @@ $('#bonus-claim').onclick = async () => {
 };
 
 // ---------- profile ----------
+const CASH_LABEL = { deposit: ['⭐ Пополнение', 'w'], deposit_refund: ['↩️ Возврат пополнения', 'l'], withdraw: ['📤 Вывод (заявка)', 'l'], withdraw_refund: ['↩️ Вывод отклонён', 'w'], bonus: ['🎁 Бонус', 'w'] };
+async function loadCash() {
+  const box = $('#cash'); if (!box) return;
+  try {
+    const rows = await api('cash');
+    box.innerHTML = rows.length ? rows.map((r) => { const [t, c] = CASH_LABEL[r.kind] || [r.kind, '']; const d = new Date(r.at); return `<div class="hrow"><span>${t}<small class="hdate">${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</small></span><span class="${c}">${r.amount > 0 ? '+' : ''}${r.amount} ⭐</span></div>`; }).join('') : '<p class="hint">Пока пусто</p>';
+  } catch (e) { box.innerHTML = `<p class="hint">${e.message}</p>`; }
+}
 async function loadProfile() {
-  paintUser();
+  paintUser(); loadCash();
   const box = $('#history');
   try {
     const rows = await api('history');

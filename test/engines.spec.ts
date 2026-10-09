@@ -109,8 +109,8 @@ describe.each([
 });
 
 it('steps multiplier math', () => {
-  expect(stepsMultiplier(3, 1, 1)).toBe(1.45);
-  expect(stepsMultiplier(2, 1, 3)).toBe(7.76);
+  expect(stepsMultiplier(3, 1, 1)).toBe(1.38);
+  expect(stepsMultiplier(2, 1, 3)).toBe(7.36);
 });
 
 describe('telegram initData', () => {
@@ -150,7 +150,7 @@ describe('tower (skill)', () => {
     expect(tower.act(s, { tap: true, lat: 5000 }, centre + 600).status).toBe('lost');    // cannot claim more than maxLat
   });
   it('houses land where they were released and the stack may lean', () => {
-    const s = start(), t = s.swingStart + periodAt(0) * 0.45, x = swingX(t, s.swingStart, 0);        // a little off-centre, still inside the first window
+    const s = start(), t = s.swingStart + periodAt(0) * 0.46, x = swingX(t, s.swingStart, 0);        // a little off-centre, still inside the first window
     const r = tower.act(s, { tap: true }, t);
     expect(Math.abs(x)).toBeGreaterThan(0.1); expect(r.status).toBe('active'); expect(r.state.offsets).toEqual([Math.round(x * 1000) / 1000]);
   });

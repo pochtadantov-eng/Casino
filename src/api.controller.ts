@@ -22,7 +22,7 @@ export class ApiController {
     return {
       id: req.user.id,
       balance: await this.wallet.balance(req.user.id),
-      limits: { minBet: config.minBet, maxBet: config.maxBet, maxPayout: config.maxPayout, minWithdraw: config.minWithdraw },
+      limits: { minBet: config.minBet, maxBet: config.maxBet, maxPayout: config.maxPayout, minWithdraw: config.minWithdraw, minDeposit: config.minDeposit, maxDeposit: config.maxDeposit },
     };
   }
 
@@ -35,6 +35,12 @@ export class ApiController {
   async claimBonus(@Req() req: any) {
     const reward = await this.wallet.claimDaily(req.user.id);
     return { reward, balance: await this.wallet.balance(req.user.id) };
+  }
+
+  /** Deposits / withdrawals / bonuses for the profile screen. */
+  @Get('cash')
+  cash(@Req() req: any) {
+    return this.wallet.cashHistory(req.user.id);
   }
 
   @Get('history')
@@ -84,8 +90,8 @@ export class ApiController {
   @Post('deposit')
   async deposit(@Req() req: any, @Body() body: any) {
     const amount = Number(body?.amount);
-    if (!Number.isInteger(amount) || amount < config.minDeposit || amount > 100000) {
-      throw new GameError(`Deposit must be ${config.minDeposit}..100000 Stars`);
+    if (!Number.isInteger(amount) || amount < config.minDeposit || amount > config.maxDeposit) {
+      throw new GameError(`Deposit must be ${config.minDeposit}..${config.maxDeposit} Stars`);
     }
     return { link: await this.bot.createDepositLink(req.user.id, amount) };
   }

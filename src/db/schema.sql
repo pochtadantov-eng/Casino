@@ -11,7 +11,7 @@ create table if not exists users (
 create table if not exists transactions (
   id            bigserial primary key,
   user_id       bigint not null references users(id),
-  kind          text   not null,             -- deposit | bet | payout | withdraw | withdraw_refund
+  kind          text   not null,             -- deposit | deposit_refund | bet | payout | bonus | withdraw | withdraw_refund
   amount        bigint not null,             -- signed
   balance_after bigint not null,
   ref           text,
