@@ -20,10 +20,10 @@
   const fail = (m) => { throw new Error(m); };
 
   // Tower (skill) - mirrors src/games/engines/tower.ts. The swing is a function of (server) time.
-  const TW = { maxSteps: 10, amp: 1.6, period0: 3000, periodStep: 150, periodMin: 1500, tol0: 0.30, tolStep: 0.016, tolMin: 0.13, firstDelay: 3400, nextDelay: 2500, maxLat: 250, ladderP: 0.8 };
-  const twPeriod = (k) => Math.max(TW.periodMin, TW.period0 - TW.periodStep * k), twTol = (k) => Math.max(TW.tolMin, TW.tol0 - TW.tolStep * k);
+  const TW = { maxSteps: 20, spaceFrom: 10, spaceGrowth: 1.15, amp: 1.6, firstDelay: 3400, nextDelay: 2500, maxLat: 250, ladderP: 0.8 };
+  const twPeriod = (k) => (k < 3 ? 3000 - 150 * k : k < TW.spaceFrom ? 2550 - 130 * (k - 3) : Math.max(1050, 1700 - 70 * (k - TW.spaceFrom))), twTol = (k) => (k < 3 ? 0.3 - 0.016 * k : k < TW.spaceFrom ? 0.252 - 0.02 * (k - 3) : Math.max(0.05, 0.12 - 0.0075 * (k - TW.spaceFrom)));
   const twX = (t, start, k) => TW.amp * Math.sin((2 * Math.PI * (t - start)) / twPeriod(k));
-  const twMult = (n) => (n === 0 ? 1 : floor2((1 - EDGE) * Math.pow(1 / TW.ladderP, n)));
+  const twMult = (n) => (n === 0 ? 1 : n <= TW.spaceFrom ? floor2((1 - EDGE) * Math.pow(1 / TW.ladderP, n)) : floor2((1 - EDGE) * Math.pow(1 / TW.ladderP, TW.spaceFrom) * Math.pow(TW.spaceGrowth, n - TW.spaceFrom)));
   const stepsCfg = {
     seagull: { variants: { classic: [3, 1] }, def: 'classic', max: 12 },
   };

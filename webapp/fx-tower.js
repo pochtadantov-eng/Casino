@@ -300,9 +300,14 @@
       const { w, h, ppu } = this, cam = this.camBottom;
       g.save(); if (this.shake > 0) g.translate((Math.random() - 0.5) * 7 * this.shake, (Math.random() - 0.5) * 7 * this.shake);
       const sk = g.createLinearGradient(0, 0, 0, h); sk.addColorStop(0, '#1f78d8'); sk.addColorStop(0.45, '#4aa6ee'); sk.addColorStop(0.8, '#9ad6f7'); sk.addColorStop(1, '#d8f0fb'); g.fillStyle = sk; g.fillRect(-10, -10, w + 20, h + 20);
-      const sun = g.createRadialGradient(w * 0.8, h * 0.16, 2, w * 0.8, h * 0.16, w * 0.55); sun.addColorStop(0, 'rgba(255,248,214,.95)'); sun.addColorStop(0.18, 'rgba(255,240,180,.55)'); sun.addColorStop(1, 'rgba(255,240,180,0)'); g.fillStyle = sun; g.fillRect(0, 0, w, h);
+      const sp = clamp((cam - 11) / 12);                                    // 0 = sky, 1 = open space: the tower has climbed above the clouds
+      if (sp > 0) this.space(g, sp, t, cam);
+      const sunA = 1 - sp * 0.85;
+      const sun = g.createRadialGradient(w * 0.8, h * 0.16, 2, w * 0.8, h * 0.16, w * 0.55); sun.addColorStop(0, `rgba(255,248,214,${0.95 * sunA})`); sun.addColorStop(0.18, `rgba(255,240,180,${0.55 * sunA})`); sun.addColorStop(1, 'rgba(255,240,180,0)'); g.fillStyle = sun; g.fillRect(0, 0, w, h);
+      g.save(); g.globalAlpha = 1 - sp;
       for (const c of this.clouds) { const span = h * 1.15, base = c.fy * h + (cam + 0.9) * ppu * c.z * 0.35, y = ((base % span) + span) % span - h * 0.07; this.cloud(g, this.X(c.x), y, c.s, 0.55 + c.z * 0.45); }
       for (const b of this.birds) { const x = this.X(b.x), y = this.Y(b.y) - (cam + 0.9) * ppu * 0.3, f = Math.sin(b.t * 9) * 4; g.strokeStyle = 'rgba(20,50,90,.7)'; g.lineWidth = 1.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 7, y - f); g.quadraticCurveTo(x - 3, y - 4, x, y); g.quadraticCurveTo(x + 3, y - 4, x + 7, y - f); g.stroke(); }
+      g.restore();
       this.cityLayer(g, 0, 0.16); this.cityLayer(g, 1, 0.3);
       const gy = this.Y(0); const gp = gy;      // the landscape scrolls away with the camera
       if (gp < h + 8 * ppu) {                       // trees / fence / lamp rise above the ground line: keep drawing them until their tops leave the frame
@@ -452,6 +457,28 @@
       const bg = g.createLinearGradient(1.5 * u, 0, 1.9 * u, 0); bg.addColorStop(0, '#9aa4ae'); bg.addColorStop(1, '#5b6570'); g.fillStyle = bg;
       g.beginPath(); g.moveTo(1.48 * u, -1.22 * u); g.lineTo(1.9 * u, -1.1 * u); g.lineTo(1.98 * u, -0.1 * u); g.lineTo(1.5 * u, -0.05 * u); g.closePath(); g.fill();
       g.strokeStyle = '#444c55'; g.lineWidth = 3; g.beginPath(); g.moveTo(1.25 * u, -0.75 * u); g.lineTo(1.55 * u, -0.7 * u); g.stroke();
+      g.restore();
+    }
+    space(g, sp, t, cam) {
+      const { w, h, ppu } = this;
+      if (!this.stars) { const r = rngSeed(77); this.stars = Array.from({ length: 170 }, () => ({ x: r(), y: r(), r: 0.4 + r() * 1.5, ph: r() * 6.28, sp: 0.5 + r() * 2, par: 0.04 + r() * 0.16 })); }
+      g.save(); g.globalAlpha = sp;
+      const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#01020a'); gr.addColorStop(0.5, '#071033'); gr.addColorStop(1, '#1d3a8a'); g.fillStyle = gr; g.fillRect(-10, -10, w + 20, h + 20);
+      const neb = g.createRadialGradient(w * 0.25, h * 0.3, 4, w * 0.25, h * 0.3, w * 0.7); neb.addColorStop(0, 'rgba(150,70,220,.28)'); neb.addColorStop(0.5, 'rgba(60,70,200,.12)'); neb.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = neb; g.fillRect(0, 0, w, h);
+      for (const st of this.stars) { const y = (((st.y * h + (cam - 11) * ppu * st.par) % h) + h) % h, tw = 0.55 + 0.45 * Math.sin(t * st.sp + st.ph); g.fillStyle = `rgba(255,255,255,${tw})`; g.beginPath(); g.arc(st.x * w, y, st.r, 0, 6.283); g.fill(); }
+      // ringed planet and a moon drift down slowly as the camera climbs
+      const off = (cam - 11) * ppu * 0.12, px = w * 0.76, py = h * 0.22 + off - h * 0.3, pr = w * 0.15;
+      if (py > -pr * 2 && py < h + pr * 2) {
+        g.save(); g.translate(px, py); g.rotate(-0.35);
+        g.strokeStyle = 'rgba(230,200,150,.55)'; g.lineWidth = pr * 0.16; g.beginPath(); g.ellipse(0, 0, pr * 1.75, pr * 0.42, 0, Math.PI, 6.283); g.stroke();
+        const pg = g.createRadialGradient(-pr * 0.35, -pr * 0.35, pr * 0.1, 0, 0, pr); pg.addColorStop(0, '#ffd9a0'); pg.addColorStop(0.55, '#d98a4a'); pg.addColorStop(1, '#5a2a1c'); g.fillStyle = pg; g.beginPath(); g.arc(0, 0, pr, 0, 6.283); g.fill();
+        g.save(); g.beginPath(); g.arc(0, 0, pr, 0, 6.283); g.clip(); g.strokeStyle = 'rgba(120,60,30,.35)'; g.lineWidth = pr * 0.12; for (let i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(-pr, i * pr * 0.32); g.lineTo(pr, i * pr * 0.32 + 6); g.stroke(); } g.restore();
+        g.strokeStyle = 'rgba(230,200,150,.75)'; g.lineWidth = pr * 0.16; g.beginPath(); g.ellipse(0, 0, pr * 1.75, pr * 0.42, 0, 0, Math.PI); g.stroke(); g.restore();
+      }
+      const mx = w * 0.17, my = h * 0.55 + off * 1.4 - h * 0.35, mr = w * 0.065;
+      if (my > -mr * 2 && my < h + mr * 2) { const mg = g.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.1, mx, my, mr); mg.addColorStop(0, '#f4f4f0'); mg.addColorStop(1, '#8a8f99'); g.fillStyle = mg; g.beginPath(); g.arc(mx, my, mr, 0, 6.283); g.fill(); g.fillStyle = 'rgba(90,95,105,.35)'; for (const [dx, dy, rr] of [[-0.3, -0.2, 0.22], [0.25, 0.1, 0.28], [-0.05, 0.4, 0.16]]) { g.beginPath(); g.arc(mx + dx * mr, my + dy * mr, rr * mr, 0, 6.283); g.fill(); } }
+      const k = (t % 7) / 1.2;                                                // a shooting star every few seconds
+      if (k < 1) { const sx = w * (0.9 - 0.7 * k), sy = h * (0.08 + 0.3 * k); const tg = g.createLinearGradient(sx, sy, sx + 70, sy - 26); tg.addColorStop(0, `rgba(255,255,255,${1 - k})`); tg.addColorStop(1, 'rgba(255,255,255,0)'); g.strokeStyle = tg; g.lineWidth = 2; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + 70, sy - 26); g.stroke(); }
       g.restore();
     }
     drawHook(g) {

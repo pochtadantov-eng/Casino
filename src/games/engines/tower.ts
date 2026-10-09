@@ -8,20 +8,24 @@ import { Engine, GameError, HOUSE_EDGE, floor2 } from './types';
  * with every floor. There is no hidden randomness: the outcome is decided by timing alone (and verified here, never on the phone).
  */
 export const TOWER = {
-  maxSteps: 10,
+  maxSteps: 20,             // floors 1-10 are the sky ladder; 11-20 climb into space: tiny windows, slowly growing payouts
   amp: 1.6,                 // swing amplitude, world units (a house is 2 wide)
-  period0: 3000, periodStep: 150, periodMin: 1500,   // ms
-  tol0: 0.30, tolStep: 0.016, tolMin: 0.13,            // accepted release distance from the axis
+  spaceFrom: 10,            // floors from this index on are 'space'
+  spaceGrowth: 1.15,        // payout multiplies by this per floor in space (the skyward ladder is x1.25 per floor)
   firstDelay: 3400,         // ms from round start until the first swing is live (intro + crane arrival)
   nextDelay: 2500,          // ms from a landing until the next swing is live
   maxLat: 250,              // ms of network latency the server compensates for
   ladderP: 0.8,             // success rate the payout ladder is priced for (see scripts/tower-rtp.mjs)
 };
 
-export const periodAt = (step: number) => Math.max(TOWER.periodMin, TOWER.period0 - TOWER.periodStep * step);
-export const tolAt = (step: number) => Math.max(TOWER.tolMin, TOWER.tol0 - TOWER.tolStep * step);
+// swing period (ms) and accepted release distance from the axis (world units). Easy for floors 1-3, clearly harder from floor 4, tiny in space.
+export const periodAt = (step: number) => (step < 3 ? 3000 - 150 * step : step < TOWER.spaceFrom ? 2550 - 130 * (step - 3) : Math.max(1050, 1700 - 70 * (step - TOWER.spaceFrom)));
+export const tolAt = (step: number) => (step < 3 ? 0.3 - 0.016 * step : step < TOWER.spaceFrom ? 0.252 - 0.02 * (step - 3) : Math.max(0.05, 0.12 - 0.0075 * (step - TOWER.spaceFrom)));
 export const swingX = (t: number, swingStart: number, step: number) => TOWER.amp * Math.sin((2 * Math.PI * (t - swingStart)) / periodAt(step));
-export const towerMultiplier = (picks: number) => (picks === 0 ? 1 : floor2((1 - HOUSE_EDGE) * Math.pow(1 / TOWER.ladderP, picks)));
+export const towerMultiplier = (picks: number) =>
+  picks === 0 ? 1
+  : picks <= TOWER.spaceFrom ? floor2((1 - HOUSE_EDGE) * Math.pow(1 / TOWER.ladderP, picks))
+  : floor2((1 - HOUSE_EDGE) * Math.pow(1 / TOWER.ladderP, TOWER.spaceFrom) * Math.pow(TOWER.spaceGrowth, picks - TOWER.spaceFrom));
 
 interface State {
   picks: number;

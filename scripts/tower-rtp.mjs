@@ -13,11 +13,11 @@ function play(sigma, target) {
   }
   return towerMultiplier(TOWER.maxSteps);
 }
-const N = 200000, sigmas = [Infinity, 300, 150, 80, 40, 15, 0], targets = [1, 3, 5, 10];
+const N = 200000, sigmas = [Infinity, 300, 150, 80, 40, 15, 0], targets = [1, 3, 5, 10, 15, 20];
 console.log('RTP (payout / bet) by timing error (rows) and cash-out floor (columns).  House edge in the ladder: 3%.');
 console.log('timing error'.padEnd(16) + targets.map((t) => ('cash@' + t).padStart(10)).join(''));
 for (const s of sigmas) {
   const row = targets.map((t) => { let sum = 0; for (let i = 0; i < N; i++) sum += play(s, t); return ((sum / N) * 100).toFixed(0) + '%'; });
   console.log((s === Infinity ? 'random tap' : s === 0 ? 'perfect (bot)' : '±' + s + ' ms').padEnd(16) + row.map((r) => r.padStart(10)).join(''));
 }
-console.log('\nsuccess chance per floor for a ±80 ms player:', [0, 1, 2, 4, 6, 8, 9].map((k) => { let ok = 0; for (let i = 0; i < 20000; i++) if (Math.abs(swingX(periodAt(k) / 2 + gauss() * 80, 0, k)) <= tolAt(k)) ok++; return `#${k + 1}:${((ok / 20000) * 100).toFixed(0)}%`; }).join(' '));
+console.log('\nsuccess chance per floor for a ±80 ms player:', [0, 1, 2, 3, 5, 8, 9, 10, 12, 15, 19].map((k) => { let ok = 0; for (let i = 0; i < 20000; i++) if (Math.abs(swingX(periodAt(k) / 2 + gauss() * 80, 0, k)) <= tolAt(k)) ok++; return `#${k + 1}:${((ok / 20000) * 100).toFixed(0)}%`; }).join(' '));
