@@ -144,9 +144,10 @@
     }
     // chips/cracks live on the house (local coords: x, y in -0.5..0.5 of the body); debris flies off in the wall colour
     hit(target, edge, xFrac, power, who) {
-      if (!target) return; const n = 1 + Math.floor(power * 2.4), y = edge === 'top' ? -0.5 : 0.5;
-      for (let i = 0; i < n; i++) target.dmg.push({ x: clamp(xFrac + rand(-0.12, 0.12) * (1 + i), -0.46, 0.46), y: y + (edge === 'top' ? 1 : -1) * rand(0.0, 0.05), kind: i === 0 && power > 0.5 ? 'crack' : 'chip', s: 0.4 + power * 0.7 + rand(0, 0.3), seed: Math.floor(rand(1, 1e6)) });
-      if (target.dmg.length > 14) target.dmg.splice(0, target.dmg.length - 14);
+      if (!target) return; if (!target.dmg) target.dmg = [];
+      if (edge === 'top') target.dmg.push({ kind: 'dent', x: clamp(xFrac, -0.4, 0.4), s: 0.6 + power * 0.8, seed: Math.floor(rand(1, 1e6)) });
+      else target.dmg.push({ kind: 'corner', side: xFrac < 0 ? -1 : xFrac > 0 ? 1 : (Math.random() < 0.5 ? -1 : 1), s: 0.55 + power * 0.8, seed: Math.floor(rand(1, 1e6)) });
+      if (target.dmg.length > 6) target.dmg.shift();
     }
     spray(x, y, n, col) { for (let i = 0; i < n; i++) this.debris.push({ x: x + rand(-0.25, 0.25), y: y + rand(-0.05, 0.15), vx: rand(-2.2, 2.2), vy: rand(1.2, 4.2), rot: rand(0, 6), vr: rand(-9, 9), s: rand(0.035, 0.09), col: Math.random() < 0.65 ? col : '#8d949b', life: rand(0.6, 1.2) }); }
     puff(x, y, n = 10, spread = 0.9) { for (let i = 0; i < n; i++) { const s = i % 2 ? 1 : -1; this.puffs.push({ x: x + s * spread * rand(0.7, 1.1), y: y + rand(0, 0.12), vx: s * rand(0.5, 1.9), vy: rand(0.05, 0.5), r: rand(0.22, 0.45), life: rand(0.5, 0.95), max: 0.95 }); } }
@@ -159,7 +160,7 @@
       switch (this.state) {
         case 'intro': {
           const f = this.intro; f.vy -= 22 * dt; f.y += f.vy * dt; f.rot += f.vr * dt * Math.min(1, (f.y - HH / 2 - top) / 5); f.x = lerp(f.x, 0, clamp(dt * 2));
-          if (f.y - HH / 2 <= top) { this.floors.push({ v: f.v, ox: 0, tilt: 0.01, sq: 0.1, dmg: [] }); this.hit(this.floors[0], 'bottom', 0, 1.0, 'W'); this.base = 1; this.intro = null; this.wv += 3.4; this.shake = 0.7; this.puff(0, top + 0.1, 14, 1.1); this.state = 'land'; this.u = 0; }
+          if (f.y - HH / 2 <= top) { this.floors.push({ v: f.v, ox: 0, tilt: 0.01, sq: 0.1, dmg: [] }); this.base = 1; this.intro = null; this.wv += 3.4; this.shake = 0.7; this.puff(0, top + 0.1, 14, 1.1); this.state = 'land'; this.u = 0; }
           break; }
         case 'land': case 'drop': case 'tumble': this.lrope = lerp(this.lrope, LROPE_HIDE, clamp(dt * 3.2)); break;
         case 'arrive': { const k = sm(clamp(1 - (sw0 - tS) / 1100)); this.lrope = lerp(LROPE_HIDE, LROPE_HOVER, k); hasHouse = true; if (tS >= sw0) { this.state = 'sway'; this.u = 0; } break; }
@@ -193,7 +194,7 @@
         if (f.y - HH / 2 <= top) {
           if (f.ok) {
             const impact = -f.vy, pw = clamp((impact - 6) / 9), under = this.floors[this.floors.length - 1], col = PAL[(f.v % 42) % PAL.length].wall;
-            const nf = { v: f.v, ox: f.ox, tilt: f.tilt, sq: clamp(impact / 130, 0.03, 0.09), dmg: f.dmg }; this.hit(nf, 'bottom', clamp(f.x / HW, -0.3, 0.3), pw * 0.8, 'W'); this.hit(under, 'top', clamp(f.x / HW, -0.3, 0.3), pw, 'T'); this.spray(f.ox, top + 0.12, 5 + Math.round(pw * 8), col);
+            const nf = { v: f.v, ox: f.ox, tilt: f.tilt, sq: clamp(impact / 130, 0.03, 0.09), dmg: f.dmg }; if (pw > 0.25) { this.hit(nf, 'bottom', f.x - under.ox || (Math.random() - 0.5), pw, 'W'); this.hit(under, 'top', clamp((f.x - under.ox) / HW, -0.3, 0.3), pw, 'T'); } this.spray(f.ox, top + 0.12, 5 + Math.round(pw * 8), col);
             this.floors.push(nf); this.landed++; this.fall = null; this.wv += 1.3 + impact * 0.08;
             this.puff(f.ox, top + 0.1, 12, 1.0); this.state = 'land'; this.u = 0; this.shake = 0.25;
             const m = this.mults[this.landed - 1]; if (m != null && this.popFor !== this.landed) { this.popFor = this.landed; this.pops.push({ txt: 'x' + m.toFixed(2), x: -0.2, y0: top + INC + 0.5, life: 1.5, max: 1.5 }); }
@@ -224,23 +225,36 @@
     X(wx) { return this.w / 2 + wx * this.ppu; }
     Y(wy) { return this.h - (wy - this.camBottom) * this.ppu; }
     drawHouse(g, v, wx, wyCenter, rot = 0, sq = 0, dmg = null) {
-      const b = houseBitmap(v, this.ppu), cx = this.X(wx), cy = this.Y(wyCenter);
-      g.save(); g.translate(cx, cy); g.rotate(-rot); g.scale(1 + sq * 0.5, 1 - sq); g.drawImage(b.cv, -b.w / 2, -(b.top + b.bodyH / 2), b.w, b.h);
-      if (dmg && dmg.length) this.drawDamage(g, dmg, HW * this.ppu, b.bodyH);
-      g.restore();
+      const b = houseBitmap(v, this.ppu), cx = this.X(wx), cy = this.Y(wyCenter), cv = dmg && dmg.length ? this.damaged(b, dmg) : b.cv;
+      g.save(); g.translate(cx, cy); g.rotate(-rot); g.scale(1 + sq * 0.5, 1 - sq); g.drawImage(cv, -b.w / 2, -(b.top + b.bodyH / 2), b.w, b.h); g.restore();
     }
-    drawDamage(g, marks, bw, bh) {
-      for (const m of marks) {
-        const r = rngSeed(m.seed), cx = m.x * bw, cy = m.y * bh, R0 = Math.max(2.2, m.s * 0.05 * this.ppu);
-        if (m.kind === 'chip') {                              // plaster chipped off: light rim, dark exposed core
-          const pts = []; for (let i = 0; i < 9; i++) { const a = (i / 9) * 6.283, rr = R0 * (0.6 + r() * 0.6); pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.75]); }
-          const path = (dx = 0, dy = 0, k = 1) => { g.beginPath(); pts.forEach(([x, y], i) => { const X = cx + (x - cx) * k + dx, Y = cy + (y - cy) * k + dy; i ? g.lineTo(X, Y) : g.moveTo(X, Y); }); g.closePath(); };
-          g.fillStyle = 'rgba(240,230,210,.85)'; path(); g.fill(); g.fillStyle = 'rgba(74,58,46,.92)'; path(0.4, 0.6, 0.72); g.fill();
+    // house sprite with its damage baked in: a broken-off corner where it hit, a crushed dent in the roof edge that was hit
+    damaged(b, dmg) {
+      const key = dmg.length + ':' + dmg[dmg.length - 1].seed + ':' + b.cv.width;
+      if (dmg._c && dmg._k === key) return dmg._c;
+      const W = b.cv.width, H = b.cv.height, k = W / b.w, bw = HW * this.ppu * k, bh = b.bodyH * k, top = b.top * k, x0 = (W - bw) / 2;
+      const c = document.createElement('canvas'); c.width = W; c.height = H; const q = c.getContext('2d'); q.drawImage(b.cv, 0, 0);
+      for (const m of dmg) {
+        const r = rngSeed(m.seed);
+        if (m.kind === 'corner') {
+          const sz = bw * (0.07 + 0.08 * m.s), X = m.side < 0 ? x0 : x0 + bw, Y = top + bh, dir = -m.side;   // dir: into the body
+          const pts = [[X, Y - sz * 1.5]]; for (let i = 1; i < 5; i++) pts.push([X + dir * sz * (i / 5) * (0.6 + r() * 0.7), Y - sz * 1.5 * (1 - i / 5) * (0.5 + r() * 0.7) - sz * 0.1 * i]); pts.push([X + dir * sz * 1.5, Y]);
+          pts.unshift([X - dir * 4, Y - sz * 1.5 - 2]); pts.push([X + dir * sz * 1.5 + 2, Y + 4]); pts.push([X - dir * 4, Y + 4]);
+          const path = () => { q.beginPath(); pts.forEach(([x, y], i) => (i ? q.lineTo(x, y) : q.moveTo(x, y))); q.closePath(); };
+          q.globalCompositeOperation = 'destination-out'; path(); q.fill();
+          q.globalCompositeOperation = 'source-atop'; q.strokeStyle = 'rgba(30,22,16,.75)'; q.lineWidth = Math.max(2, bw * 0.02); q.lineJoin = 'round'; q.beginPath(); pts.slice(1, -2).forEach(([x, y], i) => (i ? q.lineTo(x, y) : q.moveTo(x, y))); q.stroke();
+          q.strokeStyle = 'rgba(255,240,215,.35)'; q.lineWidth = 1; q.beginPath(); pts.slice(1, -2).forEach(([x, y], i) => (i ? q.lineTo(x + dir * 2, y - 2) : q.moveTo(x + dir * 2, y - 2))); q.stroke();
+        } else {
+          const w = bw * 0.15 * (0.7 + 0.4 * m.s), d = w * 0.85, X = W / 2 + m.x * bw, Y = 0;
+          const pts = [[X - w * 1.1, Y - 2]]; for (let i = 1; i < 6; i++) { const t = i / 6, e = Math.sin(t * Math.PI); pts.push([X - w * 1.1 + t * w * 2.2 + (r() - 0.5) * w * 0.2, Y + d * e * (0.75 + r() * 0.5)]); } pts.push([X + w * 1.1, Y - 2]);
+          q.globalCompositeOperation = 'destination-out'; q.beginPath(); pts.forEach(([x, y], i) => (i ? q.lineTo(x, y) : q.moveTo(x, y))); q.closePath(); q.fill();
+          q.globalCompositeOperation = 'source-atop';
+          const gr = q.createRadialGradient(X, Y + d * 0.6, 1, X, Y + d * 0.6, w * 2); gr.addColorStop(0, 'rgba(15,10,6,.65)'); gr.addColorStop(1, 'rgba(15,10,6,0)'); q.fillStyle = gr; q.fillRect(X - w * 2.2, Y, w * 4.4, d * 3);   // crushed shadow under the dent
+          q.strokeStyle = 'rgba(30,22,16,.7)'; q.lineWidth = Math.max(1.5, bw * 0.014); q.lineJoin = 'round'; q.beginPath(); pts.forEach(([x, y], i) => (i ? q.lineTo(x, y) : q.moveTo(x, y))); q.stroke();
+          q.lineWidth = 1; for (let i = 0; i < 3; i++) { let x = X + (i - 1) * w * 0.7, y = Y + d * 0.8, a = 1.57 + (r() - 0.5) * 0.9; q.beginPath(); q.moveTo(x, y); for (let j = 0; j < 3; j++) { a += (r() - 0.5) * 0.9; x += Math.cos(a) * w * 0.35; y += Math.sin(a) * w * 0.35; q.lineTo(x, y); } q.stroke(); }
         }
-        g.strokeStyle = 'rgba(38,28,22,.8)'; g.lineWidth = 1; g.lineCap = 'round'; g.lineJoin = 'round';
-        const a0 = r() * 6.283, n = m.kind === 'crack' ? 3 : 2;
-        for (let k = 0; k < n; k++) { let x = cx, y = cy, a = a0 + k * (6.283 / n) + (r() - 0.5) * 0.6; g.beginPath(); g.moveTo(x, y); const len = R0 * (m.kind === 'crack' ? 2.6 : 1.6); for (let q = 0; q < 4; q++) { a += (r() - 0.5) * 1.1; x += Math.cos(a) * len / 4; y += Math.sin(a) * len / 4; g.lineTo(x, y); } g.stroke(); }
       }
+      q.globalCompositeOperation = 'source-over'; dmg._c = c; dmg._k = key; return c;
     }
     cloud(g, x, y, s, a) {
       g.save(); g.globalAlpha = a; const r = s * this.ppu * 0.42;
