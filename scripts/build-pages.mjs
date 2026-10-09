@@ -13,6 +13,7 @@ for (const f of readdirSync(new URL('../webapp/img/', import.meta.url), { withFi
 const BUILD = (process.env.GITHUB_SHA || Date.now().toString(36)).slice(0, 10);
 writeFileSync(`${out}/version.json`, JSON.stringify({ v: BUILD }));
 const loader = `<script>window.BUILD='${BUILD}';(function(){var B='${BUILD}';try{var q=new URLSearchParams(location.search);fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j.v&&j.v!==B&&q.get('v')!==j.v){q.set('v',j.v);location.replace(location.pathname+'?'+q.toString()+location.hash)}}).catch(function(){})}catch(e){}})();</script>`;
+mkdirSync(`${out}/audio`, { recursive: true }); copyFileSync(src('audio/tower.mp3'), `${out}/audio/tower.mp3`);
 mkdirSync(`${out}/img/props`, { recursive: true });
 try { for (const f of readdirSync(new URL('../webapp/img/props/', import.meta.url))) copyFileSync(src('img/props/' + f), `${out}/img/props/${f}`); } catch {}
 const html = readFileSync(src('index.html'), 'utf8')

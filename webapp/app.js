@@ -142,13 +142,24 @@ R.steps = (round) => {
   document.querySelectorAll('.floor button').forEach((b) => b.onclick = () => act({ choice: Number(b.dataset.c) }));
 };
 R.seagull = R.steps;
+// background track for the tower game: starts on entering the game (a user gesture), loops, stops on leaving / when the app is hidden
+const Music = (() => {
+  let a = null, want = false;
+  const url = () => (window.MUSIC_SRC && window.MUSIC_SRC.tower) || 'audio/tower.mp3' + (window.BUILD ? '?v=' + window.BUILD : '');
+  return {
+    play() { want = true; try { if (!a) { a = new Audio(url()); a.loop = true; a.volume = 0.5; } a.play().catch(() => {}); } catch {} },
+    stop() { want = false; try { if (a) { a.pause(); a.currentTime = 0; } } catch {} },
+    pause(on) { try { if (a && want) { on ? a.pause() : a.play().catch(() => {}); } } catch {} },
+  };
+})();
+document.addEventListener('visibilitychange', () => Music.pause(document.hidden));
 R.tower = (round) => {                       // flat construction-site scene; the server decides every step
   const st = $('#stage');
   if (!state.tscene && !state.tpending) {
     state.tpending = true; st.classList.add('towerstage'); st.innerHTML = '<canvas class="cv" id="cv-tgame"></canvas>';
     const cv = $('#cv-tgame'), sc = new TowerGame(cv), hint = document.createElement('div');
     hint.className = 'taphint'; hint.textContent = 'Тапни по экрану, чтобы поставить'; st.append(hint);
-    state.tpending = false; state.tscene = sc;
+    state.tpending = false; state.tscene = sc; Music.play();
     sc.onReady = (ok) => { $('#cash').disabled = !ok; hint.classList.toggle('on', ok); };
     cv.addEventListener('pointerdown', (e) => { e.preventDefault(); if (state.tscene === sc && sc._ready && sc.tap()) { $('#cash').disabled = true; hint.classList.remove('on'); act({ tap: true, lat: Math.round((state.rtt || 80) / 2) }); } });
   }
