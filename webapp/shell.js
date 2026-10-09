@@ -98,13 +98,17 @@ async function loadBonus() {
     const b = await api('bonus');
     const wait = b.availableAt ? new Date(b.availableAt).getTime() - Date.now() : 0;
     if (b.reward <= 0) { txt.textContent = 'Бонус сейчас недоступен.'; btn.disabled = true; return; }
-    btn.disabled = wait > 0;
+    btn.disabled = wait > 0; $('#bonus-panel').classList.toggle('ready', wait <= 0);
     txt.textContent = wait > 0 ? `Следующий бонус через ${fmtTime(wait)}` : `Забери ${b.reward} ⭐ прямо сейчас!`;
     btn.textContent = wait > 0 ? 'Уже получено' : `Забрать ${b.reward} ⭐`;
   } catch (e) { txt.textContent = e.message; btn.disabled = true; }
 }
+function giftBurst() {                                           // the gift pops and a fountain of stars flies out of it
+  const g = $('#gift'); if (!g) return; g.classList.remove('burst'); void g.offsetWidth; g.classList.add('burst'); setTimeout(() => g.classList.remove('burst'), 1100);
+  for (let i = 0; i < 16; i++) { const s = document.createElement('i'); s.className = 'gstar'; const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.6, d = 60 + Math.random() * 90; s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d + 'px'); s.style.animationDelay = Math.random() * 0.15 + 's'; g.append(s); setTimeout(() => s.remove(), 1300); }
+}
 $('#bonus-claim').onclick = async () => {
-  try { const r = await api('bonus/daily', {}); setBalance(r.balance); window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); } catch (e) { $('#bonus-text').textContent = e.message; }
+  try { const r = await api('bonus/daily', {}); setBalance(r.balance); giftBurst(); window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); } catch (e) { $('#bonus-text').textContent = e.message; }
   loadBonus();
 };
 
