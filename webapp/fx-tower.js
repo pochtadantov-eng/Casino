@@ -413,14 +413,14 @@
         this.hvel = (this.hvel || 0) + (((this.heliOff - (this.hprev ?? this.heliOff)) / Math.max(hdt, 1e-3)) - (this.hvel || 0)) * Math.min(1, hdt * 6); this.hprev = this.heliOff; }
       const ta = this.heliOff > 0 ? base * clamp(1 - this.heliOff / (w * 0.95)) : base;   // starts invisible and fades in over the ~4 s song intro; then stays until Play is pressed
       if (ta > 0.01) {
-        const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.35, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
+        const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.4, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
         // the helicopter flies in from the left, hovers and holds the title on two ropes; when the round starts it flies away to the right with it
-        const hs = Math.min(w * 0.3, 260) / 1080, bob = Math.sin(t * 1.4) * 3 + Math.sin(t * 2.3) * 1.2;
-        const hx = cx + this.heliOff, hy = h * 0.155 + bob - clamp(this.heliOff / w) * h * 0.05, dx = this.heliOff, dy = bob - clamp(this.heliOff / w) * h * 0.05;
-        const swing = Math.sin(t * 1.3) * 0.022 + clamp((this.hvel || 0) / w * 0.12, -0.14, 0.14), topY = y1 - fs1 * 0.58, halfW = fs1 * 1.55;
+        const hs = Math.min(w * 0.044, 23), bob = Math.sin(t * 1.4) * 3 + Math.sin(t * 2.3) * 1.2;
+        const hx = cx - 1.2 * hs + this.heliOff, hy = h * 0.155 + bob - clamp(this.heliOff / w) * h * 0.05, dx = this.heliOff, dy = bob - clamp(this.heliOff / w) * h * 0.05;
+        const swing = Math.sin(t * 1.3) * 0.022 + clamp((this.hvel || 0) / w * 0.12, -0.14, 0.14), topY = y1 - fs1 * 0.58, halfW = fs1 * 1.55, ropeY = hy + 2.15 * hs;
         const xf = (px, py) => { const c = Math.cos(swing), sn = Math.sin(swing), ax = px - cx, ay = py - topY; return [cx + dx + ax * c - ay * sn, topY + dy + ax * sn + ay * c]; };
         g.save(); g.globalAlpha = ta; this.drawHeli(g, hx, hy, hs, t); g.strokeStyle = 'rgba(40,36,34,.9)'; g.lineWidth = 1.6;
-        for (const [rx, ry, ax] of [[hx + (440 - 560) * hs, hy + (505 - 300) * hs, -halfW], [hx + (690 - 560) * hs, hy + (532 - 300) * hs, halfW]]) { const [tx, ty] = xf(cx + ax, topY + 4); g.beginPath(); g.moveTo(rx, ry); g.quadraticCurveTo((rx + tx) / 2 + Math.sin(t * 2 + ax) * 2, (ry + ty) / 2 + 3, tx, ty); g.stroke(); g.fillStyle = '#2b2622'; g.beginPath(); g.arc(tx, ty, 2.6, 0, 6.283); g.fill(); }
+        for (const [rx, ax] of [[hx - 1.0 * hs, -halfW], [hx + 2.3 * hs, halfW]]) { const [tx, ty] = xf(cx + ax, topY + 4); g.beginPath(); g.moveTo(rx, ropeY); g.quadraticCurveTo((rx + tx) / 2 + Math.sin(t * 2 + ax) * 2, (ropeY + ty) / 2 + 3, tx, ty); g.stroke(); g.fillStyle = '#2b2622'; g.beginPath(); g.arc(tx, ty, 2.6, 0, 6.283); g.fill(); }
         g.restore();
         if (!this.tcv || this.tcv.width !== g.canvas.width || this.tcv.height !== g.canvas.height) { this.tcv = document.createElement('canvas'); this.tcv.width = g.canvas.width; this.tcv.height = g.canvas.height; }
         const oc = this.tcv.getContext('2d'); oc.setTransform(1, 0, 0, 1, 0, 0); oc.clearRect(0, 0, oc.canvas.width, oc.canvas.height); oc.setTransform(DP);
@@ -583,28 +583,51 @@
       if (k < 1) { const sx = w * (0.9 - 0.7 * k), sy = h * (0.08 + 0.3 * k); const tg = g.createLinearGradient(sx, sy, sx + 70, sy - 26); tg.addColorStop(0, `rgba(255,255,255,${1 - k})`); tg.addColorStop(1, 'rgba(255,255,255,0)'); g.strokeStyle = tg; g.lineWidth = 2; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + 70, sy - 26); g.stroke(); }
       g.restore();
     }
-    // the helicopter is a cut-out of a real photo (img/heli.webp = photo rows 150..565, columns 0..1080); the rotor and the cartoon builder in the open door are added on top.
-    // s = screen pixels per photo pixel; (x, y) = where photo point (560, 300) goes
+    // a dark-red helicopter (side view, nose to the right, sliding door open, a guy in the doorway waving). s = pixels per unit, the hull is ~14 units long
     drawHeli(g, x, y, s, t) {
-      const im = TowerFx.heli;
-      if (!TowerFx.heliLoading) { TowerFx.heliLoading = true; const i = new Image(); i.onload = () => { TowerFx.heli = i; }; i.src = window.HELI_SRC || 'img/heli.webp' + (window.BUILD ? '?v=' + window.BUILD : ''); }
-      if (!im) return;
-      g.save(); g.translate(x, y); g.rotate(Math.sin(t * 1.1) * 0.012); g.scale(s, s); g.translate(-560, -300);
-      // main rotor: mast, hub, a translucent disc and two blade streaks whose apparent length flickers as they spin
-      const rot = t * 40;
-      g.fillStyle = '#6d7077'; g.fillRect(558, 118, 18, 78); g.fillStyle = '#9ea3ab'; g.fillRect(528, 100, 80, 24);
-      g.fillStyle = 'rgba(25,28,34,.16)'; g.beginPath(); g.ellipse(568, 112, 540, 16, 0, 0, 6.283); g.fill();
-      g.strokeStyle = 'rgba(25,28,34,.92)'; g.lineWidth = 12; g.lineCap = 'round';
-      for (let b = 0; b < 2; b++) { const len = 520 * Math.cos(rot + b * 1.57); g.beginPath(); g.moveTo(568, 112); g.lineTo(568 + len, 112 + (b ? 6 : -4)); g.stroke(); }
-      g.drawImage(im, 0, 150);
-      // the builder stands in the open door, clipped to the dark opening; only the waving arm may stick out
-      if (!TowerFx.bld) { TowerFx.bld = {}; for (const n of ['body', 'arm']) { const bi = new Image(); bi.onload = () => { TowerFx.bld[n] = bi; }; bi.src = (window.BUILDER_SRC && window.BUILDER_SRC[n]) || `img/builder_${n}.webp` + (window.BUILD ? '?v=' + window.BUILD : ''); } }
+      g.save(); g.translate(x, y); g.scale(s, s); g.lineJoin = 'round'; g.lineCap = 'round';
+      const rot = t * 40;                                              // rotor phase
+      // shadow-free: skids first
+      g.strokeStyle = '#5a1015'; g.lineWidth = 0.26;
+      g.beginPath(); g.moveTo(-2.7, 2.15); g.lineTo(3.0, 2.15); g.quadraticCurveTo(3.7, 2.15, 3.9, 1.7); g.stroke();
+      g.beginPath(); g.moveTo(-1.3, 2.15); g.lineTo(-1.0, 1.15); g.moveTo(2.0, 2.15); g.lineTo(2.2, 1.1); g.stroke();
+      // tail boom, fin, stabiliser, tail rotor
+      let gr = g.createLinearGradient(0, -1, 0, 1); gr.addColorStop(0, '#a3202a'); gr.addColorStop(1, '#4e0d12');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(-2.2, -0.9); g.lineTo(-8.3, -1.0); g.lineTo(-8.3, -0.35); g.lineTo(-2.2, 0.8); g.closePath(); g.fill();
+      g.fillStyle = '#8c1a22'; g.beginPath(); g.moveTo(-7.4, -1.0); g.lineTo(-8.5, -3.3); g.lineTo(-9.0, -3.2); g.lineTo(-8.5, -0.4); g.closePath(); g.fill();
+      g.fillStyle = '#5a1015'; g.beginPath(); g.ellipse(-6.2, -0.45, 0.9, 0.16, 0, 0, 6.283); g.fill();
+      g.strokeStyle = 'rgba(30,30,34,.85)'; g.lineWidth = 0.14; const tl = 1.2 * Math.cos(rot * 1.7); g.beginPath(); g.moveTo(-8.2, -1.9 - tl); g.lineTo(-8.2, -1.9 + tl); g.stroke();
+      g.fillStyle = '#2b2b30'; g.beginPath(); g.arc(-8.2, -1.9, 0.18, 0, 6.283); g.fill();
+      // fuselage
+      gr = g.createLinearGradient(0, -2.4, 0, 1.4); gr.addColorStop(0, '#c4303a'); gr.addColorStop(0.45, '#8f1a22'); gr.addColorStop(1, '#4a0c11');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(-2.6, 0.7); g.lineTo(-2.6, -0.8); g.quadraticCurveTo(-2.4, -2.1, -0.9, -2.3); g.lineTo(1.6, -2.3); g.quadraticCurveTo(3.1, -2.1, 3.7, -0.7);
+      g.quadraticCurveTo(5.2, -0.1, 5.5, 0.5); g.quadraticCurveTo(5.4, 1.1, 4.5, 1.2); g.lineTo(0.5, 1.45); g.quadraticCurveTo(-2.4, 1.4, -2.6, 0.7); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(20,4,6,.7)'; g.lineWidth = 0.1; g.stroke();
+      g.strokeStyle = 'rgba(255,190,190,.38)'; g.lineWidth = 0.14; g.beginPath(); g.moveTo(-1.8, -1.8); g.quadraticCurveTo(0.5, -2.35, 2.9, -1.7); g.stroke();          // roof glint
+      g.fillStyle = '#3a0a0e'; g.beginPath(); g.ellipse(-0.7, -2.55, 1.5, 0.45, 0, 0, 6.283); g.fill();                                                                // engine hump
+      g.fillStyle = '#1d1d22'; g.beginPath(); g.ellipse(-2.1, -1.55, 0.55, 0.38, 0, 0, 6.283); g.fill();                                                               // exhaust
+      // cabin windows
+      for (const [wx0, ww] of [[-1.7, 1.3], [-0.1, 1.3]]) { g.fillStyle = '#2d4a58'; g.fillRect(wx0, -1.2, ww, 1.1); g.fillStyle = 'rgba(190,230,245,.35)'; g.fillRect(wx0 + 0.1, -1.15, ww * 0.35, 0.5); }
+      // open door: cream interior with the cartoon builder standing in it, waving
+      g.fillStyle = '#d9ccb0'; g.fillRect(1.35, -1.95, 2.05, 2.75); g.fillStyle = 'rgba(70,50,30,.35)'; g.fillRect(1.35, -1.95, 0.22, 2.75); g.fillRect(1.35, -1.95, 2.05, 0.18);
+      g.fillStyle = '#7a5a3a'; g.fillRect(1.6, 0.15, 1.6, 0.55);                                                                                                            // seat
+      if (!TowerFx.bld) { TowerFx.bld = {}; for (const n of ['body', 'arm']) { const im = new Image(); im.onload = () => { TowerFx.bld[n] = im; }; im.src = (window.BUILDER_SRC && window.BUILDER_SRC[n]) || `img/builder_${n}.webp` + (window.BUILD ? '?v=' + window.BUILD : ''); } }
       if (TowerFx.bld.body && TowerFx.bld.arm) {
-        const k = 128 / 505, bob = Math.sin(t * 3.4) * 1.2, ox = 733, oy = 282 + bob;
-        g.save(); g.beginPath(); g.moveTo(740, 290); g.lineTo(782, 284); g.lineTo(808, 332); g.lineTo(810, 396); g.lineTo(748, 404); g.closePath(); g.clip();
-        g.fillStyle = '#17120f'; g.fillRect(730, 270, 100, 150); g.translate(ox, oy); g.scale(k, k); g.drawImage(TowerFx.bld.body, 0, 0); g.restore();
-        g.save(); g.translate(ox, oy); g.scale(k, k); g.translate(492 - 180, 540 - 310); g.rotate(Math.sin(t * 7) * 0.3 - 0.05); g.translate(-(492 - 180), -(540 - 310)); g.drawImage(TowerFx.bld.arm, 0, 0); g.restore();
+        const k = 2.75 / 505, bob = Math.sin(t * 3.4) * 0.02;
+        g.save(); g.beginPath(); g.rect(1.35, -1.95, 2.05, 2.75); g.clip(); g.translate(1.2, -1.95 + bob); g.scale(k, k); g.drawImage(TowerFx.bld.body, 0, 0);
+        g.restore();
+        g.save(); g.translate(1.2, -1.95 + bob); g.scale(k, k); g.translate(492 - 180, 540 - 310); g.rotate(Math.sin(t * 7) * 0.3 - 0.05); g.translate(-(492 - 180), -(540 - 310)); g.drawImage(TowerFx.bld.arm, 0, 0); g.restore();   // the raised arm swings about the shoulder
       }
+      // windshield and nose
+      g.fillStyle = '#8fc4dc'; g.beginPath(); g.moveTo(3.45, -1.6); g.quadraticCurveTo(4.5, -1.1, 5.1, 0.0); g.lineTo(3.55, 0.05); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.moveTo(3.7, -1.3); g.lineTo(4.3, -0.9); g.lineTo(3.8, -0.1); g.closePath(); g.fill();
+      g.fillStyle = '#e8e2dc'; g.font = 'italic 800 0.75px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SHS', 0.9, 0.62);
+      g.fillStyle = '#ff3b3b'; g.beginPath(); g.arc(0.6, -2.35, 0.1, 0, 6.283); g.fill();
+      // main rotor: blur disc + blade streaks whose apparent length flickers as they spin
+      g.fillStyle = 'rgba(160,170,180,.5)'; g.fillRect(0.12, -3.05, 0.16, 0.7); g.fillStyle = '#9aa0a8'; g.fillRect(-0.15, -3.3, 0.7, 0.28);
+      g.fillStyle = 'rgba(30,34,40,.16)'; g.beginPath(); g.ellipse(0.2, -3.2, 7.8, 0.3, 0, 0, 6.283); g.fill();
+      g.strokeStyle = 'rgba(25,28,34,.9)'; g.lineWidth = 0.17;
+      for (let b = 0; b < 2; b++) { const len = 7.6 * Math.cos(rot + b * 1.57); g.beginPath(); g.moveTo(0.2, -3.25); g.lineTo(0.2 + len, -3.25 + (b ? 0.12 : -0.08)); g.stroke(); }
       g.restore();
     }
     drawHook(g) {
