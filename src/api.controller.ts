@@ -67,6 +67,14 @@ export class ApiController {
     return { round, balance: await this.wallet.balance(req.user.id) };
   }
 
+  /** Admin-only peek at the hidden state of the caller's current round (crash point, mine positions, etc). */
+  @Get('admin/peek/:game')
+  async adminPeek(@Req() req: any, @Param('game') game: string) {
+    if (!config.adminIds.includes(req.user.id)) throw new GameError('Admin only');
+    const debug = await this.games.peek(req.user.id, game);
+    return { debug };
+  }
+
   /** Returns a Stars invoice link; the Mini App opens it with Telegram.WebApp.openInvoice. */
   @Post('deposit')
   async deposit(@Req() req: any, @Body() body: any) {

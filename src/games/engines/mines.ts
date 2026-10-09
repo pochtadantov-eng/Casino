@@ -54,4 +54,5 @@ export const mines: Engine<State> = {
     const base = { count: state.count, revealed: state.revealed, size: SIZE };
     return status === 'active' ? base : { ...base, mines: state.mines };
   },
+  debug(state) { return { mines: state.mines, revealed: state.revealed, size: SIZE, bombCount: state.count }; },
 };

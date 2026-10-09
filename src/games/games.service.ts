@@ -39,6 +39,17 @@ export class GamesService {
     };
   }
 
+  /** Admin peek at the hidden state of a user's current round. Call only after admin check. */
+  async peek(userId: number, game: string) {
+    this.engine(game);
+    return this.db.tx(async (c) => {
+      const r = await this.lockActive(c, userId, game);
+      if (!r) return null;
+      const e = this.engine(r.game) as any;
+      return typeof e.debug === 'function' ? e.debug(r.state, Date.now()) : null;
+    });
+  }
+
   /** Active round for resume after reopening the app (also settles a crashed rocket). */
   async current(userId: number, game: string) {
     this.engine(game);

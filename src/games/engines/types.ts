@@ -22,6 +22,8 @@ export interface Engine<S = any> {
   cashout(state: S, now: number): StepResult<S>;
   /** What the client may see. Secrets only when status != active. */
   view(state: S, status: RoundStatus, now: number): any;
+  /** Admin-only peek at the full hidden state (crash point, mine positions, etc). */
+  debug?(state: S, now: number): any;
 }
 
 /** Round multiplier to 2 decimals, always down (house-favourable). */

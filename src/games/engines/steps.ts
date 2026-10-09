@@ -72,6 +72,7 @@ export function makeStepsEngine(cfg: StepsConfig): Engine<State> {
       };
       return status === 'active' ? base : { ...base, deadly: state.deadly };
     },
+    debug(state) { return { deadly: state.deadly, picks: state.picks, variant: state.variant }; },
   };
 }
 

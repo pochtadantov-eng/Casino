@@ -55,4 +55,8 @@ export const rocket: Engine<State> = {
     const base = { growth: GROWTH, startedAt: state.startedAt, serverNow: now, auto: state.auto };
     return status === 'active' ? base : { ...base, crash: state.crash, cashedAt: state.cashedAt ?? null };
   },
+  debug(state, now) {
+    const msElapsed = now - state.startedAt, msToCrash = Math.max(0, Math.round(Math.log(state.crash) / GROWTH * 1000) - msElapsed);
+    return { crash: state.crash, auto: state.auto, cashedAt: state.cashedAt ?? null, msElapsed, msToCrash };
+  },
 };

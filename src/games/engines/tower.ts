@@ -60,4 +60,5 @@ export const tower: Engine<State> = {
       swing: { start: state.swingStart, period: periodAt(state.picks), amp: TOWER.amp, tol: tolAt(state.picks) },
     };
   },
+  debug(state) { return { picks: state.picks, swingStart: state.swingStart, period: periodAt(state.picks), tol: tolAt(state.picks) }; },
 };

@@ -41,8 +41,15 @@
     return { variant: s.variant, choices: s.choices, bad: s.bad, maxSteps: s.max, picks: s.picks,
       multipliers: Array.from({ length: s.max }, (_, i) => stepsMult(s.choices, s.bad, i + 1)), ...(done ? { deadly: s.deadly } : {}) };
   };
+  const DEBUG = /[?&]debug(=|&|$)/.test(location.search) || localStorage.getItem('nova.debug') === '1';
+  const debugOf = (r, now) => {                           // admin/demo peek at the current round state
+    const s = r.state; if (r.game === 'rocket') return { crash: s.crash, auto: s.auto, msToCrash: Math.max(0, Math.round((Math.log(s.crash) / GROWTH * 1000) - (now - s.startedAt))) };
+    if (r.game === 'mines') return { mines: s.mines, revealed: s.revealed, size: SIZE };
+    if (r.game === 'tower') return { picks: s.picks, swingStart: s.swingStart, period: twPeriod(s.picks), tol: twTol(s.picks) };
+    return { picks: s.picks, deadly: s.deadly };
+  };
   const present = (r, now = Date.now()) => ({ id: r.id, game: r.game, bet: r.bet, status: r.status, multiplier: r.multiplier, payout: r.payout,
-    serverSeedHash: 'demo-mode', clientSeed: r.clientSeed, nonce: r.nonce, serverSeed: r.status === 'active' ? null : 'demo-mode', view: view(r, now) });
+    serverSeedHash: 'demo-mode', clientSeed: r.clientSeed, nonce: r.nonce, serverSeed: r.status === 'active' ? null : 'demo-mode', view: view(r, now), debug: DEBUG ? debugOf(r, now) : undefined });
 
   const finish = (r, status, mult) => {
     r.status = status; r.multiplier = mult;

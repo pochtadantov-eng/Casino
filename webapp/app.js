@@ -198,6 +198,7 @@ function apply(j) {
   state.round = j.round;
   const r = j.round;
   R[state.game](r);
+  renderDebug(r);
   const active = r?.status === 'active';
   const towerActive = active && state.game === 'tower';
   $('#go').hidden = active; $('#cash').hidden = !active; $('#place').hidden = true;
@@ -251,3 +252,21 @@ $('#btn-withdraw').onclick = async () => {
 };
 
 async function boot() { try { const me = await api('me'); setBalance(me.balance); state.limits = me.limits; } catch (e) { console.warn(e.message); } }
+
+// --- admin / demo debug overlay (opt-in): shows the round's hidden state while developing.
+// Enable with ?debug=1 in the URL, or in the console: localStorage.setItem('nova.debug','1')
+function renderDebug(round) {
+  let box = document.getElementById('dbgbox');
+  if (!round?.debug) { if (box) box.hidden = true; return; }
+  if (!box) {
+    box = document.createElement('div'); box.id = 'dbgbox'; box.className = 'dbgbox';
+    box.innerHTML = '<div class="dbg-h">ADMIN · раунд видно</div><div class="dbg-body"></div>';
+    document.getElementById('stage')?.append(box);
+  }
+  box.hidden = false;
+  const d = round.debug, body = box.querySelector('.dbg-body'); let html = '';
+  if (round.game === 'rocket') html = `<div>Крэш: <b>x${d.crash.toFixed(2)}</b></div><div>Авто-вывод: ${d.auto ? 'x' + d.auto.toFixed(2) : '—'}</div><div>До крэша: <b>${d.msToCrash}мс</b></div>`;
+  else if (round.game === 'mines') { const g = []; for (let i = 0; i < d.size; i++) g.push(`<span class="dbg-c ${d.mines.includes(i) ? 'bomb' : (d.revealed.includes(i) ? 'open' : 'safe')}">${d.mines.includes(i) ? '💣' : '·'}</span>`); html = `<div>Бомбы: ${d.mines.length} из ${d.size}</div><div class="dbg-grid">${g.join('')}</div>`; }
+  else if (round.game === 'tower') html = `<div>Этаж: ${d.picks + 1}</div><div>Старт качания: ${new Date(d.swingStart).toLocaleTimeString()}</div><div>Период: ${d.period}мс · допуск: ±${d.tol.toFixed(3)}</div>`;
+  body.innerHTML = html;
+}
