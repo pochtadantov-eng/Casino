@@ -9,7 +9,7 @@
   const sm = (t) => t * t * t * (t * (t * 6 - 15) + 10);
   const rand = (a, b) => a + Math.random() * (b - a);
 
-  const HW = 1.9, HH = 1.55, INC = 1.66, SLAB_H = 0.55, SLAB_W = 5.4, LOW = 0.2;       // house width/height, floor step, foundation slab (world units)
+  const HW = 1.9, HH = 1.55, INC = 1.66, SLAB_H = 0.55, SLAB_W = 5.4, LOW = 0.1;       // house width/height, floor step, foundation slab (world units)
   const R = 5.4, SLING = 0.95, PIVOT_UP = 8.8;                               // pendulum: the pivot hangs above the frame
   const LROPE_HOVER = R - SLING - HH / 2, LROPE_HIDE = -3.4;
 
