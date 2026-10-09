@@ -14,15 +14,29 @@
   const pick = (a, r) => a[Math.floor(r() * a.length)];
   const gaussian = (r) => { let u = 0, v = 0; while (u === 0) u = r(); while (v === 0) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
 
-  // nicknames: lowercase handles that look like real Telegram usernames
+  // nicknames: lowercase handles that look like real Telegram usernames — a chaotic mix
   function makeNick(r) {
+    const letters = 'abcdefghijklmnopqrstuvwxyz', vowels = 'aeiouy', cons = 'bcdfghklmnprstvwxz';
+    const randChars = (len) => { let s = ''; for (let i = 0; i < len; i++) s += (i % 2 ? vowels : cons)[Math.floor(r() * (i % 2 ? vowels.length : cons.length))]; return s; };
+    const chunk = (len) => { let s = ''; for (let i = 0; i < len; i++) s += letters[Math.floor(r() * letters.length)]; return s; };
     const n = pick(FIRST, r), form = r();
-    if (form < 0.18) return n;                                    // bare name
-    if (form < 0.4)  return n + '_' + Math.floor(70 + r() * 40);  // sasha_94
-    if (form < 0.55) return n + Math.floor(1 + r() * 999);        // ivan23
-    if (form < 0.7)  return n + '.' + 'rkmvbtlpdg'[Math.floor(r() * 10)];  // kate.m
-    if (form < 0.85) return n + '_' + pick(CITIES, r);            // misha_spb
-    let n2 = pick(FIRST, r); if (n2 === n) n2 = FIRST[(FIRST.indexOf(n2) + 1) % FIRST.length]; return n2 + '_' + n;
+    if (form < 0.14) return n;                                    // bare name
+    if (form < 0.3)  return n + Math.floor(10 + r() * 989);       // ivan23
+    if (form < 0.42) return n + '_' + Math.floor(70 + r() * 40);  // sasha_94
+    if (form < 0.52) return n + '_' + pick(CITIES, r);            // misha_spb
+    if (form < 0.6)  return n + '.' + 'rkmvbtlpdg'[Math.floor(r() * 10)];  // kate.m
+    if (form < 0.72) {                                            // fredy_mayerttown45 — name + fake-word + number
+      const parts = ['town', 'kov', 'off', 'mayer', 'kin', 'enko', 'shin', 'ich', 'oglu', 'yan', 'eck'];
+      return n + '_' + randChars(3) + pick(parts, r) + Math.floor(10 + r() * 90);
+    }
+    if (form < 0.85) {                                            // eqorkhikk38 — random letter soup + number
+      return chunk(6 + Math.floor(r() * 3)) + Math.floor(10 + r() * 90);
+    }
+    if (form < 0.93) {                                            // mmuuuuur — repeated letters
+      const base = chunk(2), rep = letters[Math.floor(r() * letters.length)].repeat(3 + Math.floor(r() * 4));
+      return base + rep + chunk(2);
+    }
+    return 'e' + Math.floor(r() * 10) + chunk(5);                 // e1dnejx — digit sandwiched
   }
 
   // avatars: real portrait SVGs bundled with the app (webapp/img/avatars/av0.svg..av39.svg).
@@ -112,12 +126,22 @@
       this.root = root; this.entries = []; this.lastSpawn = 0; this.seedBase = Date.now(); this.liveM = 1;
     }
     reset() { for (const e of this.entries) e.el.remove(); this.entries = []; this.lastSpawn = 0; this.liveM = 1; }
-    start() { this.lastSpawn = performance.now() - 500; for (let i = 0; i < 4; i++) this.spawn(); }
-    spawn() {
-      const id = ++this.seedBase, r = rng(id), { bet, target } = samplePlayer(r), nick = makeNick(r), avatar = makeAvatar(id);
+    start() { this.lastSpawn = performance.now() - 500; for (let i = 0; i < 4; i++) this.spawn(1); }
+    spawn(mNow = 1) {
+      const id = ++this.seedBase, r = rng(id);
+      // mix: a few in-flight (target ahead of current), many already-cashed below current (feed looks lively with wins)
+      let bet, target, state = 'in', atX = null;
+      if (mNow > 1.05 && r() < 0.7) {                             // mid-flight: pretend they cashed just now, below current m
+        target = Math.max(1.05, mNow - r() * 0.3); state = 'won'; atX = target;
+        bet = pick([30, 50, 75, 100, 150, 200, 300, 500], r);
+      } else {
+        ({ bet, target } = samplePlayer(r));
+      }
+      const nick = makeNick(r), avatar = makeAvatar(id);
       const el = document.createElement('div'); el.className = 'rrow enter';
-      el.innerHTML = `<img class="rav" src="${avatar}" alt=""><div class="rmid"><div class="rnick">${nick}</div><div class="rbet"><span>${bet} ⭐</span><span class="rtarget">цель x${target.toFixed(2)}</span></div></div><div class="rst"><span class="r-in">x1.00</span></div>`;
-      const entry = { id, bet, target, state: 'in', atX: null, el, stEl: el.querySelector('.rst') };
+      el.innerHTML = `<img class="rav" src="${avatar}" alt=""><div class="rmid"><div class="rnick">${nick}</div><div class="rbet"><span>${bet} ⭐</span><span class="rtarget">цель x${target.toFixed(2)}</span></div></div><div class="rst"></div>`;
+      const entry = { id, bet, target, state, atX, el, stEl: el.querySelector('.rst') };
+      this.setStatus(entry, mNow);
       this.entries.unshift(entry); this.root.prepend(el);
       requestAnimationFrame(() => el.classList.remove('enter'));
       while (this.entries.length > 6) { const old = this.entries.pop(); old.el.remove(); }
@@ -130,7 +154,7 @@
     tick(m, flying) {
       if (flying) {
         const now = performance.now();
-        if (now - this.lastSpawn > 600 + Math.random() * 900) { this.lastSpawn = now; this.spawn(); }
+        if (now - this.lastSpawn > 500 + Math.random() * 700) { this.lastSpawn = now; this.spawn(m); }
         for (const e of this.entries) {
           if (e.state === 'in' && m >= e.target) { e.state = 'won'; e.atX = e.target; this.setStatus(e, m); }
           else if (e.state === 'in') this.setStatus(e, m);
