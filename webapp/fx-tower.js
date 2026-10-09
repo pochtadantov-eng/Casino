@@ -121,7 +121,7 @@
     newHang() { this.hang = { v: this.ci++ }; }
     _setReady(v) { if (v !== this._ready) { this._ready = v; this.onReady?.(v); } }
     landTop() { return SLAB_H + (this.landed + this.base) * INC; }
-    camTarget() { return Math.max(-0.7, this.landTop() - 0.38 * this.hv); }
+    camTarget() { const lt = this.landTop(); return Math.max(-0.7, -0.7 + 0.45 * (lt - (SLAB_H + INC)), lt - 0.7 * this.hv); }   // rises gently with the tower, so the site scrolls out of frame gradually
     pivotY() { return this.landTop() + PIVOT_UP; }
     tap() {
       if (this.state !== 'sway' || this.roundStatus !== 'active' || !this.hang || this.fall || !this.swing) return false;
@@ -274,7 +274,7 @@
       for (const c of this.clouds) { const span = h * 1.15, base = c.fy * h + (cam + 0.9) * ppu * c.z * 0.35, y = ((base % span) + span) % span - h * 0.07; this.cloud(g, this.X(c.x), y, c.s, 0.55 + c.z * 0.45); }
       for (const b of this.birds) { const x = this.X(b.x), y = this.Y(b.y) - (cam + 0.9) * ppu * 0.3, f = Math.sin(b.t * 9) * 4; g.strokeStyle = 'rgba(20,50,90,.7)'; g.lineWidth = 1.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 7, y - f); g.quadraticCurveTo(x - 3, y - 4, x, y); g.quadraticCurveTo(x + 3, y - 4, x + 7, y - f); g.stroke(); }
       this.cityLayer(g, 0, 0.16); this.cityLayer(g, 1, 0.3);
-      const gy = this.Y(0); this.camBottom = -0.7; const gp = this.Y(0); this.camBottom = cam;      // landscape stays put: the tower slides down in front of it
+      const gy = this.Y(0); const gp = gy;      // the landscape scrolls away with the camera
       if (gp < h + 4) {
         const gg = g.createLinearGradient(0, gp, 0, h); gg.addColorStop(0, '#5fbf4a'); gg.addColorStop(0.07, '#3f9a3a'); gg.addColorStop(0.1, '#9a7a56'); gg.addColorStop(1, '#6d5238'); g.fillStyle = gg; g.fillRect(0, gp, w, h - gp + 4);
         g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0, gp, w, 2); g.fillStyle = 'rgba(0,0,0,.12)'; for (let i = 0; i < 18; i++) { g.beginPath(); g.ellipse(((i * 97) % 211) / 211 * w, gp + 0.45 * ppu + ((i * 53) % 37) / 37 * 0.9 * ppu, 5 + (i % 4) * 2, 2.5, 0, 0, 6.283); g.fill(); }
