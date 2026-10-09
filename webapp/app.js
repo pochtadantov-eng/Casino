@@ -154,15 +154,27 @@ R.seagull = R.steps;
 // background track for the tower game: starts on entering the game (a user gesture), loops, stops on leaving / when the app is hidden
 const Music = (() => {
   const LISTS = { tower: ['tower', 'tower2'] };      // the tower plays its first track, then the second, then starts over
+  const pos = {};                                    // per section: where the music was left ({ idx, t }) so coming back resumes instead of restarting
   let a = null, want = false, cur = null, idx = 0;
   const url = (n) => (window.MUSIC_SRC && window.MUSIC_SRC[n]) || `audio/${n}.mp3` + (window.BUILD ? '?v=' + window.BUILD : '');
   const list = () => LISTS[cur] || [cur];
-  const load = () => { a = new Audio(url(list()[idx])); a.loop = list().length === 1; a.volume = 0.5; a.onended = () => { if (!want) return; idx = (idx + 1) % list().length; load(); }; a.play().catch(() => {}); };
+  const save = () => { if (a && cur) pos[cur] = { idx, t: a.currentTime || 0 }; };
+  const load = (startAt = 0) => {
+    a = new Audio(url(list()[idx])); a.loop = list().length === 1; a.volume = 0.5; a.onended = () => { if (!want) return; idx = (idx + 1) % list().length; load(); };
+    if (startAt > 0.1) { const seek = () => { try { if (a.duration && startAt < a.duration - 1) a.currentTime = startAt; } catch {} }; a.addEventListener('loadedmetadata', seek, { once: true }); }
+    a.play().catch(() => {});
+  };
+  // browsers only allow sound after a tap: the first tap starts whatever should be playing
+  document.addEventListener('pointerdown', () => { if (want && a && a.paused && !document.hidden) a.play().catch(() => {}); }, { capture: true });
   return {
-    play(name = 'tower') { try { if (a && cur === name) { want = true; a.play().catch(() => {}); return; } if (a) { a.onended = null; a.pause(); a = null; } cur = name; idx = 0; want = true; load(); } catch {} },
+    play(name = 'tower') { try {
+      if (a && cur === name) { want = true; a.play().catch(() => {}); return; }
+      if (a) { save(); a.onended = null; a.pause(); a = null; }
+      cur = name; const p = pos[name]; idx = p ? p.idx : 0; want = true; load(p ? p.t : 0);
+    } catch {} },
     time() { return a && want && cur === 'tower' && !a.paused && a.currentTime > 0 ? a.currentTime : null; },
     track() { return cur === 'tower' ? list()[idx] : null; },
-    stop() { want = false; try { if (a) { a.onended = null; a.pause(); a.currentTime = 0; } } catch {} },
+    stop() { try { save(); want = false; if (a) { a.onended = null; a.pause(); a = null; } } catch {} },      // remembers the spot; the next play() of this section continues from it
     pause(on) { try { if (a && want) { on ? a.pause() : a.play().catch(() => {}); } } catch {} },
   };
 })();
