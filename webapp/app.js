@@ -210,10 +210,11 @@ function apply(j) {
   $('#cash').disabled = towerActive ? !state.tscene?._ready : false;
   $('#cash').textContent = active ? `Забрать ${Math.floor(r.bet * (state.game === 'rocket' ? 1 : r.multiplier))} ⭐` : 'Забрать';
   if (state.game === 'rocket') $('#cash').textContent = 'Забрать';
+  $('#cash').classList.toggle('dim', state.game === 'mines' && active && !r.view.revealed.length);      // greyed until the first tile is opened
   if (r && !active && prev?.status === 'active') {
     if (r.status === 'won') { showResult(r, state.game === 'tower' ? 0.9 : 0.15, 'win'); tg?.HapticFeedback?.notificationOccurred('success'); }
     else {
-      const delay = state.game === 'mines' ? 1.15 : state.game === 'tower' ? 1.7 : 0.15;                  // mines: wait for the flip and the blast
+      const delay = state.game === 'mines' ? 0.82 : state.game === 'tower' ? 1.7 : 0.15;                  // mines: wait for the flip and the blast
       showResult(r, delay, 'loss');
       setTimeout(() => tg?.HapticFeedback?.notificationOccurred('error'), delay * 1000);
     }
@@ -235,7 +236,9 @@ async function load() {
 
 $('#place').onclick = () => { if ($('#place').disabled) return; state.tscene?.tap?.(); $('#place').disabled = true; $('#cash').disabled = true; act({ choice: 0 }); };   // the house drops at once; the server's verdict arrives a moment later
 $('#go').onclick = () => { if (Date.now() < (state.lockUntil || 0)) return; guard(async () => apply(await api(`games/${state.game}/start`, { bet: betValue(), ...startParams() }))); };
-$('#cash').onclick = () => guard(async () => apply(await api(`games/${state.game}/cashout`, {})));
+function fieldHint(txt) { document.querySelector('.fieldhint')?.remove(); const el = document.createElement('div'); el.className = 'fieldhint'; el.textContent = txt; $('#stage').append(el); setTimeout(() => el.remove(), 2000); }
+$('#cash').onclick = () => { if ($('#cash').classList.contains('dim')) { fieldHint('Открой хотя бы одну плитку, чтобы забрать'); return; } cashOut(); };
+const cashOut = () => guard(async () => apply(await api(`games/${state.game}/cashout`, {})));
 $('#bet-minus').onclick = () => $('#bet').value = Math.max(1, betValue() - 10);
 $('#bet-plus').onclick = () => $('#bet').value = Math.min(state.limits.maxBet, betValue() + 10);
 $('#bet-x2').onclick = () => $('#bet').value = Math.min(state.limits.maxBet, betValue() * 2);
