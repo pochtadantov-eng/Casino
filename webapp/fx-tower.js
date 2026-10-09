@@ -9,7 +9,7 @@
   const sm = (t) => t * t * t * (t * (t * 6 - 15) + 10);
   const rand = (a, b) => a + Math.random() * (b - a);
 
-  const HW = 1.9, HH = 1.55, INC = 1.66, SLAB_H = 0.55, SLAB_W = 5.4, LOW = 0.1, RAMP = 2.1;       // house width/height, floor step, foundation slab (world units)
+  const HW = 1.9, HH = 1.55, INC = 1.66, SLAB_H = 0.55, SLAB_W = 5.4, LOW = 0.1, RAMP = 1.6;       // house width/height, floor step, foundation slab (world units)
   const R = 5.4, SLING = 0.95, PIVOT_UP = 8.8;                               // pendulum: the pivot hangs above the frame
   const LROPE_HOVER = R - SLING - HH / 2, LROPE_HIDE = -3.4;
 
@@ -157,7 +157,7 @@
     wreck() { if (this.state !== 'done' || (this.roundStatus !== 'lost' && this.roundStatus !== 'won') || this.wreckT !== -1) return; this.wreckT = 0; this.struck = false; this.tractorX = -(this.w / 2 / this.ppu + 2.0); }
     stepWreck(dt) {
       this.wreckT += dt; const v = 4.2; this.tractorX += v * dt;
-      { const top = SLAB_H - LOW + 0.02, sm3 = (q) => { q = clamp(q); return q * q * (3 - 2 * q); }, xl = -SLAB_W / 2, xr = SLAB_W / 2, Hh = (x) => top * sm3((x - (xl - RAMP)) / RAMP) * (1 - sm3((x - xr) / RAMP)), hf = Hh(this.tractorX + 1.1), hr = Hh(this.tractorX - 1.1);
+      { const top = SLAB_H + 0.15, sm3 = (q) => { q = clamp(q); return q * q * (3 - 2 * q); }, xl = -SLAB_W / 2, xr = SLAB_W / 2, Hh = (x) => top * sm3((x - (xl - RAMP)) / RAMP) * (1 - sm3((x - xr) / RAMP)), hf = Hh(this.tractorX + 1.1), hr = Hh(this.tractorX - 1.1);
         this.tractorY = (hf + hr) / 2; this.tractorRot = Math.atan2(hf - hr, 2.2); }       // it climbs onto the platform, shoves the tower from there and drives down the far side
       this.tw = (this.tw || 0) + v * dt * 1.6;
       if (Math.random() < dt * 14) this.puffs.push({ x: this.tractorX - 1.9, y: 0.12, vx: -rand(0.3, 0.9), vy: rand(0.4, 0.9), r: rand(0.18, 0.32), life: 0.7, max: 0.7 });
@@ -331,6 +331,7 @@
         g.fillStyle = '#8c949c'; for (const bx of [x + 0.9 * ppu, x + sw - 0.9 * ppu]) { g.beginPath(); g.arc(bx, sy + lip * 0.55, 2.4, 0, 6.283); g.fill(); }
         g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(x - 4, gb - 2, sw + 8, 3);
       }
+      if (sy < h + 60) this.drawRamps(g, gy, 1);                     // permanent plank ramps, flush with the platform's corners
       const n = this.floors.length;
       this.floors.forEach((f, i) => { const k = n > 1 ? i / (n - 1) : 1, kf = 0.1 + 0.9 * k, wy = SLAB_H + i * INC + HH / 2; if (this.Y(wy) < -HH * ppu) return; this.drawHouse(g, f.v, f.ox + this.wob * 0.2 * kf, wy, f.tilt - this.wob * 0.02 * kf, f.sq, f.dmg); });
       if (this.intro) this.drawHouse(g, this.intro.v, this.intro.x, this.intro.y, this.intro.rot);
@@ -339,7 +340,7 @@
       if (this.rest) { const q = this.rest, sup = this.support(q.x, this.landTop()), low = (HW / 2) * Math.abs(Math.sin(q.rot)) + (HH / 2) * Math.abs(Math.cos(q.rot)); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(this.X(q.x), this.Y(sup) + 2, HW * ppu * 0.55, 5, 0, 0, 6.283); g.fill(); this.drawHouse(g, q.v, q.x, sup + low, q.rot, 0, q.dmg); }
       for (const q of this.pieces) { g.save(); g.globalAlpha = clamp(1 - q.age / 0.9); this.drawHouse(g, q.v, q.x, q.y, q.rot, 0, q.dmg); g.restore(); }
       if (gp < h + 8 * ppu) this.propsSide(g, gp);
-      if (this.wreckT >= 0) { this.drawRamps(g, gy, clamp(this.wreckT / 0.3)); this.drawTractor(g, this.tractorX, gy); }
+      if (this.wreckT >= 0) this.drawTractor(g, this.tractorX, gy);
       if (gp < h + 8 * ppu) this.propsFront(g, gp);                // foreman, speaker, cones: in front of the bulldozer lane, so nothing of theirs gets run over
       // the allowed release window on the roof of the tower while the swing is live
       if (this.swing && ['arrive', 'sway'].includes(this.state) && this.roundStatus === 'active') {
@@ -437,7 +438,7 @@
       const { ppu } = this; this.drawCrew(g, gy, this._t || 0); this.sprite(g, TowerProps.cone(ppu), -2.85, gy + 0.15 * ppu);
     }
     drawRamps(g, gy, a) {                       // two plank ramps up to the platform: the bulldozer drives up one side and down the other
-      const u = this.ppu, base = gy + 0.15 * u, top = (SLAB_H - LOW + 0.02) * u, xl = this.X(-SLAB_W / 2), xr = this.X(SLAB_W / 2), L = RAMP * u;
+      const u = this.ppu, base = gy + 0.15 * u, top = (SLAB_H + 0.15) * u, xl = this.X(-SLAB_W / 2), xr = this.X(SLAB_W / 2), L = RAMP * u;
       g.save(); g.globalAlpha = a;
       const ramp = (x0, x1, up) => {            // x0 = foot on the ground, x1 = top edge on the platform
         g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse((x0 + x1) / 2, base + 1, Math.abs(x1 - x0) / 2, 3, 0, 0, 6.283); g.fill();
