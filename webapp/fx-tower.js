@@ -178,6 +178,7 @@
     }
     support(x, top) { const a = Math.abs(x); return a < HW / 2 + 0.25 ? top : a < SLAB_W / 2 ? SLAB_H : 0; }
     update(dt) {
+      this.titleA = (this.titleA == null ? 1 : this.titleA) + ((this.roundId === null ? 1 : 0) - (this.titleA == null ? 1 : this.titleA)) * Math.min(1, dt * 5);
       if (this.state === 'done' && this.roundStatus === 'lost' && this.wreckT === -1 && this.lostT > 0.9) this.wreck();      // the bulldozer rolls in while the plaque is still up
       if (this.wreckT >= 0) this.stepWreck(dt);
       const tS = this.now(), sw0 = this.swing ? this.swing.start : tS, top = this.landTop();
@@ -339,6 +340,20 @@
       for (const d of this.debris) { g.save(); g.globalAlpha = clamp(d.life / 0.35); g.translate(this.X(d.x), this.Y(d.y)); g.rotate(d.rot); g.fillStyle = d.col; const z = d.s * this.ppu; g.fillRect(-z / 2, -z / 2, z, z * 0.7); g.restore(); }
       for (const p of this.puffs) { const a = clamp(p.life / p.max), x = this.X(p.x), y = this.Y(p.y), r = p.r * ppu, gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(255,255,255,${0.95 * a})`); gr.addColorStop(0.6, `rgba(250,250,250,${0.7 * a})`); gr.addColorStop(1, 'rgba(240,240,240,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); }
       for (const p of this.pops) { const k = 1 - p.life / p.max, y = this.Y(p.y0 + 1.6 * (1 - Math.pow(1 - k, 2))), x = this.X(p.x), sc = 1 + 0.4 * Math.sin(clamp(k * 4) * Math.PI); g.save(); g.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3; g.translate(x, y); g.scale(sc, sc); g.font = "800 28px 'Unbounded',system-ui,sans-serif"; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(110,55,0,.95)'; g.strokeText(p.txt, 0, 0); const tg = g.createLinearGradient(0, -14, 0, 14); tg.addColorStop(0, '#fff2a0'); tg.addColorStop(0.5, '#ffc533'); tg.addColorStop(1, '#ff9a14'); g.fillStyle = tg; g.fillText(p.txt, 0, 0); g.restore(); }
+      if (this.titleA > 0.01) {                                  // sky title on entering the game; fades out when Play is pressed
+        const a = this.titleA, bob = Math.sin(t * 1.6) * 3, cx = w / 2, fs1 = Math.min(w * 0.17, 66), fs2 = fs1 * 0.62, y1 = h * 0.22 + bob, y2 = y1 + fs1 * 0.78;
+        g.save(); g.globalAlpha = a; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+        const line = (txt, y, fs, c0, c1, c2) => {
+          g.font = `800 ${fs}px 'Unbounded',system-ui,sans-serif`;
+          g.shadowColor = 'rgba(20,50,110,.55)'; g.shadowBlur = 18; g.shadowOffsetY = 6; g.strokeStyle = 'rgba(70,20,10,.9)'; g.lineWidth = fs * 0.2; g.strokeText(txt, cx, y);
+          g.shadowColor = 'transparent'; g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = fs * 0.07; g.strokeText(txt, cx, y);
+          const gr = g.createLinearGradient(0, y - fs * 0.5, 0, y + fs * 0.5); gr.addColorStop(0, c0); gr.addColorStop(0.55, c1); gr.addColorStop(1, c2); g.fillStyle = gr; g.fillText(txt, cx, y);
+          const sx = ((t * 0.45) % 1.6 - 0.3) * w; g.save(); g.globalCompositeOperation = 'source-atop'; const sh = g.createLinearGradient(sx - 40, 0, sx + 40, 0); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.55)'); sh.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = sh; g.fillRect(0, y - fs, w, fs * 2); g.restore();
+        };
+        line('NOVA', y1, fs1, '#fff6b0', '#ffc233', '#ff8a14');
+        line('БАШНИ', y2, fs2, '#ffd1c2', '#ff5a4a', '#c8202a');
+        g.restore();
+      }
       const vg = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.max(w, h) * 0.75); vg.addColorStop(0, 'rgba(0,30,70,0)'); vg.addColorStop(1, 'rgba(0,30,70,.22)'); g.fillStyle = vg; g.fillRect(0, 0, w, h);
       g.restore();
     }
