@@ -96,16 +96,16 @@
   // ------------------------------------------------------------------ trees: silver birch and linden
   function tree(kind, ppu) {
     return once('tree' + kind + '@' + ppu, () => fromPhoto(kind, 2.4, ppu) || (() => {
-      const k = ppu * DPR, W = 2.6 * k, Ht = 4.6 * k, [c, g] = mk(W, Ht), r = rng(kind === 'birch' ? 11 : 29), cx = W / 2, birch = kind === 'birch';
-      g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(cx + 0.1 * k, Ht - 2, 0.7 * k, 0.07 * k, 0, 0, 6.283); g.fill();
+      const k = ppu * DPR, W = 3.8 * k, Ho = 4.6 * k, Ht = Ho + 1.4 * k, [c, g] = mk(W, Ht), r = rng(kind === 'birch' ? 11 : 29), cx = W / 2, birch = kind === 'birch'; g.translate(0, 1.4 * k);
+      g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(cx + 0.1 * k, Ho - 2, 0.7 * k, 0.07 * k, 0, 0, 6.283); g.fill();
       // trunk
-      const tw = (birch ? 0.11 : 0.17) * k, ty = Ht - 0.02 * k, tt = Ht * (birch ? 0.3 : 0.4);
+      const tw = (birch ? 0.11 : 0.17) * k, ty = Ho - 0.02 * k, tt = Ho * (birch ? 0.3 : 0.4);
       let gr = g.createLinearGradient(cx - tw, 0, cx + tw, 0); if (birch) { gr.addColorStop(0, '#cfcfc8'); gr.addColorStop(0.4, '#f6f5ef'); gr.addColorStop(1, '#a9a99f'); } else { gr.addColorStop(0, '#4a3a2a'); gr.addColorStop(0.4, '#7a634a'); gr.addColorStop(1, '#33281c'); }
       g.fillStyle = gr; g.beginPath(); g.moveTo(cx - tw, ty); g.quadraticCurveTo(cx - tw * 0.7, (ty + tt) / 2, cx - tw * 0.55, tt); g.lineTo(cx + tw * 0.55, tt); g.quadraticCurveTo(cx + tw * 0.7, (ty + tt) / 2, cx + tw, ty); g.fill();
       if (birch) { g.fillStyle = '#2a2a2a'; for (let i = 0; i < 18; i++) { const y = tt + r() * (ty - tt), w = tw * (0.5 + r() * 1.1), x = cx - tw * 0.9 + r() * tw * 1.2; g.fillRect(x, y, w, 0.014 * k + r() * 0.012 * k); } }
       else { g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1; for (let i = 0; i < 26; i++) { const x = cx - tw * 0.85 + r() * tw * 1.7; g.beginPath(); g.moveTo(x, ty); g.lineTo(x + (r() - 0.5) * 6, tt + r() * 60); g.stroke(); } }
       // branches
-      g.strokeStyle = birch ? '#8d8d82' : '#4a3a2a'; g.lineCap = 'round'; for (let i = 0; i < 7; i++) { const y = tt + i * (Ht * 0.06), s = i % 2 ? 1 : -1; g.lineWidth = tw * 0.4; g.beginPath(); g.moveTo(cx, y + 20); g.quadraticCurveTo(cx + s * 0.3 * k, y - 0.1 * k, cx + s * (0.6 + r() * 0.3) * k, y - 0.55 * k); g.stroke(); }
+      g.strokeStyle = birch ? '#8d8d82' : '#4a3a2a'; g.lineCap = 'round'; for (let i = 0; i < 7; i++) { const y = tt + i * (Ho * 0.06), s = i % 2 ? 1 : -1; g.lineWidth = tw * 0.4; g.beginPath(); g.moveTo(cx, y + 20); g.quadraticCurveTo(cx + s * 0.3 * k, y - 0.1 * k, cx + s * (0.6 + r() * 0.3) * k, y - 0.55 * k); g.stroke(); }
       // foliage: thousands of small leaves in clusters, shaded by height and by cluster depth
       const base = birch ? ['#4f8f2e', '#6bb23a', '#92d24f', '#b6e56a'] : ['#2f6f2a', '#3f8a35', '#5aa845', '#7fc65a'];
       const clusters = birch ? [[0, -0.5, 0.62], [-0.55, -0.2, 0.5], [0.55, -0.1, 0.52], [-0.3, -1.2, 0.5], [0.35, -1.3, 0.5], [0, -1.75, 0.42], [-0.7, -0.9, 0.38], [0.75, -0.8, 0.4]] : [[0, -0.6, 0.85], [-0.75, -0.2, 0.62], [0.75, -0.25, 0.64], [-0.45, -1.35, 0.62], [0.45, -1.4, 0.62], [0, -1.9, 0.5]];
@@ -113,7 +113,7 @@
       const clamp01 = (v) => Math.max(0, Math.min(0.999, v));
       for (const [dx, dy, rr] of clusters) { g.fillStyle = 'rgba(20,50,15,.35)'; g.beginPath(); g.ellipse(cx + dx * k + 0.03 * k, fy0 + dy * k + 0.05 * k, rr * k, rr * k * 0.9, 0, 0, 6.283); g.fill(); drawLeaves(cx + dx * k, fy0 + dy * k, rr * k, 0.5); }
       for (const [dx, dy, rr] of clusters) drawLeaves(cx + dx * k, fy0 + dy * k - 0.04 * k, rr * k * 0.72, 0);
-      return { cv: c, w: W / DPR, h: Ht / DPR, anchorX: cx / DPR };
+      return { cv: c, w: W / DPR, h: Ht / DPR, anchorX: cx / DPR, tree: true, crownY: 1.4 * k / DPR };
     })());
   }
 

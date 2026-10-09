@@ -291,7 +291,7 @@
       const { ppu } = this, c = TowerProps.city(layer, ppu, 30), off = (this.camBottom + 0.7) * ppu * par, by = this.Y(0) - off + 0.25 * ppu, y = by - c.base;
       if (y > this.h) return; g.drawImage(c.cv, this.X(-15), y, c.w, c.h);
     }
-    sprite(g, s, wx, baseY, flip = false) { const ax = s.anchorX != null ? s.anchorX : s.w / 2; g.save(); g.translate(this.X(wx), baseY); if (flip) g.scale(-1, 1); g.drawImage(s.cv, -ax, -s.h, s.w, s.h); g.restore(); }
+    sprite(g, s, wx, baseY, flip = false, sway = 0) { const ax = s.anchorX != null ? s.anchorX : s.w / 2; g.save(); g.translate(this.X(wx), baseY); if (flip) g.scale(-1, 1); if (sway) g.transform(1, 0, sway, 1, 0, 0); g.drawImage(s.cv, -ax, -s.h, s.w, s.h); g.restore(); }
     draw(g, t) {
       this._t = t;
       const { w, h, ppu } = this, cam = this.camBottom;
@@ -338,7 +338,9 @@
     props(g, gy) {                                  // behind the tower: site fence, trees, park lamp
       const { ppu } = this, P = TowerProps, f = P.fence(ppu);
       for (let i = -2; i <= 1; i++) this.sprite(g, f, i * 3.2 + 1.6, gy + 0.12 * ppu);
-      this.sprite(g, P.tree('birch', ppu), -3.15, gy + 0.05 * ppu); this.sprite(g, P.tree('linden', ppu), 3.35, gy + 0.05 * ppu);
+      const tt = this._t || 0, gust = 0.5 + 0.5 * Math.sin(tt * 0.5);       // wind: slow sway plus a gust; the crown leans more than the trunk base
+      this.sprite(g, P.tree('birch', ppu), -3.15, gy + 0.05 * ppu, false, (Math.sin(tt * 1.7) * 0.022 + Math.sin(tt * 3.1 + 1) * 0.008) * (0.6 + gust));
+      this.sprite(g, P.tree('linden', ppu), 3.35, gy + 0.05 * ppu, false, (Math.sin(tt * 1.3 + 2) * 0.018 + Math.sin(tt * 2.7) * 0.007) * (0.6 + gust));
       const l = P.lamp(ppu); this.sprite(g, l, -2.95 + (l.anchorX != null ? 0 : 0), gy + 0.02 * ppu);
     }
     // the foreman and his speaker on the ground in front: he sways to the beat, the speaker cone pumps and notes float up
