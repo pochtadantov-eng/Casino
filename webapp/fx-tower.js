@@ -235,7 +235,7 @@
       for (const p of this.puffs) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.r += dt * 0.5; } this.puffs = this.puffs.filter((p) => p.life > 0);
       for (const d of this.debris) { d.vy -= 16 * dt; d.x += d.vx * dt; d.y += d.vy * dt; d.rot += d.vr * dt; d.life -= dt; if (d.y < 0.02) { d.y = 0.02; d.vy *= -0.3; d.vx *= 0.6; } } this.debris = this.debris.filter((d) => d.life > 0);
       for (const p of this.pops) p.life -= dt; this.pops = this.pops.filter((p) => p.life > 0);
-      for (const c of this.clouds) { c.x += c.v * dt; if (c.x > 9) c.x = -9; }
+      for (const c of this.clouds) { c.x += c.v * dt * (1 + (this.windA || 0) * 9); if (c.x > 9) c.x = -9; }
       for (const b of this.birds) { b.t += dt; b.x += b.v * dt; if (b.x > 9) { b.x = -9; b.y = rand(5.5, 9); } }
     }
     // the stack cannot carry the new weight: everything above level j slides off the weak house, tumbling to the side of the lean
@@ -412,16 +412,22 @@
         else { if (this.heliOff > 0) { this.heliOff = -W * 0.95; } this.heliV = 0; this.heliOff += (0 - this.heliOff) * Math.min(1, hdt * 1.5) + (this.heliOff < -2 ? 1.5 : 0); }
         this.hvel = (this.hvel || 0) + (((this.heliOff - (this.hprev ?? this.heliOff)) / Math.max(hdt, 1e-3)) - (this.hvel || 0)) * Math.min(1, hdt * 6); this.hprev = this.heliOff; }
       const ta = this.heliOff > 0 ? base * clamp(1 - this.heliOff / (w * 0.95)) : base;   // starts invisible and fades in over the ~4 s song intro; then stays until Play is pressed
+      { const hdt2 = Math.min(0.05, Math.max(0, t - (this.wlt ?? t))); this.wlt = t; this.windA = (this.windA || 0) + ((ta > 0.01 ? 1 : 0) - (this.windA || 0)) * Math.min(1, hdt2 * 2.5);
+        if (this.windA > 0.02) {                                  // strong wind while the helicopter is here: fast streaks across the whole scene
+          this.streaks = this.streaks || [];
+          if (Math.random() < this.windA * hdt2 * 38) this.streaks.push({ x: -0.2 * w, y: rand(0.04, 0.82) * h, len: rand(0.1, 0.3) * w, sp: rand(0.9, 1.7) * w, a: rand(0.25, 0.55), lw: rand(0.8, 1.8) });
+          g.save(); g.lineCap = 'round';
+          for (const q of this.streaks) { q.x += q.sp * hdt2; g.strokeStyle = `rgba(255,255,255,${q.a * this.windA})`; g.lineWidth = q.lw; g.beginPath(); g.moveTo(q.x - q.len, q.y); g.lineTo(q.x, q.y + Math.sin(q.x * 0.02) * 2); g.stroke(); }
+          g.restore(); this.streaks = this.streaks.filter((q) => q.x - q.len < w);
+        } else this.streaks = []; }
       if (ta > 0.01) {
         const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.4, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
         // the helicopter flies in from the left, hovers and holds the title on two ropes; when the round starts it flies away to the right with it
-        const hs = Math.min(w * 0.044, 23), bob = Math.sin(t * 1.4) * 3 + Math.sin(t * 2.3) * 1.2;
+        const hs = Math.min(w * 0.044, 23), bob = Math.sin(t * 1.4) * 5 + Math.sin(t * 2.9) * 3 + Math.sin(t * 6.1) * 0.8;
         const hx = cx - 1.2 * hs + this.heliOff, hy = h * 0.155 + bob - clamp(this.heliOff / w) * h * 0.05, dx = this.heliOff, dy = bob - clamp(this.heliOff / w) * h * 0.05;
-        const swing = Math.sin(t * 1.3) * 0.022 + clamp((this.hvel || 0) / w * 0.12, -0.14, 0.14), topY = y1 - fs1 * 0.58, halfW = fs1 * 1.55, ropeY = hy + 2.15 * hs;
+        const swing = Math.sin(t * 1.3) * 0.045 + Math.sin(t * 3.1) * 0.018 + clamp((this.hvel || 0) / w * 0.12, -0.14, 0.14), topY = y1 - fs1 * 0.58, halfW = fs1 * 1.55, ropeY = hy + 2.15 * hs;
         const xf = (px, py) => { const c = Math.cos(swing), sn = Math.sin(swing), ax = px - cx, ay = py - topY; return [cx + dx + ax * c - ay * sn, topY + dy + ax * sn + ay * c]; };
-        g.save(); g.globalAlpha = ta; this.drawHeli(g, hx, hy, hs, t); g.strokeStyle = 'rgba(40,36,34,.9)'; g.lineWidth = 1.6;
-        for (const [rx, ax] of [[hx - 1.0 * hs, -halfW], [hx + 2.3 * hs, halfW]]) { const [tx, ty] = xf(cx + ax, topY + 4); g.beginPath(); g.moveTo(rx, ropeY); g.quadraticCurveTo((rx + tx) / 2 + Math.sin(t * 2 + ax) * 2, (ropeY + ty) / 2 + 3, tx, ty); g.stroke(); g.fillStyle = '#2b2622'; g.beginPath(); g.arc(tx, ty, 2.6, 0, 6.283); g.fill(); }
-        g.restore();
+        g.save(); g.globalAlpha = ta; this.drawHeli(g, hx, hy, hs, t); g.restore();
         if (!this.tcv || this.tcv.width !== g.canvas.width || this.tcv.height !== g.canvas.height) { this.tcv = document.createElement('canvas'); this.tcv.width = g.canvas.width; this.tcv.height = g.canvas.height; }
         const oc = this.tcv.getContext('2d'); oc.setTransform(1, 0, 0, 1, 0, 0); oc.clearRect(0, 0, oc.canvas.width, oc.canvas.height); oc.setTransform(DP);
         const lines = [['NOVA', y1, fs1, ['#fff6b0', '#ffc233', '#ff8a14']], ['БАШНИ', y2, fs2, ['#ffd1c2', '#ff5a4a', '#c8202a']]];
@@ -440,6 +446,14 @@
         const sx = ((t * 0.5) % 1.7 - 0.35) * w, sh = oc.createLinearGradient(sx - 36, y1 - 40, sx + 36, y1 + 120); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.75)'); sh.addColorStop(1, 'rgba(255,255,255,0)'); oc.fillStyle = sh; oc.fillRect(0, 0, w, h); oc.globalCompositeOperation = 'source-over';
         o2.setTransform(1, 0, 0, 1, 0, 0); o2.drawImage(this.tcv, 0, 0);       // outline + fill merged into one layer, so fading never shows the outline through the letters
         g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = ta; { const k = DP.a; g.translate((cx + dx) * k, (topY + dy) * k); g.rotate(swing); g.translate(-cx * k, -topY * k); } g.drawImage(this.tcv2, 0, 0); g.restore();
+        // two ropes from the skid struts to rings on top of the first and last letter (they follow the swaying title)
+        g.save(); g.globalAlpha = ta; g.lineCap = 'round';
+        for (const [rx, L] of [[hx - 1.0 * hs, letters[0]], [hx + 2.3 * hs, letters[3]]]) {
+          const [tx, ty] = xf(L.x, L.y - L.fs * 0.5 - 3), mx = (rx + tx) / 2 + Math.sin(t * 2.4 + rx) * 3, my = (ropeY + ty) / 2 + 4;
+          g.strokeStyle = 'rgba(30,26,24,.95)'; g.lineWidth = 1.8; g.beginPath(); g.moveTo(rx, ropeY); g.quadraticCurveTo(mx, my, tx, ty); g.stroke();
+          g.strokeStyle = '#c9ccd2'; g.lineWidth = 1.6; g.beginPath(); g.arc(tx, ty - 1, 3, 0, 6.283); g.stroke();
+        }
+        g.restore();
       }
       if (this.loadStart == null) this.loadStart = Date.now();
       const lp = (Date.now() - this.loadStart) / 5000;
@@ -586,7 +600,9 @@
     // a dark-red helicopter (side view, nose to the right, sliding door open, a guy in the doorway waving). s = pixels per unit, the hull is ~14 units long
     drawHeli(g, x, y, s, t) {
       g.save(); g.translate(x, y); g.scale(s, s); g.lineJoin = 'round'; g.lineCap = 'round';
-      const rot = t * 40;                                              // rotor phase
+      const rot = t * 70;                                              // rotor phase (fast)
+      g.rotate(Math.sin(t * 1.9) * 0.03 + Math.sin(t * 4.3) * 0.012 + Math.sin(t * 9) * 0.004);      // the wind rocks the helicopter
+      g.translate(Math.sin(t * 5.3) * 0.05, Math.sin(t * 7.1) * 0.04);
       // shadow-free: skids first
       g.strokeStyle = '#5a1015'; g.lineWidth = 0.26;
       g.beginPath(); g.moveTo(-2.7, 2.15); g.lineTo(3.0, 2.15); g.quadraticCurveTo(3.7, 2.15, 3.9, 1.7); g.stroke();
@@ -595,17 +611,16 @@
       let gr = g.createLinearGradient(0, -1, 0, 1); gr.addColorStop(0, '#a3202a'); gr.addColorStop(1, '#4e0d12');
       g.fillStyle = gr; g.beginPath(); g.moveTo(-2.2, -0.9); g.lineTo(-8.3, -1.0); g.lineTo(-8.3, -0.35); g.lineTo(-2.2, 0.8); g.closePath(); g.fill();
       g.fillStyle = '#8c1a22'; g.beginPath(); g.moveTo(-7.4, -1.0); g.lineTo(-8.5, -3.3); g.lineTo(-9.0, -3.2); g.lineTo(-8.5, -0.4); g.closePath(); g.fill();
-      g.fillStyle = '#5a1015'; g.beginPath(); g.ellipse(-6.2, -0.45, 0.9, 0.16, 0, 0, 6.283); g.fill();
+      g.fillStyle = '#7a141b'; g.beginPath(); g.moveTo(-7.0, -0.55); g.lineTo(-5.6, -0.62); g.lineTo(-5.2, -0.25); g.lineTo(-7.3, -0.3); g.closePath(); g.fill();      // horizontal stabiliser
       g.strokeStyle = 'rgba(30,30,34,.85)'; g.lineWidth = 0.14; const tl = 1.2 * Math.cos(rot * 1.7); g.beginPath(); g.moveTo(-8.2, -1.9 - tl); g.lineTo(-8.2, -1.9 + tl); g.stroke();
-      g.fillStyle = '#2b2b30'; g.beginPath(); g.arc(-8.2, -1.9, 0.18, 0, 6.283); g.fill();
       // fuselage
       gr = g.createLinearGradient(0, -2.4, 0, 1.4); gr.addColorStop(0, '#c4303a'); gr.addColorStop(0.45, '#8f1a22'); gr.addColorStop(1, '#4a0c11');
       g.fillStyle = gr; g.beginPath(); g.moveTo(-2.6, 0.7); g.lineTo(-2.6, -0.8); g.quadraticCurveTo(-2.4, -2.1, -0.9, -2.3); g.lineTo(1.6, -2.3); g.quadraticCurveTo(3.1, -2.1, 3.7, -0.7);
       g.quadraticCurveTo(5.2, -0.1, 5.5, 0.5); g.quadraticCurveTo(5.4, 1.1, 4.5, 1.2); g.lineTo(0.5, 1.45); g.quadraticCurveTo(-2.4, 1.4, -2.6, 0.7); g.closePath(); g.fill();
       g.strokeStyle = 'rgba(20,4,6,.7)'; g.lineWidth = 0.1; g.stroke();
       g.strokeStyle = 'rgba(255,190,190,.38)'; g.lineWidth = 0.14; g.beginPath(); g.moveTo(-1.8, -1.8); g.quadraticCurveTo(0.5, -2.35, 2.9, -1.7); g.stroke();          // roof glint
-      g.fillStyle = '#3a0a0e'; g.beginPath(); g.ellipse(-0.7, -2.55, 1.5, 0.45, 0, 0, 6.283); g.fill();                                                                // engine hump
-      g.fillStyle = '#1d1d22'; g.beginPath(); g.ellipse(-2.1, -1.55, 0.55, 0.38, 0, 0, 6.283); g.fill();                                                               // exhaust
+      g.fillStyle = '#7c1820'; g.beginPath(); g.moveTo(-1.7, -2.28); g.quadraticCurveTo(-1.5, -2.7, -1.0, -2.72); g.lineTo(0.9, -2.72); g.quadraticCurveTo(1.4, -2.65, 1.6, -2.28); g.closePath(); g.fill(); g.strokeStyle = 'rgba(20,4,6,.6)'; g.lineWidth = 0.08; g.stroke();      // rotor fairing, one piece with the roof
+      g.strokeStyle = 'rgba(25,5,8,.75)'; g.lineWidth = 0.09; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(-2.3, -1.5 + i * 0.22); g.lineTo(-1.8, -1.5 + i * 0.22); g.stroke(); }      // engine vents
       // cabin windows
       for (const [wx0, ww] of [[-1.7, 1.3], [-0.1, 1.3]]) { g.fillStyle = '#2d4a58'; g.fillRect(wx0, -1.2, ww, 1.1); g.fillStyle = 'rgba(190,230,245,.35)'; g.fillRect(wx0 + 0.1, -1.15, ww * 0.35, 0.5); }
       // open door: an opening inside the fuselage contour, cream interior, the cartoon builder standing in it and waving (everything clipped to the opening)
@@ -623,7 +638,6 @@
       g.fillStyle = '#8fc4dc'; g.beginPath(); g.moveTo(3.45, -1.6); g.quadraticCurveTo(4.5, -1.1, 5.1, 0.0); g.lineTo(3.55, 0.05); g.closePath(); g.fill();
       g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.moveTo(3.7, -1.3); g.lineTo(4.3, -0.9); g.lineTo(3.8, -0.1); g.closePath(); g.fill();
       g.save(); g.fillStyle = '#f1ece6'; g.font = 'italic 800 0.78px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.transform(1, 0, -0.18, 1, 0, 0); g.fillText('Nova', -0.55, 0.66); g.restore();      // livery on the side under the windows
-      g.fillStyle = '#ff3b3b'; g.beginPath(); g.arc(0.6, -2.35, 0.1, 0, 6.283); g.fill();
       // main rotor: blur disc + blade streaks whose apparent length flickers as they spin
       g.fillStyle = 'rgba(160,170,180,.5)'; g.fillRect(0.12, -3.05, 0.16, 0.7); g.fillStyle = '#9aa0a8'; g.fillRect(-0.15, -3.3, 0.7, 0.28);
       g.fillStyle = 'rgba(30,34,40,.16)'; g.beginPath(); g.ellipse(0.2, -3.2, 7.8, 0.3, 0, 0, 6.283); g.fill();
