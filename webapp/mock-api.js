@@ -21,7 +21,8 @@
 
   // Tower (skill) - mirrors src/games/engines/tower.ts. The swing is a function of (server) time.
   const TW = { maxSteps: 20, spaceFrom: 10, spaceGrowth: 1.15, amp: 1.6, firstDelay: 3400, nextDelay: 2500, maxLat: 250, ladderP: 0.8 };
-  const twPeriod = (k) => (k < 3 ? 3000 - 150 * k : k < TW.spaceFrom ? 2550 - 130 * (k - 3) : Math.max(1050, 1700 - 70 * (k - TW.spaceFrom))), twTol = (k) => (k < 3 ? 0.3 - 0.016 * k : k < TW.spaceFrom ? 0.252 - 0.02 * (k - 3) : Math.max(0.05, 0.12 - 0.0075 * (k - TW.spaceFrom)));
+  const TW_EASY = !!window.EASY_TOWER || /[?&]easy(=|&|$)/.test(location.search);        // demo shortcut: every drop lands, to look at the space floors
+  const twPeriod = (k) => (k < 3 ? 3000 - 150 * k : k < TW.spaceFrom ? 2550 - 130 * (k - 3) : Math.max(1050, 1700 - 70 * (k - TW.spaceFrom))), twTol = (k) => TW_EASY ? 3 : (k < 3 ? 0.3 - 0.016 * k : k < TW.spaceFrom ? 0.252 - 0.02 * (k - 3) : Math.max(0.05, 0.12 - 0.0075 * (k - TW.spaceFrom)));
   const twX = (t, start, k) => TW.amp * Math.sin((2 * Math.PI * (t - start)) / twPeriod(k));
   const twMult = (n) => (n === 0 ? 1 : n <= TW.spaceFrom ? floor2((1 - EDGE) * Math.pow(1 / TW.ladderP, n)) : floor2((1 - EDGE) * Math.pow(1 / TW.ladderP, TW.spaceFrom) * Math.pow(TW.spaceGrowth, n - TW.spaceFrom)));
   const stepsCfg = {

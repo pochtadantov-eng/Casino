@@ -305,7 +305,7 @@
       const sunA = 1 - sp * 0.85;
       const sun = g.createRadialGradient(w * 0.8, h * 0.16, 2, w * 0.8, h * 0.16, w * 0.55); sun.addColorStop(0, `rgba(255,248,214,${0.95 * sunA})`); sun.addColorStop(0.18, `rgba(255,240,180,${0.55 * sunA})`); sun.addColorStop(1, 'rgba(255,240,180,0)'); g.fillStyle = sun; g.fillRect(0, 0, w, h);
       g.save(); g.globalAlpha = 1 - sp;
-      for (const c of this.clouds) { const span = h * 1.15, base = c.fy * h + (cam + 0.9) * ppu * c.z * 0.35, y = ((base % span) + span) % span - h * 0.07; this.cloud(g, this.X(c.x), y, c.s, 0.55 + c.z * 0.45); }
+      for (const c of this.clouds) { const span = h * 1.15, base = c.fy * h + (cam + 0.9) * ppu * c.z * 0.35, y = ((base % span) + span) % span - h * 0.07; if (sp < 0.98) this.cloud(g, this.X(c.x), y, c.s, (0.55 + c.z * 0.45) * (1 - sp)); }
       for (const b of this.birds) { const x = this.X(b.x), y = this.Y(b.y) - (cam + 0.9) * ppu * 0.3, f = Math.sin(b.t * 9) * 4; g.strokeStyle = 'rgba(20,50,90,.7)'; g.lineWidth = 1.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 7, y - f); g.quadraticCurveTo(x - 3, y - 4, x, y); g.quadraticCurveTo(x + 3, y - 4, x + 7, y - f); g.stroke(); }
       g.restore();
       this.cityLayer(g, 0, 0.16); this.cityLayer(g, 1, 0.3);
