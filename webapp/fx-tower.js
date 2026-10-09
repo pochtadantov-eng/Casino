@@ -432,7 +432,7 @@
       }
     }
     propsSide(g, gy) {                              // bricks on a pallet + right cone: the bulldozer drives in front of these
-      const { ppu } = this, P = TowerProps; this.sprite(g, P.pallet(ppu), 3.0, gy + 0.15 * ppu); this.sprite(g, P.cone(ppu), 2.4, gy + 0.15 * ppu);
+      const { ppu } = this, P = TowerProps; this.sprite(g, P.cone(ppu), 2.4, gy + 0.15 * ppu);
     }
     propsFront(g, gy) {                             // foreman, speaker and left cone: in front of the bulldozer lane
       const { ppu } = this; this.drawCrew(g, gy, this._t || 0); this.sprite(g, TowerProps.cone(ppu), -2.85, gy + 0.15 * ppu);
@@ -440,13 +440,19 @@
     drawRamps(g, gy, a) {                       // two plank ramps up to the platform: the bulldozer drives up one side and down the other
       const u = this.ppu, base = gy + 0.15 * u, top = (SLAB_H + 0.15) * u, xl = this.X(-SLAB_W / 2), xr = this.X(SLAB_W / 2), L = RAMP * u;
       g.save(); g.globalAlpha = a;
-      const ramp = (x0, x1, up) => {            // x0 = foot on the ground, x1 = top edge on the platform
+      const ramp = (x0, x1) => {                 // x0 = foot on the ground, x1 = edge flush with the platform; poured concrete like the platform: sloped top face + front face
+        const dp = 0.2 * u, dir = x1 > x0 ? 1 : -1;           // visual depth of the deck seen slightly from above
         g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse((x0 + x1) / 2, base + 1, Math.abs(x1 - x0) / 2, 3, 0, 0, 6.283); g.fill();
-        const gr = g.createLinearGradient(0, base - top, 0, base); gr.addColorStop(0, '#c99a5b'); gr.addColorStop(1, '#8a6232'); g.fillStyle = gr;
-        g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - top); g.lineTo(x1, base); g.closePath(); g.fill(); g.strokeStyle = 'rgba(50,30,10,.7)'; g.lineWidth = 1.5; g.stroke();
-        g.strokeStyle = 'rgba(50,30,10,.45)'; g.lineWidth = 1; for (let i = 1; i < 6; i++) { const f = i / 6, x = x0 + (x1 - x0) * f; g.beginPath(); g.moveTo(x, base); g.lineTo(x, base - top * f); g.stroke(); }
+        let gr = g.createLinearGradient(0, base - top, 0, base); gr.addColorStop(0, '#a29c91'); gr.addColorStop(1, '#6b665c'); g.fillStyle = gr;          // front face (a wedge)
+        g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - top); g.lineTo(x1, base); g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(40,36,30,.35)'; g.lineWidth = 1; for (let i = 1; i < 4; i++) { const f = i / 4, x = x0 + (x1 - x0) * f; g.beginPath(); g.moveTo(x, base); g.lineTo(x, base - top * f); g.stroke(); }
+        gr = g.createLinearGradient(0, base - top - dp, 0, base); gr.addColorStop(0, '#e2dccf'); gr.addColorStop(1, '#c6bfb1'); g.fillStyle = gr;                  // sloped top face
+        g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - top); g.lineTo(x1, base - top - dp); g.lineTo(x0 + dir * 0.1 * u, base - dp); g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0 + dir * 0.1 * u, base - dp); g.lineTo(x1, base - top - dp); g.stroke();
+        g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - top); g.stroke();
+        g.fillStyle = 'rgba(0,0,0,.16)'; for (let i = 0; i < 6; i++) { const f = 0.15 + i * 0.14, x = x0 + (x1 - x0) * f; g.beginPath(); g.arc(x, base - top * f * 0.35 - dp * 0.5, 1 + (i % 3) * 0.5, 0, 6.283); g.fill(); }
       };
-      ramp(xl - L, xl, true); ramp(xr + L, xr, false); g.restore();
+      ramp(xl - L, xl); ramp(xr + L, xr); g.restore();
     }
     drawTractor(g, wx, gy) {
       const u = this.ppu, x = this.X(wx), bob = Math.sin(this.tw * 3.1) * 0.012 * u;
