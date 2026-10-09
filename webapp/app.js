@@ -7,7 +7,7 @@ const state = { game: 'rocket', round: null, balance: 0, limits: { minBet: 1, ma
 const RU_ERR = {
   'No active round': 'Раунд уже завершён', 'Insufficient balance': 'Недостаточно звёзд на балансе', 'Finish your current round first': 'Сначала завершите текущий раунд',
   'Open at least one tile': 'Откройте хотя бы одну плитку', 'Make at least one move': 'Сделайте хотя бы один ход', 'Tile already open': 'Плитка уже открыта',
-  'Unknown game': 'Игра не найдена', 'Bad tile': 'Неверная плитка', 'Bad choice': 'Неверный выбор', 'Unknown variant': 'Неверная сложность', 'Bad auto cashout': 'Неверный авто-вывод',
+  'Unknown game': 'Игра не найдена', 'Bad tile': 'Неверная плитка', 'Bad choice': 'Неверный выбор', 'Unknown variant': 'Неверная сложность', 'Too early': 'Подождите, пока домик раскачается', 'Bad auto cashout': 'Неверный авто-вывод',
 };
 function ruError(m) {
   if (RU_ERR[m]) return RU_ERR[m];
@@ -17,6 +17,10 @@ function ruError(m) {
   return m;
 }
 async function api(path, body) {
+  const t0 = performance.now();
+  try { return await api0(path, body); } finally { const d = performance.now() - t0; state.rtt = state.rtt ? state.rtt * 0.7 + d * 0.3 : d; }
+}
+async function api0(path, body) {
   if (window.__mockApi) { try { return await window.__mockApi(path, body); } catch (e) { throw new Error(ruError(e.message)); } }
   const headers = { 'Content-Type': 'application/json' };
   if (tg?.initData) headers.Authorization = 'tma ' + tg.initData;
@@ -49,13 +53,14 @@ function askAmount(title, def) {
 const OPTS = {
   rocket: () => `<label>Авто-вывод (необязательно)</label><div class="row"><input id="auto" type="number" step="0.1" min="1.01" placeholder="например 2.0"></div>`,
   mines: () => `<label>Количество мин</label><div class="row"><select id="mines">${[1,2,3,5,8,10,15,20,24].map((n) => `<option ${n === 3 ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`,
-  tower: () => `<label>Сложность</label><div class="row"><select id="variant"><option value="easy">Лёгкая (1 из 4 плохой)</option><option value="medium" selected>Средняя (1 из 3)</option><option value="hard">Сложная (1 из 2)</option><option value="expert">Эксперт (2 из 3)</option></select></div>`,
+  tower: () => '',
+  towerOld: () => `<label>Сложность</label><div class="row"><select id="variant"><option value="easy">Лёгкая (1 из 4 плохой)</option><option value="medium" selected>Средняя (1 из 3)</option><option value="hard">Сложная (1 из 2)</option><option value="expert">Эксперт (2 из 3)</option></select></div>`,
   seagull: () => '',
 };
 const startParams = () => ({
   rocket: () => ({ autoCashout: $('#auto')?.value ? Number($('#auto').value) : undefined }),
   mines: () => ({ mines: Number($('#mines').value) }),
-  tower: () => ({ variant: $('#variant').value }),
+  tower: () => ({}),
   seagull: () => ({}),
 }[state.game]());
 
@@ -137,29 +142,15 @@ R.steps = (round) => {
   document.querySelectorAll('.floor button').forEach((b) => b.onclick = () => act({ choice: Number(b.dataset.c) }));
 };
 R.seagull = R.steps;
-let threeLoad;
-function ensureThree() {                                   // Three.js (600 KB) is only fetched when the Tower game is opened
-  if (window.THREE) return Promise.resolve();
-  threeLoad = threeLoad || new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'vendor/three.min.js' + (window.BUILD ? '?v=' + window.BUILD : ''); s.onload = res; s.onerror = rej; document.head.append(s); });
-  return threeLoad;
-}
-R.tower = (round) => {                       // 3D construction site; the server still decides every step
+R.tower = (round) => {                       // flat construction-site scene; the server decides every step
   const st = $('#stage');
   if (!state.tscene && !state.tpending) {
-    state.tpending = true; st.classList.add('towerstage');
-    const mount = () => { st.innerHTML = '<canvas class="cv" id="cv-tgame"></canvas>'; return $('#cv-tgame'); };
-    let canvas = mount();
-    const done = (sc, cv) => {
-      state.tpending = false; if (!st.contains(cv)) return; state.tscene = sc;
-      const hint = document.createElement('div'); hint.className = 'taphint'; hint.textContent = 'Тапни по экрану, чтобы поставить'; st.append(hint);
-      sc.onReady = (ok) => { $('#cash').disabled = !ok; hint.classList.toggle('on', ok); };
-      cv.addEventListener('pointerdown', (e) => { e.preventDefault(); if (state.tscene === sc && sc._ready && sc.tap()) { $('#cash').disabled = true; hint.classList.remove('on'); act({ choice: 0 }); } });
-      sc.sync(state.round);
-    };
-    ensureThree().then(() => {
-      let sc; try { sc = new TowerGame3D(canvas); } catch (e) { console.warn('WebGL unavailable, using the 2D scene', e); canvas = mount(); sc = new TowerGame2D(canvas); }
-      done(sc, canvas);
-    }).catch(() => { canvas = mount(); done(new TowerGame2D(canvas), canvas); });
+    state.tpending = true; st.classList.add('towerstage'); st.innerHTML = '<canvas class="cv" id="cv-tgame"></canvas>';
+    const cv = $('#cv-tgame'), sc = new TowerGame(cv), hint = document.createElement('div');
+    hint.className = 'taphint'; hint.textContent = 'Тапни по экрану, чтобы поставить'; st.append(hint);
+    state.tpending = false; state.tscene = sc;
+    sc.onReady = (ok) => { $('#cash').disabled = !ok; hint.classList.toggle('on', ok); };
+    cv.addEventListener('pointerdown', (e) => { e.preventDefault(); if (state.tscene === sc && sc._ready && sc.tap()) { $('#cash').disabled = true; hint.classList.remove('on'); act({ tap: true, lat: Math.round((state.rtt || 80) / 2) }); } });
   }
   state.tscene?.sync(round);
 };

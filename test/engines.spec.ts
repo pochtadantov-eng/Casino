@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Rng, hashSeed } from '../src/fair/fair';
 import { crashPoint, multiplierAt, rocket } from '../src/games/engines/rocket';
 import { mines, minePositions, minesMultiplier } from '../src/games/engines/mines';
-import { seagull, stepsMultiplier, tower } from '../src/games/engines/steps';
+import { seagull, stepsMultiplier } from '../src/games/engines/steps';
+import { tower, swingX, tolAt, periodAt, towerMultiplier, TOWER } from '../src/games/engines/tower';
 import { verifyInitData } from '../src/auth/telegram-auth';
 import { createHmac } from 'node:crypto';
 
@@ -80,7 +81,6 @@ describe('mines', () => {
 });
 
 describe.each([
-  ['tower', tower, { variant: 'medium' }],
   ['seagull', seagull, {}],
 ])('%s', (_name, eng, params) => {
   it('RTP of "go 2 steps then cash out" is ~97%', () => {
@@ -122,5 +122,33 @@ describe('telegram initData', () => {
     expect(verifyInitData(params.toString(), 'other')).toBeNull();
     params.set('user', JSON.stringify({ id: 43 }));
     expect(verifyInitData(params.toString(), token)).toBeNull();
+  });
+});
+
+describe('tower (skill)', () => {
+  const start = () => tower.init({}, rng(1), 1_000_000).state;
+  it('rejects a tap before the swing is live', () => {
+    expect(() => tower.act(start(), { tap: true }, 1_000_100)).toThrow();
+  });
+  it('a tap at the centre crossing lands, the window shrinks, the next swing is delayed', () => {
+    const s = start(), t = s.swingStart + periodAt(0) / 2;                 // x = 0 exactly
+    expect(Math.abs(swingX(t, s.swingStart, 0))).toBeLessThan(1e-9);
+    const r = tower.act(s, { tap: true }, t);
+    expect(r.status).toBe('active'); expect(r.state.picks).toBe(1); expect(r.state.swingStart).toBe(t + TOWER.nextDelay); expect(r.multiplier).toBe(towerMultiplier(1));
+    expect(tolAt(5)).toBeLessThan(tolAt(0));
+  });
+  it('a tap at the extreme loses and reveals nothing hidden', () => {
+    const s = start(), t = s.swingStart + periodAt(0) / 4;                  // x = amp
+    const r = tower.act(s, { tap: true }, t);
+    expect(r.status).toBe('lost'); expect(r.state.last?.ok).toBe(false); expect(Math.abs(r.state.last!.x)).toBeCloseTo(TOWER.amp, 2);
+  });
+  it('compensates latency but only up to the cap', () => {
+    const s = start(), centre = s.swingStart + periodAt(0) / 2;
+    expect(tower.act(s, { tap: true, lat: 100 }, centre + 100).status).toBe('active');   // arrived 100 ms late, claims 100 ms latency
+    expect(tower.act(s, { tap: true, lat: 5000 }, centre + 600).status).toBe('lost');    // cannot claim more than maxLat
+  });
+  it('cash-out needs a landed house and pays the ladder', () => {
+    const s = start(); expect(() => tower.cashout(s, 0)).toThrow();
+    expect(tower.cashout({ ...s, picks: 3 }, 0).multiplier).toBe(towerMultiplier(3));
   });
 });

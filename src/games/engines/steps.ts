@@ -75,19 +75,6 @@ export function makeStepsEngine(cfg: StepsConfig): Engine<State> {
   };
 }
 
-/** Tower: build as high as you can. Harder variants = fewer safe blocks per floor. */
-export const tower = makeStepsEngine({
-  id: 'tower',
-  variants: {
-    easy: { choices: 4, bad: 1 },
-    medium: { choices: 3, bad: 1 },
-    hard: { choices: 2, bad: 1 },
-    expert: { choices: 3, bad: 2 },
-  },
-  defaultVariant: 'medium',
-  maxSteps: 10,
-});
-
 /** Seagull: it flies over 3 kids and snatches one. Guess a kid it will NOT take. The further, the bigger the x. */
 export const seagull = makeStepsEngine({
   id: 'seagull',

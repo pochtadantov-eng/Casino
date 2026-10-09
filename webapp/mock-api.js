@@ -19,8 +19,12 @@
   const save = () => { try { localStorage.setItem('demo-casino', JSON.stringify(db)); } catch {} };
   const fail = (m) => { throw new Error(m); };
 
+  // Tower (skill) - mirrors src/games/engines/tower.ts. The swing is a function of (server) time.
+  const TW = { maxSteps: 10, amp: 1.6, period0: 3000, periodStep: 150, periodMin: 1500, tol0: 0.30, tolStep: 0.016, tolMin: 0.13, firstDelay: 3400, nextDelay: 2500, maxLat: 250, ladderP: 0.8 };
+  const twPeriod = (k) => Math.max(TW.periodMin, TW.period0 - TW.periodStep * k), twTol = (k) => Math.max(TW.tolMin, TW.tol0 - TW.tolStep * k);
+  const twX = (t, start, k) => TW.amp * Math.sin((2 * Math.PI * (t - start)) / twPeriod(k));
+  const twMult = (n) => (n === 0 ? 1 : floor2((1 - EDGE) * Math.pow(1 / TW.ladderP, n)));
   const stepsCfg = {
-    tower: { variants: { easy: [4, 1], medium: [3, 1], hard: [2, 1], expert: [3, 2] }, def: 'medium', max: 10 },
     seagull: { variants: { classic: [3, 1] }, def: 'classic', max: 12 },
   };
   const stepsMult = (c, b, k) => (k === 0 ? 1 : floor2((1 - EDGE) * Math.pow(c / (c - b), k)));
@@ -31,6 +35,7 @@
   const view = (r, now) => {
     const s = r.state, done = r.status !== 'active';
     if (r.game === 'rocket') return { growth: GROWTH, startedAt: s.startedAt, serverNow: now, auto: s.auto, ...(done ? { crash: s.crash, cashedAt: s.cashedAt ?? null } : {}) };
+    if (r.game === 'tower') return { picks: s.picks, maxSteps: TW.maxSteps, last: s.last, serverNow: now, multipliers: Array.from({ length: TW.maxSteps }, (_, i) => twMult(i + 1)), swing: { start: s.swingStart, period: twPeriod(s.picks), amp: TW.amp, tol: twTol(s.picks) } };
     if (r.game === 'mines') return { count: s.count, revealed: s.revealed, size: SIZE, ...(done ? { mines: s.mines } : {}) };
     return { variant: s.variant, choices: s.choices, bad: s.bad, maxSteps: s.max, picks: s.picks,
       multipliers: Array.from({ length: s.max }, (_, i) => stepsMult(s.choices, s.bad, i + 1)), ...(done ? { deadly: s.deadly } : {}) };
@@ -63,8 +68,9 @@
     withdraw: (b) => { const a = Number(b.amount); if (a < LIMITS.minWithdraw) fail('Минимум ' + LIMITS.minWithdraw); if (a > db.balance) fail('Insufficient balance'); db.balance -= a; save(); return { id: 1, balance: db.balance }; },
   };
 
-  window.__mockApi = async (path, body) => {
-    await new Promise((r) => setTimeout(r, 60)); // feel like a network call
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  window.__mockApi = async (path, body) => { await sleep(30); const out = await handle(path, body); await sleep(30); return out; };      // symmetric 30 ms each way, like a real network
+  const handle = async (path, body) => {
     if (handlers[path]) return handlers[path](body || {});
     const g = path.split('/')[1], o = path.split('/')[2];
     if (!['rocket', 'mines', 'tower', 'seagull'].includes(g)) fail('Unknown game');
@@ -85,6 +91,8 @@
         const count = Number(body.mines); if (!Number.isInteger(count) || count < 1 || count > 24) fail('mines must be 1..24');
         const board = [...Array(SIZE).keys()]; for (let i = 0; i < count; i++) { const j = i + int(SIZE - i); [board[i], board[j]] = [board[j], board[i]]; }
         state = { count, mines: board.slice(0, count), revealed: [] };
+      } else if (g === 'tower') {
+        state = { picks: 0, swingStart: now + TW.firstDelay, last: null };
       } else {
         const c = stepsCfg[g], name = body.variant || c.def, v = c.variants[name]; if (!v) fail('Unknown variant');
         const deadly = Array.from({ length: c.max }, () => { const pool = [...Array(v[0]).keys()]; for (let i = 0; i < v[1]; i++) { const j = i + int(v[0] - i); [pool[i], pool[j]] = [pool[j], pool[i]]; } return pool.slice(0, v[1]); });
@@ -103,6 +111,14 @@
         s.revealed.push(t);
         if (s.mines.includes(t)) finish(r, 'lost', 0);
         else { r.multiplier = minesMult(s.count, s.revealed.length); if (s.revealed.length === SIZE - s.count) finish(r, 'won', r.multiplier); }
+      } else if (g === 'tower') {
+        if (body.tap) {
+          if (now < s.swingStart) fail('Too early');
+          const lat = Math.min(TW.maxLat, Math.max(0, Number(body.lat) || 0)), t = Math.max(s.swingStart, now - lat), x = twX(t, s.swingStart, s.picks), tol = twTol(s.picks), ok = Math.abs(x) <= tol;
+          s.last = { x: Math.round(x * 1000) / 1000, ok, tol };
+          if (!ok) finish(r, 'lost', 0);
+          else { s.picks++; r.multiplier = twMult(s.picks); s.swingStart = now + TW.nextDelay; if (s.picks >= TW.maxSteps) finish(r, 'won', r.multiplier); }
+        }
       } else {
         const c = Number(body.choice); if (!Number.isInteger(c) || c < 0 || c >= s.choices) fail('Bad choice');
         const step = s.picks.length; s.picks.push(c);
@@ -114,6 +130,7 @@
     if (o === 'cashout') {
       if (g === 'rocket') { settleRocket(r, now); if (r.status === 'active') { s.cashedAt = r.multiplier; finish(r, 'won', r.multiplier); } }
       else if (g === 'mines') { if (!s.revealed.length) fail('Open at least one tile'); finish(r, 'won', minesMult(s.count, s.revealed.length)); }
+      else if (g === 'tower') { if (s.picks < 1) fail('Make at least one move'); finish(r, 'won', twMult(s.picks)); }
       else { if (!s.picks.length) fail('Make at least one move'); finish(r, 'won', stepsMult(s.choices, s.bad, s.picks.length)); }
       return reply(r);
     }

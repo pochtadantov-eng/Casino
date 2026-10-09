@@ -261,3 +261,5 @@ button.place{flex:1.15;border:0;border-radius:14px;padding:16px 10px;font-size:1
   transition:opacity .25s,transform .25s}
 .taphint.on{opacity:1;transform:translate(-50%,0) scale(1);animation:hintpulse 1.5s ease-in-out infinite}
 @keyframes hintpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.35)}50%{box-shadow:0 0 0 8px rgba(255,255,255,0)}}
+
+.nogl{margin:auto;padding:24px;text-align:center;color:#334155;font-size:14px;line-height:1.5}
