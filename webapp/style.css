@@ -365,3 +365,14 @@ button.cash.dim{background:#3a3d46;color:rgba(255,255,255,.45)}
 .ptoast.on{transform:translate(-50%,0);opacity:1}
 .ptoast.ok{border-color:rgba(80,240,150,.55);color:#9bf5c4}.ptoast.wait{border-color:rgba(255,216,74,.5);color:#ffe27a}
 .hrow .hdate{display:block;font-size:11px;color:var(--hint);margin-top:2px}
+
+/* music volume */
+.sndbtn{margin-left:auto;margin-right:8px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#cfe0ff;border:1px solid rgba(255,255,255,.12);background:linear-gradient(135deg,rgba(80,120,255,.22),rgba(60,80,180,.1))}
+.sndbtn:active{transform:scale(.92)}
+body.ingame .sndbtn{display:none}
+.volrow{display:flex;align-items:center;gap:12px;margin:6px 0 18px}
+.volrow .vico{font-size:24px;width:30px;text-align:center}
+.volrow b{min-width:48px;text-align:right;font:800 16px/1 'Unbounded',system-ui,sans-serif;color:#fff;font-variant-numeric:tabular-nums}
+.volrow input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:8px;border-radius:5px;padding:0;border:0;background:linear-gradient(90deg,#5aa0ff var(--p,50%),rgba(255,255,255,.14) var(--p,50%))}
+.volrow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(90,160,255,.35),0 2px 8px rgba(0,0,0,.5)}
+.volrow input[type=range]::-moz-range-thumb{width:26px;height:26px;border:0;border-radius:50%;background:#fff}

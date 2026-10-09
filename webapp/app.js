@@ -186,23 +186,29 @@ R.seagull = R.steps;
 const Music = (() => {
   const LISTS = { tower: ['tower', 'tower2'] };      // the tower plays its first track, then the second, then starts over
   const pos = {};                                    // per section: where the music was left ({ idx, t }) so coming back resumes instead of restarting
-  let a = null, want = false, cur = null, idx = 0;
+  let a = null, want = false, cur = null, idx = 0, vol = 0.5, ctx = null, master = null;
+  // iOS ignores audio.volume, so the level goes through a Web Audio gain node (falls back to audio.volume where Web Audio is missing)
+  const ensureCtx = () => { if (ctx) return ctx; try { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; ctx = new AC(); master = ctx.createGain(); master.gain.value = vol; master.connect(ctx.destination); } catch { ctx = null; master = null; } return ctx; };
   const url = (n) => (window.MUSIC_SRC && window.MUSIC_SRC[n]) || `audio/${n}.mp3` + (window.BUILD ? '?v=' + window.BUILD : '');
   const list = () => LISTS[cur] || [cur];
   const save = () => { if (a && cur) pos[cur] = { idx, t: a.currentTime || 0 }; };
   const load = (startAt = 0) => {
-    a = new Audio(url(list()[idx])); a.loop = list().length === 1; a.volume = 0.5; a.onended = () => { if (!want) return; idx = (idx + 1) % list().length; load(); };
+    a = new Audio(url(list()[idx])); a.loop = list().length === 1; a.volume = vol;
+    if (ensureCtx()) { try { ctx.createMediaElementSource(a).connect(master); a.volume = 1; ctx.resume?.(); } catch { a.volume = vol; } }
+    a.onended = () => { if (!want) return; idx = (idx + 1) % list().length; load(); };
     if (startAt > 0.1) { const seek = () => { try { if (a.duration && startAt < a.duration - 1) a.currentTime = startAt; } catch {} }; a.addEventListener('loadedmetadata', seek, { once: true }); }
     a.play().catch(() => {});
   };
   // browsers only allow sound after a tap: the first tap starts whatever should be playing
-  document.addEventListener('pointerdown', () => { if (want && a && a.paused && !document.hidden) a.play().catch(() => {}); }, { capture: true });
+  document.addEventListener('pointerdown', () => { ctx?.resume?.(); if (want && a && a.paused && !document.hidden) a.play().catch(() => {}); }, { capture: true });
   return {
     play(name = 'tower') { try {
       if (a && cur === name) { want = true; a.play().catch(() => {}); return; }
       if (a) { save(); a.onended = null; a.pause(); a = null; }
       cur = name; const p = pos[name]; idx = p ? p.idx : 0; want = true; load(p ? p.t : 0);
     } catch {} },
+    setVolume(v) { vol = Math.min(1, Math.max(0, Number(v) || 0)); if (master) master.gain.setTargetAtTime(vol, ctx.currentTime, 0.03); else if (a) a.volume = vol; },
+    getVolume() { return vol; },
     time() { return a && want && cur === 'tower' && !a.paused && a.currentTime > 0 ? a.currentTime : null; },
     track() { return cur === 'tower' ? list()[idx] : null; },
     stop() { try { save(); want = false; if (a) { a.onended = null; a.pause(); a = null; } } catch {} },      // remembers the spot; the next play() of this section continues from it
@@ -386,3 +392,34 @@ function renderDebug(round) {
   else if (round.game === 'tower') html = `<div>Этаж: ${d.picks + 1}</div><div>Старт качания: ${new Date(d.swingStart).toLocaleTimeString()}</div><div>Период: ${d.period}мс · допуск: ±${d.tol.toFixed(3)}</div>`;
   body.innerHTML = html;
 }
+
+
+// ---------- music volume: a slider in the lobby, saved with a button, restored when the mini app is opened again ----------
+const VOL_KEY = 'nova.musicVolume';
+const volStore = {
+  get() { try { const v = localStorage.getItem(VOL_KEY); if (v !== null && v !== '') return Math.min(1, Math.max(0, Number(v))); } catch {} return null; },
+  set(v) { try { localStorage.setItem(VOL_KEY, String(v)); } catch {} try { tg?.CloudStorage?.setItem(VOL_KEY, String(v)); } catch {} },      // CloudStorage keeps it across devices / reinstalls
+};
+let savedVol = volStore.get() ?? 0.5;
+Music.setVolume(savedVol);
+if (volStore.get() === null) { try { tg?.CloudStorage?.getItem(VOL_KEY, (err, val) => { if (!err && val !== '' && val != null && volStore.get() === null) { savedVol = Math.min(1, Math.max(0, Number(val))); Music.setVolume(savedVol); } }); } catch {} }
+const paintSnd = () => { const v = Music.getVolume(); $('#snd-w1').style.opacity = v > 0.02 ? 1 : 0; $('#snd-w2').style.opacity = v > 0.5 ? 1 : 0; };
+paintSnd();
+function openVolume() {
+  if (document.querySelector('.volsheet')) return;
+  const d = document.createElement('div'); d.className = 'paysheet volsheet';
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><h3>Громкость музыки</h3><p class="psub">Применяется ко всей музыке в приложении.</p>
+    <div class="volrow"><span class="vico" id="v-mute">🔈</span><input type="range" id="v-range" min="0" max="100" step="1" value="${Math.round(Music.getVolume() * 100)}"><b id="v-val">0%</b></div>
+    <button class="primary pay" id="v-save">Сохранить</button><button class="plink" id="v-no">Отмена</button></div>`;
+  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
+  const r = d.querySelector('#v-range'), val = d.querySelector('#v-val'), ico = d.querySelector('#v-mute'), save = d.querySelector('#v-save');
+  const paint = () => { const p = Number(r.value); val.textContent = p + '%'; ico.textContent = p === 0 ? '🔇' : p < 40 ? '🔈' : p < 75 ? '🔉' : '🔊'; r.style.setProperty('--p', p + '%'); save.disabled = p / 100 === savedVol; save.textContent = save.disabled ? 'Сохранено' : 'Сохранить'; paintSnd(); };
+  r.oninput = () => { Music.setVolume(r.value / 100); paint(); };               // live preview while dragging
+  ico.onclick = () => { r.value = Number(r.value) === 0 ? 50 : 0; r.oninput(); };
+  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
+  const cancel = () => { Music.setVolume(savedVol); paintSnd(); close(); };                      // closing without saving puts the saved level back
+  save.onclick = () => { savedVol = r.value / 100; volStore.set(savedVol); toast('Громкость сохранена', 'ok'); close(); };
+  d.querySelector('#v-no').onclick = cancel; d.onclick = (e) => { if (e.target === d) cancel(); };
+  paint();
+}
+$('#btn-sound').onclick = openVolume;
