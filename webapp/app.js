@@ -95,7 +95,7 @@ R.rocket = (round) => {
       paint(m); feed.tick(m, true);
       if (v.auto && m >= v.auto && !sc.polled) { sc.polled = true; poll(); }
     });
-    state.pollTimer = setTimeout(poll, 1500); // each poll re-renders and re-arms the timer
+    state.pollTimer = setTimeout(poll, 250); // each poll re-renders and re-arms the timer; short interval so the on-screen x never runs far past the real crash point
   } else {
     const final = round.status === 'won' ? round.multiplier : v.crash;
     paint(final, round.status === 'lost' ? 'crashed' : 'won');
