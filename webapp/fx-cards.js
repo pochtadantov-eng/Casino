@@ -263,7 +263,7 @@
       this.th = 0; this.thv = 0; this.hookL = null; this.trolleyX = null; this.hand = this.ci++;
     }
     layout() {
-      this.hw = Math.min(53, this.h * 0.29); this.s = this.hw / 337; this.hh = 317 * this.s; this.inc = this.hw * 0.46;
+      this.hw = Math.min(66, this.h * 0.36); this.s = this.hw / 337; this.hh = 317 * this.s; this.inc = this.hw * 0.46;
       this.cx = this.w - this.hw * 1.25; this.yTop = this.h * 0.77; this.yLand = this.yTop - this.inc; this.x0 = Math.max(this.w * 0.5, this.cx - this.hw * 2.6);
       this.tinted = {};
     }
