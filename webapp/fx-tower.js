@@ -90,7 +90,7 @@
     }
     reset() {
       this.state = 'idle'; this.u = 0; this.floors = []; this.base = 0; this.landed = 0; this.targetSucc = 0; this.queue = []; this.failQueued = false; this.pendingVerdicts = 0;
-      this.debris = []; this.lostT = 0; this.camV = 0; this.wreckT = -1; this.pieces = []; this.tractorX = 0; this.struck = false;
+      this.debris = []; this.lostT = 0; this.camV = 0; this.wreckT = -1; this.pieces = []; this.tractorX = 0; this.tractorY = 0; this.tractorRot = 0; this.struck = false;
       this.wob = 0; this.wv = 0; this.shake = 0; this.puffs = []; this.pops = []; this.fall = null; this.tumble = null; this.rest = null; this.intro = null; this.hang = null; this.popFor = 0;
       this.th = 0; this.thv = 0; this.lrope = LROPE_HIDE; this.roundStatus = 'idle'; this.maxSteps = 10; this.mults = []; this.camBottom = -0.7; this.camSet = false;
     }
@@ -156,7 +156,10 @@
     // after a loss: once the plaque is gone a bulldozer drives in from the left, knocks the tower over and the houses fall apart and vanish
     wreck() { if (this.state !== 'done' || (this.roundStatus !== 'lost' && this.roundStatus !== 'won') || this.wreckT !== -1) return; this.wreckT = 0; this.struck = false; this.tractorX = -(this.w / 2 / this.ppu + 2.0); }
     stepWreck(dt) {
-      this.wreckT += dt; const v = 4.6; this.tractorX += v * dt; this.tw = (this.tw || 0) + v * dt * 1.6;
+      this.wreckT += dt; const v = 4.6; this.tractorX += v * dt;
+      { const top = SLAB_H - LOW + 0.02, sm3 = (q) => { q = clamp(q); return q * q * (3 - 2 * q); }, xl = -SLAB_W / 2, xr = SLAB_W / 2, Hh = (x) => top * sm3((x - (xl - 0.55)) / 0.95) * (1 - sm3((x - (xr - 0.4)) / 0.95)), hf = Hh(this.tractorX + 1.1), hr = Hh(this.tractorX - 1.1);
+        this.tractorY = (hf + hr) / 2; this.tractorRot = Math.atan2(hf - hr, 2.2); }       // it climbs onto the platform, shoves the tower from there and drives down the far side
+      this.tw = (this.tw || 0) + v * dt * 1.6;
       if (Math.random() < dt * 14) this.puffs.push({ x: this.tractorX - 1.9, y: 0.12, vx: -rand(0.3, 0.9), vy: rand(0.4, 0.9), r: rand(0.18, 0.32), life: 0.7, max: 0.7 });
       if (!this.struck && this.tractorX + 1.95 >= -HW / 2 - 0.05) {
         this.struck = true; this.shake = 0.9; this.puff(-HW / 2, 0.2, 14, 0.9);
@@ -435,7 +438,7 @@
     }
     drawTractor(g, wx, gy) {
       const u = this.ppu, x = this.X(wx), bob = Math.sin(this.tw * 3.1) * 0.012 * u;
-      g.save(); g.translate(x, gy + 0.15 * u + bob);
+      g.save(); g.translate(x, gy + 0.15 * u + bob - (this.tractorY || 0) * u); g.rotate(-(this.tractorRot || 0));
       g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0.02 * u, 1.9 * u, 0.1 * u, 0, 0, 6.283); g.fill();
       const rr = (X, Y, W, H, R) => { g.beginPath(); g.roundRect ? g.roundRect(X, Y, W, H, R) : g.rect(X, Y, W, H); };
       // tracks
