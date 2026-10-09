@@ -130,10 +130,14 @@ export class WalletService {
     return rows;
   }
 
+  /** Testing switch: no 24 h wait for admins, or for everybody with CHEST_UNLIMITED=1. */
+  chestUnlimited(userId: number) { return config.chestUnlimited || config.adminIds.includes(userId); }
+
   async dailyStatus(userId: number) {
     const { rows } = await this.db.pool.query('select last_daily from users where id = $1', [userId]);
     const next = rows[0]?.last_daily ? new Date(rows[0].last_daily.getTime() + 86_400_000) : null;
-    return { enabled: config.dailyBonus > 0, availableAt: next && next.getTime() > Date.now() ? next.toISOString() : null, prizes: publicPrizes() };
+    const unlimited = this.chestUnlimited(userId);
+    return { enabled: config.dailyBonus > 0, unlimited, availableAt: !unlimited && next && next.getTime() > Date.now() ? next.toISOString() : null, prizes: publicPrizes() };
   }
 
   /** Opens the daily chest, once per 24 h. The UPDATE is the lock: a concurrent second claim matches no row. Stars are credited at once; a gift is queued for an admin. */
@@ -141,7 +145,9 @@ export class WalletService {
     if (config.dailyBonus <= 0) throw new GameError('Бонус сейчас недоступен');
     return this.db.tx(async (c) => {
       const r = await c.query(
-        "update users set last_daily = now() where id = $1 and (last_daily is null or last_daily < now() - interval '24 hours') returning id",
+        this.chestUnlimited(userId)
+          ? 'update users set last_daily = now() where id = $1 returning id'
+          : "update users set last_daily = now() where id = $1 and (last_daily is null or last_daily < now() - interval '24 hours') returning id",
         [userId],
       );
       if (!r.rowCount) throw new GameError('Бонус уже получен, приходите позже');

@@ -87,8 +87,8 @@
   const handlers = {
     me: () => ({ id: 1, balance: db.balance, limits: LIMITS }),
     history: () => db.hist.slice(0, 20).map((r) => present(r)),
-    bonus: () => ({ enabled: true, availableAt: db.lastDaily && Date.now() - db.lastDaily < 864e5 ? new Date(db.lastDaily + 864e5).toISOString() : null, prizes: CHEST }),
-    'bonus/daily': () => { if (db.lastDaily && Date.now() - db.lastDaily < 864e5) fail('Бонус уже получен, приходите позже'); db.lastDaily = Date.now(); const p = drawChest(); if (p.stars) { db.balance += p.stars; (db.cash = db.cash || []).unshift({ kind: 'bonus', amount: p.stars, balance: db.balance, at: new Date().toISOString() }); } save(); return { prize: { id: p.id, stars: p.stars, gift: p.gift, label: p.label }, balance: db.balance }; },
+    bonus: () => ({ enabled: true, unlimited: true, availableAt: null, prizes: CHEST }),      // demo: the chest can be opened again and again
+    'bonus/daily': () => { db.lastDaily = Date.now(); const p = drawChest(); if (p.stars) { db.balance += p.stars; (db.cash = db.cash || []).unshift({ kind: 'bonus', amount: p.stars, balance: db.balance, at: new Date().toISOString() }); } save(); return { prize: { id: p.id, stars: p.stars, gift: p.gift, label: p.label }, balance: db.balance }; },
     cash: () => (db.cash || []).slice(0, 20),
     deposit: (b) => { const a = Number(b.amount) || 0; if (!Number.isInteger(a) || a < LIMITS.minDeposit || a > LIMITS.maxDeposit) fail(`Deposit must be ${LIMITS.minDeposit}..${LIMITS.maxDeposit} Stars`); db.balance += a; (db.cash = db.cash || []).unshift({ kind: 'deposit', amount: a, balance: db.balance, at: new Date().toISOString() }); save(); return { link: 'demo' }; },
     withdraw: (b) => { const a = Number(b.amount); if (a < LIMITS.minWithdraw) fail('Минимум ' + LIMITS.minWithdraw); if (a > db.balance) fail('Insufficient balance'); db.balance -= a; (db.cash = db.cash || []).unshift({ kind: 'withdraw', amount: -a, balance: db.balance, at: new Date().toISOString() }); save(); return { id: 1, balance: db.balance }; },

@@ -101,7 +101,7 @@ async function loadBonus() {
     const wait = b.availableAt ? new Date(b.availableAt).getTime() - Date.now() : 0;
     if (b.enabled === false) { txt.textContent = 'Сундук сейчас недоступен.'; btn.disabled = true; return; }
     btn.disabled = wait > 0; $('#bonus-panel').classList.toggle('ready', wait <= 0);
-    txt.textContent = wait > 0 ? `Следующий сундук через ${fmtTime(wait)}` : 'Крути рулетку: от 15 до 1000 ⭐ и NFT-подарки Telegram!';
+    txt.textContent = wait > 0 ? `Следующий сундук через ${fmtTime(wait)}` : b.unlimited ? 'Тестовый режим: крути рулетку сколько хочешь!' : 'Крути рулетку: от 15 до 1000 ⭐ и NFT-подарки Telegram!';
     btn.textContent = wait > 0 ? 'Уже открыт' : 'Открыть сундук';
   } catch (e) { txt.textContent = e.message; btn.disabled = true; }
 }
