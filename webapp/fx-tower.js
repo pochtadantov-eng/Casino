@@ -463,13 +463,15 @@
         g.fillStyle = '#2a2d33'; g.fillRect(hookX - 0.28 * hs, beltY - 0.1 * hs, 0.56 * hs, 0.34 * hs);
         rope(hookX, beltY + 0.2 * hs, ringX, ringY - 4, 0, 2.4);
         g.strokeStyle = '#d5d8de'; g.lineWidth = 2; g.beginPath(); g.arc(ringX, ringY, 4.5, 0, 6.283); g.stroke(); g.strokeStyle = 'rgba(30,30,34,.7)'; g.lineWidth = 0.8; g.beginPath(); g.arc(ringX, ringY, 5.6, 0, 6.283); g.stroke();
-        top.forEach((L, i) => { const [px, py] = xf(L.x + topAt[i] * L.fs, L.y - L.fs * 0.5 + 4); rope(ringX, ringY + 4, px, py, 3, 2.1, i); knot(px, py); });
-        for (const [i, j, ju, side] of [[0, 4, 0, -1], [3, 8, 4, 1]]) {          // left: N -> Б, right: A -> И; a double strand each, so they look like one sturdy lashing
-          const U = letters[i], D = letters[j];
-          for (const o of [-3.2, 3.2]) {
-            const [px, py] = xf(U.x + botAt[i] * U.fs + o, U.y + U.fs * 0.5 - 3), [qx, qy] = xf(D.x + lowTop[ju] * D.fs + o, D.y - D.fs * 0.5 + 3);
-            rope(px, py, qx, qy, 0.8, 1.9, i + o); knot(px, py, 2.1); knot(qx, qy, 2.1);
-          }
+        // the lashings are tied to the OUTER EDGES of the title (the outside of the first and last letters), never to the letters themselves
+        const E = 0.56;                                                              // outside of the letter outline, as a share of the font size from the letter centre
+        const N = letters[0], A = letters[3], B = letters[4], I = letters[8];
+        const tl = xf(N.x - E * N.fs, N.y - 0.36 * N.fs), tr = xf(A.x + E * A.fs, A.y - 0.36 * A.fs);          // top-left / top-right edge of NOVA
+        rope(ringX, ringY + 4, tl[0], tl[1], 3, 2.3, 1); rope(ringX, ringY + 4, tr[0], tr[1], 3, 2.3, 2); knot(tl[0], tl[1], 3); knot(tr[0], tr[1], 3);
+        // NOVA -> БАШНИ: down the left edge and down the right edge
+        for (const [U, D, ux, dx2, ph] of [[N, B, -E, -E, 3], [A, I, E, E, 4]]) {
+          const [px, py] = xf(U.x + ux * U.fs, U.y + 0.3 * U.fs), [qx, qy] = xf(D.x + dx2 * D.fs, D.y - 0.3 * D.fs);
+          rope(px, py, qx, qy, ux < 0 ? -1.5 : 1.5, 2.3, ph); knot(px, py, 3); knot(qx, qy, 3);
         }
         g.restore();
       }
