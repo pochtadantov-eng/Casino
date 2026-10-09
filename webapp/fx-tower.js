@@ -121,7 +121,7 @@
     newHang() { this.hang = { v: this.ci++ }; }
     _setReady(v) { if (v !== this._ready) { this._ready = v; this.onReady?.(v); } }
     landTop() { return SLAB_H + (this.landed + this.base) * INC; }
-    camTarget() { const lt = this.landTop(); return Math.max(-0.7, -0.7 + 0.45 * (lt - (SLAB_H + INC)), lt - 0.7 * this.hv); }   // rises gently with the tower, so the site scrolls out of frame gradually
+    camTarget() { return Math.max(-0.7, this.landTop() - 0.36 * this.hv); }   // tower top stays at a steady height; everything below scrolls away at the same speed
     pivotY() { return this.landTop() + PIVOT_UP; }
     tap() {
       if (this.state !== 'sway' || this.roundStatus !== 'active' || !this.hang || this.fall || !this.swing) return false;
