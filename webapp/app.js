@@ -148,6 +148,7 @@ const Music = (() => {
   const url = () => (window.MUSIC_SRC && window.MUSIC_SRC.tower) || 'audio/tower.mp3' + (window.BUILD ? '?v=' + window.BUILD : '');
   return {
     play() { want = true; try { if (!a) { a = new Audio(url()); a.loop = true; a.volume = 0.5; } a.play().catch(() => {}); } catch {} },
+    time() { return a && want && !a.paused && a.currentTime > 0 ? a.currentTime : null; },
     stop() { want = false; try { if (a) { a.pause(); a.currentTime = 0; } } catch {} },
     pause(on) { try { if (a && want) { on ? a.pause() : a.play().catch(() => {}); } } catch {} },
   };

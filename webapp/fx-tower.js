@@ -345,7 +345,9 @@
     }
     // the foreman and his speaker on the ground in front: he sways to the beat, the speaker cone pumps and notes float up
     drawCrew(g, gy, t) {
-      const u = this.ppu, beat = 0.5, ph = (t % beat) / beat, pulse = Math.pow(Math.max(0, Math.cos(ph * 6.283)), 3);
+      const u = this.ppu, mt = typeof Music !== 'undefined' && Music.time ? Music.time() : null;
+      // locked to the track: 104 BPM, first beat at 0.519 s (measured from the mp3); without audio it just keeps the same tempo
+      const beatPos = mt != null ? (mt - 0.519 + 0.03) * 104 / 60 : t * 104 / 60, ph = ((beatPos % 1) + 1) % 1, pulse = Math.pow(Math.max(0, Math.cos(ph * 6.283)), 3);
       if (!TowerFx.loading) { TowerFx.loading = true; const im = new Image(); im.onload = () => { TowerFx.worker = im; }; im.src = window.WORKER_SRC || 'img/worker.webp' + (window.BUILD ? '?v=' + window.BUILD : ''); }
       const sx = this.X(-2.3), sw = 0.62 * u, sh = 0.9 * u, shake = pulse * 0.6;
       g.save(); g.translate(sx + (Math.random() - 0.5) * shake, gy + 0.1 * u);
@@ -362,7 +364,7 @@
       const im = TowerFx.worker;
       if (im && im.width) {
         // dance: feet stay planted, the body above bends like rubber (hip groove + shoulder shimmy), knees dip on every beat, the head nods hard
-        const hgt = 1.8 * u, iw = im.width, ih = im.height, sc = hgt / ih, wid = iw * sc, b = t * 12.566, sw = Math.sin(b / 2), dip = Math.pow(Math.max(0, Math.cos(b)), 2);
+        const hgt = 1.8 * u, iw = im.width, ih = im.height, sc = hgt / ih, wid = iw * sc, b = beatPos * 6.2832, sw = Math.sin(b / 2), dip = Math.pow(Math.max(0, Math.cos(b)), 2);
         const neck = 0.3 * ih, ys = 1 - 0.05 * dip, bend = (f) => sw * 0.085 * hgt * f * f + Math.sin(b * 2 + f * 4) * 0.004 * hgt * Math.sin(f * 3.14);
         g.save(); g.translate(this.X(-1.45), gy + 0.12 * u); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, wid * 0.5, 4.5, 0, 0, 6.283); g.fill();
         const step = Math.max(2, Math.round(2.2 / sc));                 // source rows per slice
@@ -371,7 +373,7 @@
           g.drawImage(im, 0, y0, iw, h, -wid / 2 + bend(f), (y0 - ih) * sc * ys, wid, h * sc * ys + 0.6);
         }
         const fn = 1 - neck / ih, nx = bend(fn), ny = (neck - ih) * sc * ys;
-        g.translate(nx, ny); g.rotate(0.13 * Math.sin(b) + 0.08 * sw + 0.04 * sw * sw);                  // head: nod on the beat, lean with the groove
+        g.translate(nx, ny); g.rotate(0.13 * Math.cos(b) + 0.08 * sw + 0.04 * sw * sw);                  // head: nod on the beat, lean with the groove
         g.drawImage(im, 0, 0, iw, neck + step, -wid / 2, -neck * sc * ys, wid, (neck + step) * sc * ys);
         g.restore();
       }
