@@ -12,7 +12,7 @@ const out = `<title>Stars Casino</title>
 <style>${css}\nhtml,body{height:auto}body{max-width:520px;margin-inline:auto}</style>
 ${body}
 <script>window.ROCKET_SRC='data:image/svg+xml;base64,${svg}'</script>
-<script>window.CARD_IMG={${[0, 1, 2, 3, 4].map((i) => `'house_${i}.webp':'data:image/webp;base64,${readFileSync(f(`img/house_${i}.webp`)).toString('base64')}'`).join(',')},'hook.webp':'data:image/webp;base64,${readFileSync(f('img/hook.webp')).toString('base64')}'}</script>\n<script>${r('fx-rocket.js')}</script>\n<script>${r('fx-cards.js')}</script>\n<script>${r('fx-tower.js')}</script>
+<script>window.CARD_IMG={${[0, 1, 2, 3, 4].map((i) => `'house_${i}.webp':'data:image/webp;base64,${readFileSync(f(`img/house_${i}.webp`)).toString('base64')}'`).join(',')},'hook.webp':'data:image/webp;base64,${readFileSync(f('img/hook.webp')).toString('base64')}'}</script>\n<script>${r('fx-rocket.js')}</script>\n<script>${r('fx-cards.js')}</script>\n<script>${readFileSync(f('vendor/three.min.js'), 'utf8')}</script>\n<script>${r('fx-tower2d.js')}</script>\n<script>${r('fx-tower.js')}</script>
 <script>${r('mock-api.js')}</script>
 <script>${r('app.js')}</script>
 <script>${r('shell.js')}</script>`;

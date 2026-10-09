@@ -7,7 +7,7 @@ const fmtTime = (ms) => { const m = Math.max(0, Math.ceil(ms / 60000)); return m
 // ---------- views ----------
 let view = 'play', tab = 'play';
 function show(name) {
-  if (name !== 'game') { clearTimeout(state.pollTimer); cancelAnimationFrame(state.raf); state.scene = null; state.tscene = null; $('#stage').className = ''; $('#stage').innerHTML = ''; }
+  if (name !== 'game') { clearTimeout(state.pollTimer); cancelAnimationFrame(state.raf); state.scene = null; state.tscene = null; state.tpending = false; $('#stage').className = ''; $('#stage').innerHTML = ''; }
   view = name;
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('on', v.id === 'view-' + name));
   const inGame = name === 'game'; document.body.classList.toggle('ingame', inGame);
@@ -19,7 +19,7 @@ function show(name) {
   if (name === 'profile') loadProfile();
 }
 function openGame(g) {
-  state.game = g; state.round = null; unlockPlay(); state.tscene = null; $('#stage').className = '';
+  state.game = g; state.round = null; unlockPlay(); state.tscene = null; state.tpending = false; $('#stage').className = '';
   $('#gtitle').textContent = TITLES[g];
   show('game');
   load();

@@ -137,14 +137,25 @@ R.steps = (round) => {
   document.querySelectorAll('.floor button').forEach((b) => b.onclick = () => act({ choice: Number(b.dataset.c) }));
 };
 R.seagull = R.steps;
-R.tower = (round) => {                       // construction-site scene; the server still decides every step
+let threeLoad;
+function ensureThree() {                                   // Three.js (600 KB) is only fetched when the Tower game is opened
+  if (window.THREE) return Promise.resolve();
+  threeLoad = threeLoad || new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'vendor/three.min.js' + (window.BUILD ? '?v=' + window.BUILD : ''); s.onload = res; s.onerror = rej; document.head.append(s); });
+  return threeLoad;
+}
+R.tower = (round) => {                       // 3D construction site; the server still decides every step
   const st = $('#stage');
-  if (!state.tscene || !st.contains(state.tscene.c)) {
-    st.classList.add('towerstage'); st.innerHTML = '<canvas class="cv" id="cv-tgame"></canvas>';
-    state.tscene = new TowerGame($('#cv-tgame'));
-    state.tscene.onReady = (ok) => { $('#place').disabled = !ok; $('#cash').disabled = !ok; };
+  if (!state.tscene && !state.tpending) {
+    state.tpending = true; st.classList.add('towerstage');
+    const mount = () => { st.innerHTML = '<canvas class="cv" id="cv-tgame"></canvas>'; return $('#cv-tgame'); };
+    let canvas = mount();
+    const done = (sc, cv) => { state.tpending = false; if (!st.contains(cv)) return; state.tscene = sc; sc.onReady = (ok) => { $('#place').disabled = !ok; $('#cash').disabled = !ok; }; sc.sync(state.round); };
+    ensureThree().then(() => {
+      let sc; try { sc = new TowerGame3D(canvas); } catch (e) { console.warn('WebGL unavailable, using the 2D scene', e); canvas = mount(); sc = new TowerGame2D(canvas); }
+      done(sc, canvas);
+    }).catch(() => { canvas = mount(); done(new TowerGame2D(canvas), canvas); });
   }
-  state.tscene.sync(round);
+  state.tscene?.sync(round);
 };
 
 // ---------- flow ----------
