@@ -174,21 +174,21 @@
       return top * sm((x - (xl - RAMP)) / RAMP) * (1 - sm((x - xr) / RAMP));
     }
     stepWreck(dt) {
-      this.wreckT += dt; const v = 4.2; this.tractorX += v * dt;
+      this.wreckT += dt; const v = 9.5; this.tractorX += v * dt;
       { const hf = this.terrainH(this.tractorX + 1.1), hr = this.terrainH(this.tractorX - 1.1), k = Math.min(1, dt * 9);     // pose follows the surface profile, low-passed so it never snaps
         this.tractorY += ((hf + hr) / 2 - this.tractorY) * k; this.tractorRot += (Math.atan2(hf - hr, 2.2) - this.tractorRot) * k; }
       this.tw = (this.tw || 0) + v * dt * 1.6;
       if (Math.random() < dt * 14) this.puffs.push({ x: this.tractorX - 1.7, y: this.terrainH(this.tractorX - 1.7) - 0.05, vx: -rand(0.3, 0.9), vy: rand(0.4, 0.9), r: rand(0.18, 0.32), life: 0.7, max: 0.7 });
       if (!this.struck && this.tractorX + 1.95 >= -HW / 2 - 0.02) {
         this.struck = true; this.shake = 0.7; this.puff(-HW / 2, 0.2, 14, 0.9);
-        this.floors.forEach((f, i) => this.pieces.push({ v: f.v, dmg: f.dmg, x: f.ox, y: SLAB_H + i * INC + HH / 2, vx: 4.6 + rand(0, 1.2) + i * 0.35, vy: rand(1.0, 3.2) + Math.min(i, 5) * 0.35, rot: f.tilt, vr: -rand(1.5, 3.5), age: 0, down: 0 }));
-        if (this.rest) this.pieces.push({ v: this.rest.v, dmg: this.rest.dmg, x: this.rest.x, y: 1, vx: 4.6, vy: 2.5, rot: this.rest.rot, vr: -2.5, age: 0, down: 0 });
+        this.floors.forEach((f, i) => this.pieces.push({ v: f.v, dmg: f.dmg, x: f.ox, y: SLAB_H + i * INC + HH / 2, vx: 8.5 + rand(0, 2) + i * 0.6, vy: rand(1.0, 3.2) + Math.min(i, 5) * 0.35, rot: f.tilt, vr: -rand(1.5, 3.5), age: 0, down: 0 }));
+        if (this.rest) this.pieces.push({ v: this.rest.v, dmg: this.rest.dmg, x: this.rest.x, y: 1, vx: 8.5, vy: 2.5, rot: this.rest.rot, vr: -2.5, age: 0, down: 0 });
         this.floors = []; this.rest = null; this.spray(-HW / 2, 1.2, 26, '#c9b79a');
       }
       const tip = this.tractorX + 1.95, late = this.struck && this.tractorX > 1.5;
       for (const q of this.pieces) {
         { const edge = q.x - (HW / 2) * Math.abs(Math.cos(q.rot)) - (HH / 2) * Math.abs(Math.sin(q.rot)), pen = tip - edge;                 // blade overlaps the piece: push it out smoothly and give it the blade's speed
-          if (pen > 0 && pen < HW + 0.8 && q.y < this.terrainH(this.tractorX) + 1.6) { q.x += pen * Math.min(1, dt * 14); q.vx = Math.max(q.vx, 4.2 * 1.25); } }
+          if (pen > 0 && pen < HW + 0.8 && q.y < this.terrainH(this.tractorX) + 1.6) { q.x += pen * Math.min(1, dt * 14); q.vx = Math.max(q.vx, 9.5 * 1.25); } }
         if (late) q.age += dt * 1.5;
         q.vy -= 22 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt;
         const low = (HW / 2) * Math.abs(Math.sin(q.rot)) + (HH / 2) * Math.abs(Math.cos(q.rot)), gnd = Math.abs(q.x) < SLAB_W / 2 ? SLAB_H : 0;
@@ -201,8 +201,8 @@
     support(x, top) { const c = this.floors.length ? this.floors[this.floors.length - 1].ox : 0, a = Math.abs(x - c); return a < HW / 2 + 0.25 ? top : a < SLAB_W / 2 ? SLAB_H : 0; }
     update(dt, t = performance.now() / 1000) {
       const tgt = this.roundId === null || (this.state === 'done' && this.camBottom <= -0.6 && this.wreckT === -2) ? 1 : 0;      // the title is back once the camera is at the bottom and the round is over
-      this.titleA = (this.titleA == null ? 1 : this.titleA) + (tgt - (this.titleA == null ? 1 : this.titleA)) * Math.min(1, dt * (tgt ? 3 : 5));
-      if (this.state === 'done' && (this.roundStatus === 'lost' || this.roundStatus === 'won') && this.wreckT === -1 && this.lostT > 0.9) this.wreck();      // the bulldozer rolls in while the plaque is still up
+      this.titleTgt = tgt; this.titleA = (this.titleA == null ? 1 : this.titleA) + (tgt - (this.titleA == null ? 1 : this.titleA)) * Math.min(1, dt * (tgt ? 3 : 5));
+      if (this.state === 'done' && (this.roundStatus === 'lost' || this.roundStatus === 'won') && this.wreckT === -1 && this.lostT > 0.45 && this.camBottom < 2.5) this.wreck();      // the bulldozer rolls in while the plaque is still up
       if (this.wreckT >= 0) this.stepWreck(dt);
       const tS = this.now(), sw0 = this.swing ? this.swing.start : tS, top = this.landTop();
       this.u += dt; if (this.stress > 0.45 && this.roundStatus === 'active' && this.state !== 'done') this.wv += Math.cos(t * 7.7) * Math.min(1, (this.stress - 0.45) / 0.55) * 30 * dt;      // the tower creaks when it is close to the limit
@@ -405,13 +405,19 @@
       for (const p of this.puffs) { const a = clamp(p.life / p.max), x = this.X(p.x), y = this.Y(p.y), r = p.r * ppu, gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(255,255,255,${0.95 * a})`); gr.addColorStop(0.6, `rgba(250,250,250,${0.7 * a})`); gr.addColorStop(1, 'rgba(240,240,240,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); }
       for (const p of this.pops) { const k = 1 - p.life / p.max, y = this.Y(p.y0 + 1.6 * (1 - Math.pow(1 - k, 2))), x = this.X(p.x), sc = 1 + 0.4 * Math.sin(clamp(k * 4) * Math.PI); g.save(); g.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3; g.translate(x, y); g.scale(sc, sc); g.font = "800 28px 'Unbounded',system-ui,sans-serif"; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 7; g.strokeStyle = 'rgba(110,55,0,.95)'; g.strokeText(p.txt, 0, 0); const tg = g.createLinearGradient(0, -14, 0, 14); tg.addColorStop(0, '#fff2a0'); tg.addColorStop(0.5, '#ffc533'); tg.addColorStop(1, '#ff9a14'); g.fillStyle = tg; g.fillText(p.txt, 0, 0); g.restore(); }
       if (this.t0 == null) this.t0 = t;
-      const mt = typeof Music !== 'undefined' && Music.time ? Music.time() : null, since = mt != null ? mt : t - this.t0, base = clamp(Math.max(since, t - this.t0) / 3.8), ta = this.titleA * base;   // starts invisible and fades in over the ~4 s song intro; then stays until Play is pressed
+      const mt = typeof Music !== 'undefined' && Music.time ? Music.time() : null, since = mt != null ? mt : t - this.t0, base = clamp(Math.max(since, t - this.t0) / 3.8);
+      { const hdt = Math.min(0.05, Math.max(0, t - (this.hlt ?? t))); this.hlt = t; const W = w;                      // helicopter: -W (left of the screen) -> 0 (hover) -> +W (right of the screen), never the other way round
+        if (this.heliOff == null) { this.heliOff = -W * 0.95; this.heliV = 0; }
+        if (this.titleTgt === 0) { this.heliV = Math.min(W * 1.1, (this.heliV || 0) + W * 1.6 * hdt); this.heliOff += Math.max(0, this.heliV) * hdt; if (this.heliOff > 0 && this.heliOff < 1) this.heliOff = 1; }
+        else { if (this.heliOff > 0) { this.heliOff = -W * 0.95; } this.heliV = 0; this.heliOff += (0 - this.heliOff) * Math.min(1, hdt * 1.5) + (this.heliOff < -2 ? 1.5 : 0); }
+        this.hvel = (this.hvel || 0) + (((this.heliOff - (this.hprev ?? this.heliOff)) / Math.max(hdt, 1e-3)) - (this.hvel || 0)) * Math.min(1, hdt * 6); this.hprev = this.heliOff; }
+      const ta = this.heliOff > 0 ? base * clamp(1 - this.heliOff / (w * 0.95)) : base;   // starts invisible and fades in over the ~4 s song intro; then stays until Play is pressed
       if (ta > 0.01) {
         const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.4, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
         // the helicopter flies in from the left, hovers and holds the title on two ropes; when the round starts it flies away to the right with it
-        const hk = sm(clamp(base)), away = 1 - this.titleA, hs = Math.min(w * 0.044, 23), bob = Math.sin(t * 1.4) * 3 + Math.sin(t * 2.3) * 1.2;
-        const hx = cx - 1.2 * hs - (1 - hk) * w * 0.9 + away * away * w * 1.1, hy = h * 0.155 + bob - away * h * 0.06, dx = hx - (cx - 1.2 * hs), dy = bob - away * h * 0.06;
-        const swing = Math.sin(t * 1.3) * 0.022 - ((1 - hk) + away) * 0.07, topY = y1 - fs1 * 0.58, halfW = fs1 * 1.55, ropeY = hy + 2.15 * hs;
+        const hs = Math.min(w * 0.044, 23), bob = Math.sin(t * 1.4) * 3 + Math.sin(t * 2.3) * 1.2;
+        const hx = cx - 1.2 * hs + this.heliOff, hy = h * 0.155 + bob - clamp(this.heliOff / w) * h * 0.05, dx = this.heliOff, dy = bob - clamp(this.heliOff / w) * h * 0.05;
+        const swing = Math.sin(t * 1.3) * 0.022 + clamp((this.hvel || 0) / w * 0.12, -0.14, 0.14), topY = y1 - fs1 * 0.58, halfW = fs1 * 1.55, ropeY = hy + 2.15 * hs;
         const xf = (px, py) => { const c = Math.cos(swing), sn = Math.sin(swing), ax = px - cx, ay = py - topY; return [cx + dx + ax * c - ay * sn, topY + dy + ax * sn + ay * c]; };
         g.save(); g.globalAlpha = ta; this.drawHeli(g, hx, hy, hs, t); g.strokeStyle = 'rgba(40,36,34,.9)'; g.lineWidth = 1.6;
         for (const [rx, ax] of [[hx - 1.0 * hs, -halfW], [hx + 2.3 * hs, halfW]]) { const [tx, ty] = xf(cx + ax, topY + 4); g.beginPath(); g.moveTo(rx, ropeY); g.quadraticCurveTo((rx + tx) / 2 + Math.sin(t * 2 + ax) * 2, (ropeY + ty) / 2 + 3, tx, ty); g.stroke(); g.fillStyle = '#2b2622'; g.beginPath(); g.arc(tx, ty, 2.6, 0, 6.283); g.fill(); }
