@@ -39,9 +39,20 @@
     return 'e' + Math.floor(r() * 10) + chunk(5);                 // e1dnejx — digit sandwiched
   }
 
-  // one shared default avatar for everyone — drop your own file into webapp/img/avatars/default.* to replace
-  const DEFAULT_AVATAR = (window.AV_SRC && window.AV_SRC.default) || `img/avatars/default.svg` + (window.BUILD ? '?v=' + window.BUILD : '');
-  function makeAvatar() { return DEFAULT_AVATAR; }
+  // generic "no profile picture" silhouette, with the background colour tinted per user id
+  const AV_PALETTE = ['#5b9bd5', '#e8768f', '#f0b35a', '#4fbfa8', '#9b7bd4', '#e67e5a', '#5a9d6a', '#d44a7b', '#4a8ac4', '#c9815e', '#7fa847', '#b964c6', '#4bb5c9', '#dc9a3c', '#7e78d1', '#da5a5a', '#3faa88', '#c15d9a', '#6a8fd1', '#d6823a', '#5fa14e', '#a86cd1', '#5aa9b8', '#e8a04a', '#8e86dc', '#d26868', '#4ba893', '#be6ba5', '#5a94c7', '#c89148', '#71aa5a', '#b57ad1', '#4fb0b8', '#e2984a', '#8b85d1', '#d87070', '#4ea890', '#c278a0', '#5a97c2', '#cb8c54'];
+  const avCache = new Map();
+  function makeAvatar(seed) {
+    if (avCache.has(seed)) return avCache.get(seed);
+    const size = 128, dpr = 2, c = document.createElement('canvas');
+    c.width = c.height = size * dpr; const g = c.getContext('2d'); g.scale(dpr, dpr);
+    g.fillStyle = AV_PALETTE[seed % AV_PALETTE.length];
+    g.beginPath(); g.arc(size / 2, size / 2, size / 2, 0, 6.283); g.fill();
+    g.fillStyle = '#fff';
+    g.beginPath(); g.arc(size / 2, size * 0.4, size * 0.19, 0, 6.283); g.fill();                // head
+    g.beginPath(); g.ellipse(size / 2, size * 1.0, size * 0.38, size * 0.42, 0, Math.PI, 2 * Math.PI); g.fill();   // shoulders
+    const url = c.toDataURL(); avCache.set(seed, url); return url;
+  }
   function paintedAvatar(seed) {                                   // fallback when SVGs are missing — not normally reached
     if (avCache.has('p' + seed)) return avCache.get('p' + seed);
     const r = rng(seed + 1), size = 72, c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d');
