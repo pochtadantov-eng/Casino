@@ -5,7 +5,7 @@ import { mines, minePositions, minesMultiplier } from '../src/games/engines/mine
 import { seagull, stepsMultiplier } from '../src/games/engines/steps';
 import { roundAt, publicRound, crashOfRound, BET_MS, PAUSE_MS } from '../src/games/engines/rocket-schedule';
 import { CHEST_PRIZES, drawPrize, chestEv } from '../src/wallet/chest';
-import { tower, swingX, tolAt, periodAt, towerMultiplier, levelRanges, TOWER } from '../src/games/engines/tower';
+import { tower, SNAP, swingX, tolAt, periodAt, towerMultiplier, TOWER } from '../src/games/engines/tower';
 import { verifyInitData } from '../src/auth/telegram-auth';
 import { createHmac } from 'node:crypto';
 
@@ -150,20 +150,20 @@ describe('tower (skill)', () => {
     expect(tower.act(s, { tap: true, lat: 100 }, centre + 100).status).toBe('active');   // arrived 100 ms late, claims 100 ms latency
     expect(tower.act(s, { tap: true, lat: 5000 }, centre + 600).status).toBe('lost');    // cannot claim more than maxLat
   });
-  it('houses land where they were released and the stack may lean', () => {
+  it('a house released off-centre (inside the zone) lands pulled most of the way to the centre', () => {
     const s = start(), t = s.swingStart + periodAt(0) * 0.46, x = swingX(t, s.swingStart, 0);        // a little off-centre, still inside the first window
     const r = tower.act(s, { tap: true }, t);
-    expect(Math.abs(x)).toBeGreaterThan(0.1); expect(r.status).toBe('active'); expect(r.state.offsets).toEqual([Math.round(x * 1000) / 1000]);
+    expect(Math.abs(x)).toBeGreaterThan(0.1); expect(r.status).toBe('active'); expect(r.state.offsets).toEqual([Math.round(x * SNAP * 1000) / 1000]);
   });
-  it('an overhang topples the stack: the weak level is reported and the round is lost', () => {
-    const s = { ...start(), picks: 3, offsets: [0.4, 0.8, 1.2] }, t = s.swingStart + periodAt(3) * 0.2;      // already leaning right, adds more weight on the right
+  it('a house released inside the green zone lands pulled towards the zone centre; outside it the round is lost', () => {
+    const s = { ...start(), picks: 2, offsets: [0.1, 0.2] }, tol = tolAt(2);
+    const inT = s.swingStart + periodAt(2) * 0.5 + 1;                         // x ~ 0: |0 - 0.2| <= tol is false when tol < 0.2, so aim at the zone instead
+    const xs = (tt: number) => swingX(tt, s.swingStart, 2);
+    let t = s.swingStart; while (Math.abs(xs(t) - 0.2) > tol * 0.5) t += 5;
     const r = tower.act(s, { tap: true }, t);
-    expect(r.status).toBe('lost'); expect(r.state.last?.collapse).not.toBeNull(); expect(r.state.last?.ok).toBe(false);
-  });
-  it('level ranges tighten with height and shift with the load above', () => {
-    const lv = levelRanges([0, 0.3, -0.3, 0.2]);
-    expect(lv).toHaveLength(4);
-    const widths = lv.map(([a, b], j) => (b - a) / (4 - j)); expect(widths[3]).toBeLessThan(widths[0]);
+    expect(r.status).toBe('active'); expect(Math.abs(r.state.offsets[2] - 0.2)).toBeLessThan(tol * 0.5);
+    const far = tower.act(s, { tap: true }, s.swingStart + periodAt(2) * 0.25);   // swing extreme
+    expect(far.status).toBe('lost'); expect(far.state.last?.miss).toBe(true); expect(inT).toBeGreaterThan(0);
   });
   it('cash-out needs a landed house and pays the ladder', () => {
     const s = start(); expect(() => tower.cashout(s, 0)).toThrow();

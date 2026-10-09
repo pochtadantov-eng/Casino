@@ -141,10 +141,11 @@
       if (this.state !== 'sway' || this.roundStatus !== 'active' || !this.hang || this.fall || !this.swing) return false;
       const t = this.now(); if (t < this.swing.start + 40) return false;
       this.pendingVerdicts++;
-      const top = this.floors.length ? this.floors[this.floors.length - 1].ox : 0, lv = this.limits || [];      // same balance rule and the same +-GRACE ms forgiveness as the server
-      const judge = (x) => { const miss = Math.abs(x - top) > HW * 0.9, j = miss ? -1 : lv.findIndex((q) => x < q[0] || x > q[1]); return { x, miss, j, ok: !miss && j === -1 }; };
+      const top = this.floors.length ? this.floors[this.floors.length - 1].ox : 0, rg = this.range || [top - 0.3, top + 0.3];      // same green zone and the same +-GRACE ms forgiveness as the server
+      const judge = (x) => ({ x, ok: x >= rg[0] && x <= rg[1] });
       const cands = [t, t - 40, t + 40].map((tt) => judge(this.swingAt(Math.max(this.swing.start, tt)).x)), pick = cands.find((c) => c.ok) || cands[0];
-      this.predQ.push(pick.ok); this.release({ ok: !pick.miss, x: pick.x, collapse: pick.j >= 0 ? pick.j : null }); return true;
+      const lx = pick.ok ? top + (pick.x - top) * 0.3 : pick.x;                          // a landed house is pulled most of the way to the zone centre
+      this.predQ.push(pick.ok); this.release({ ok: pick.ok, x: lx, collapse: null }); return true;
     }
     release(item) {
       if (!this.hang) return; const sp = this.swingAt(this.now()), x = R * Math.sin(this.th), y = this.pivotY() - R * Math.cos(this.th);

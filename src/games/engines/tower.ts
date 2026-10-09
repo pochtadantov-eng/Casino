@@ -4,9 +4,8 @@ import { Engine, GameError, floor2 } from './types';
  * Tower (skill): the hook swings on a rope, the player taps to release the house.
  * The swing is a pure function of SERVER time, so the phone only draws what the server computes:
  *   x(t) = AMP * sin(2π (t - swingStart) / period(step))
- * The house lands exactly where it was released (x), so the tower can lean and zigzag. After every landing the stack must still balance:
- * for each level j, the centre of mass of all houses above it has to stay within `levelLim(j)` of that level's own centre, otherwise
- * everything above the weakest level collapses. Higher levels have tighter limits and the swing speeds up with every floor.
+ * A tap succeeds when the house is released within `tol(step)` of the top house (a green zone drawn on the roof). The swing speeds up and
+ * the zone narrows slowly with every floor. A landed house is pulled most of the way to the zone centre, so the tower stays tidy.
  * There is no hidden randomness: the outcome is decided by timing alone (and verified here, never on the phone).
  */
 export const TOWER = {
@@ -26,20 +25,9 @@ export const TOWER = {
 
 // swing period (ms) and accepted release distance from the axis (world units). Floor 1 is easy, floors 2-3 already need care, tiny windows in space.
 export const periodAt = (step: number) => step === 0 ? 3000 : step === 1 ? 2400 : step === 2 ? 2100 : step < TOWER.spaceFrom ? Math.max(1250, 2000 - 90 * (step - 3)) : Math.max(1050, 1400 - 35 * (step - TOWER.spaceFrom));
-// how far (fraction of half a house width) the centre of mass above level j may sit from that level's centre; tightens with every level
-const LIM = [0.5, 0.4, 0.3, 0.24, 0.19, 0.15, 0.12, 0.1, 0.085, 0.07];
-export const levelLim = (j: number) => Math.max(0.045, 0.85 * (LIM[j] ?? 0.07 * Math.pow(0.93, j - 9)));      // x0.85: a little harder than before
-export const tolAt = (step: number) => levelLim(step) * TOWER.hw / 2;
-/** per level j (0 = the base house): the interval the NEXT house's x has to fall in so that level j still holds */
-export function levelRanges(full: number[]): [number, number][] {
-  const m = full.length - 1, out: [number, number][] = [];
-  for (let j = 0; j <= m; j++) {
-    const cnt = m + 1 - j, d = levelLim(j) * TOWER.hw / 2; let sum = 0;
-    for (let i = j + 1; i <= m; i++) sum += full[i];
-    out.push([(full[j] - d) * cnt - sum, (full[j] + d) * cnt - sum]);
-  }
-  return out;
-}
+// half-width of the green zone around the top house (world units; a house is 1.9 wide): wide at first, narrowing slowly, then tiny in space
+export const tolAt = (step: number) => step < TOWER.spaceFrom ? Math.max(0.1, 0.42 - 0.055 * step) : Math.max(0.06, 0.1 - 0.004 * (step - TOWER.spaceFrom));
+export const SNAP = 0.3;      // a released house keeps only this share of its distance from the zone centre
 export const swingX = (t: number, swingStart: number, step: number) => TOWER.amp * Math.sin((2 * Math.PI * (t - swingStart)) / periodAt(step));
 export const towerMultiplier = (picks: number) =>
   picks === 0 ? 1
@@ -53,19 +41,7 @@ interface State {
   offsets: number[];        // x of every landed house above the base (the base sits at 0)
   last: { x: number; ok: boolean; miss: boolean; collapse: number | null; tol: number } | null;
 }
-/** 0..1+: how close the weakest level is to its limit (the phone wobbles the tower as a warning) */
-const stressOf = (offsets: number[] = []) => {
-  const full = [0, ...offsets], m = full.length - 1; let worst = 0;
-  for (let j = 0; j < m; j++) {
-    let sum = 0; for (let i = j + 1; i <= m; i++) sum += full[i];
-    worst = Math.max(worst, Math.abs(sum / (m - j) - full[j]) / (levelLim(j) * TOWER.hw / 2));
-  }
-  return Math.round(worst * 1000) / 1000;
-};
-const ranges = (offsets: number[] = []) => {
-  const lv = levelRanges([0, ...offsets]);
-  return { lv, lo: Math.max(...lv.map((r) => r[0])), hi: Math.min(...lv.map((r) => r[1])) };
-};
+const topOf = (offsets: number[] = []) => offsets[offsets.length - 1] ?? 0;
 
 export const tower: Engine<State> = {
   id: 'tower',
@@ -77,17 +53,12 @@ export const tower: Engine<State> = {
     if (now < state.swingStart) throw new GameError('Too early');
     const lat = Math.min(TOWER.maxLat, Math.max(0, Number(input.lat) || 0));
     const t = Math.max(state.swingStart, now - lat);
-    const top = (state.offsets ?? [])[(state.offsets ?? []).length - 1] ?? 0, { lv, lo, hi } = ranges(state.offsets);
-    const judge = (tt: number) => {
-      const x = swingX(Math.max(state.swingStart, tt), state.swingStart, state.picks);
-      const miss = Math.abs(x - top) > TOWER.hw * 0.9;                  // no overlap with the house below: it just falls beside the tower
-      const j = miss ? -1 : lv.findIndex((r) => x < r[0] || x > r[1]);   // lowest level that cannot carry the new weight: everything above it falls
-      return { x, miss, j, ok: !miss && j === -1 };
-    };
+    const top = topOf(state.offsets), tol = tolAt(state.picks);
+    const judge = (tt: number) => { const x = swingX(Math.max(state.swingStart, tt), state.swingStart, state.picks); return { x, ok: Math.abs(x - top) <= tol }; };
     // a tap is judged at its estimated moment and at +-GRACE ms around it (network jitter must never decide a round): the best of the three counts
     const cands = [t, t - TOWER.grace, t + TOWER.grace].map(judge), pick = cands.find((c) => c.ok) ?? cands[0];
-    const { x, miss, j, ok } = pick, xr = Math.round(x * 1000) / 1000;
-    const last = { x: xr, ok, miss, collapse: j >= 0 ? j : null, tol: Math.round(((hi - lo) / 2) * 1000) / 1000 };
+    const ok = pick.ok, x = ok ? top + (pick.x - top) * SNAP : pick.x, xr = Math.round(x * 1000) / 1000;
+    const last = { x: xr, ok, miss: !ok, collapse: null, tol };
     if (!ok) return { status: 'lost', multiplier: 0, state: { ...state, last } };
     const picks = state.picks + 1;
     return { status: picks >= TOWER.maxSteps ? 'won' : 'active', multiplier: towerMultiplier(picks), state: { picks, swingStart: now + TOWER.nextDelay, offsets: [...(state.offsets ?? []), xr], last } };
@@ -97,13 +68,13 @@ export const tower: Engine<State> = {
     return { status: 'won', multiplier: towerMultiplier(state.picks), state };
   },
   view(state, _status, now) {
-    const { lv, lo, hi } = ranges(state.offsets);
+    const top = topOf(state.offsets), tol = tolAt(state.picks);
     return {
       picks: state.picks, maxSteps: TOWER.maxSteps, last: state.last, serverNow: now, offsets: state.offsets ?? [], hw: TOWER.hw,
-      limits: lv, range: [lo, hi], stress: stressOf(state.offsets),
+      range: [top - tol, top + tol], stress: 0,
       multipliers: Array.from({ length: TOWER.maxSteps }, (_, i) => towerMultiplier(i + 1)),
-      swing: { start: state.swingStart, period: periodAt(state.picks), amp: TOWER.amp, tol: Math.max(0, (hi - lo) / 2) },
+      swing: { start: state.swingStart, period: periodAt(state.picks), amp: TOWER.amp, tol },
     };
   },
-  debug(state) { return { picks: state.picks, swingStart: state.swingStart, period: periodAt(state.picks), offsets: state.offsets, range: ranges(state.offsets) }; },
+  debug(state) { return { picks: state.picks, swingStart: state.swingStart, period: periodAt(state.picks), offsets: state.offsets, tol: tolAt(state.picks) }; },
 };

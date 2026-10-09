@@ -23,11 +23,10 @@
   const TW = { grace: 40, maxSteps: 20, spaceFrom: 10, spaceGrowth: 1.1, ladderGrowth: 1.2, easyFloors: 5, easyMult: 2, amp: 1.6, firstDelay: 2700, nextDelay: 2500, maxLat: 250 };
   const TW_EASY = !!window.EASY_TOWER || /[?&]easy(=|&|$)/.test(location.search);        // demo shortcut: every drop lands, to look at the space floors
   const twPeriod = (k) => (k === 0 ? 3000 : k === 1 ? 2400 : k === 2 ? 2100 : k < TW.spaceFrom ? Math.max(1250, 2000 - 90 * (k - 3)) : Math.max(1050, 1400 - 35 * (k - TW.spaceFrom)));
-  const twTol = (k) => TW_EASY ? 3 : twLim(k) * TW_HW / 2;
-  const TW_LIM = [0.5, 0.4, 0.3, 0.24, 0.19, 0.15, 0.12, 0.1, 0.085, 0.07], TW_HW = 1.9;
-  const twLim = (j) => Math.max(0.045, 0.85 * (TW_LIM[j] ?? 0.07 * Math.pow(0.93, j - 9)));
-  const twRanges = (offs) => { const full = [0, ...(offs || [])], m = full.length - 1, lv = []; for (let j = 0; j <= m; j++) { const cnt = m + 1 - j, d = twLim(j) * TW_HW / 2; let sum = 0; for (let i = j + 1; i <= m; i++) sum += full[i]; lv.push([(full[j] - d) * cnt - sum, (full[j] + d) * cnt - sum]); } return { lv, lo: Math.max(...lv.map((r) => r[0])), hi: Math.min(...lv.map((r) => r[1])) }; };
-  const twStress = (offs) => { const full = [0, ...(offs || [])], m = full.length - 1; let w = 0; for (let j = 0; j < m; j++) { let sum = 0; for (let i = j + 1; i <= m; i++) sum += full[i]; w = Math.max(w, Math.abs(sum / (m - j) - full[j]) / (twLim(j) * TW_HW / 2)); } return Math.round(w * 1000) / 1000; };
+  const twTol = (k) => TW_EASY ? 3 : twTol0(k);
+  const TW_HW = 1.9, TW_SNAP = 0.3;
+  const twTol0 = (k) => (k < TW.spaceFrom ? Math.max(0.1, 0.42 - 0.055 * k) : Math.max(0.06, 0.1 - 0.004 * (k - TW.spaceFrom)));
+  const twTop = (s) => (s.offsets && s.offsets.length ? s.offsets[s.offsets.length - 1] : 0);
   const twX = (t, start, k) => TW.amp * Math.sin((2 * Math.PI * (t - start)) / twPeriod(k));
   const twMult = (n) => (n === 0 ? 1 : n <= TW.easyFloors ? floor2(Math.pow(TW.easyMult, n / TW.easyFloors)) : n <= TW.spaceFrom ? floor2(TW.easyMult * Math.pow(TW.ladderGrowth, n - TW.easyFloors)) : floor2(TW.easyMult * Math.pow(TW.ladderGrowth, TW.spaceFrom - TW.easyFloors) * Math.pow(TW.spaceGrowth, n - TW.spaceFrom)));
   const stepsCfg = {
@@ -49,7 +48,7 @@
   const view = (r, now) => {
     const s = r.state, done = r.status !== 'active';
     if (r.game === 'rocket') return { growth: GROWTH, startedAt: s.startedAt, serverNow: now, auto: s.auto, k: s.k ?? null, ...(done ? { crash: s.crash, cashedAt: s.cashedAt ?? null } : {}) };
-    if (r.game === 'tower') return { picks: s.picks, maxSteps: TW.maxSteps, last: s.last, serverNow: now, multipliers: Array.from({ length: TW.maxSteps }, (_, i) => twMult(i + 1)), offsets: s.offsets || [], hw: TW_HW, limits: twRanges(s.offsets).lv, stress: twStress(s.offsets), range: [twRanges(s.offsets).lo, twRanges(s.offsets).hi], swing: { start: s.swingStart, period: twPeriod(s.picks), amp: TW.amp, tol: Math.max(0, (twRanges(s.offsets).hi - twRanges(s.offsets).lo) / 2) } };
+    if (r.game === 'tower') return { picks: s.picks, maxSteps: TW.maxSteps, last: s.last, serverNow: now, multipliers: Array.from({ length: TW.maxSteps }, (_, i) => twMult(i + 1)), offsets: s.offsets || [], hw: TW_HW, stress: 0, range: [twTop(s) - twTol(s.picks), twTop(s) + twTol(s.picks)], swing: { start: s.swingStart, period: twPeriod(s.picks), amp: TW.amp, tol: twTol(s.picks) } };
     if (r.game === 'mines') return { count: s.count, revealed: s.revealed, size: SIZE, ...(done ? { mines: s.mines } : {}) };
     return { variant: s.variant, choices: s.choices, bad: s.bad, maxSteps: s.max, picks: s.picks,
       multipliers: Array.from({ length: s.max }, (_, i) => stepsMult(s.choices, s.bad, i + 1)), ...(done ? { deadly: s.deadly } : {}) };
@@ -58,7 +57,7 @@
   const debugOf = (r, now) => {                           // admin/demo peek at the current round state
     const s = r.state; if (r.game === 'rocket') return { crash: s.crash, auto: s.auto, msToCrash: Math.max(0, Math.round((Math.log(s.crash) / GROWTH * 1000) - (now - s.startedAt))) };
     if (r.game === 'mines') return { mines: s.mines, revealed: s.revealed, size: SIZE };
-    if (r.game === 'tower') return { picks: s.picks, swingStart: s.swingStart, period: twPeriod(s.picks), offsets: s.offsets, range: [twRanges(s.offsets).lo, twRanges(s.offsets).hi] };
+    if (r.game === 'tower') return { picks: s.picks, swingStart: s.swingStart, period: twPeriod(s.picks), offsets: s.offsets, tol: twTol(s.picks) };
     return { picks: s.picks, deadly: s.deadly };
   };
   const present = (r, now = Date.now()) => ({ id: r.id, game: r.game, bet: r.bet, status: r.status, multiplier: r.multiplier, payout: r.payout,
@@ -144,10 +143,10 @@
         if (body.tap) {
           if (now < s.swingStart) fail('Too early');
           const lat = Math.min(TW.maxLat, Math.max(0, Number(body.lat) || 0)), t = Math.max(s.swingStart, now - lat);
-          const offs = s.offsets || (s.offsets = []), top = offs.length ? offs[offs.length - 1] : 0, { lv, lo, hi } = twRanges(offs);
-          const judge = (tt) => { const x = twX(Math.max(s.swingStart, tt), s.swingStart, s.picks), miss = !TW_EASY && Math.abs(x - top) > TW_HW * 0.9, j = TW_EASY || miss ? -1 : lv.findIndex((q) => x < q[0] || x > q[1]); return { x, miss, j, ok: !miss && j === -1 }; };
-          const cands = [t, t - TW.grace, t + TW.grace].map(judge), pk = cands.find((c) => c.ok) || cands[0], x = pk.x, miss = pk.miss, j = pk.j, ok = pk.ok, xr = Math.round(x * 1000) / 1000;
-          s.last = { x: xr, ok, miss, collapse: j >= 0 ? j : null, tol: Math.round(((hi - lo) / 2) * 1000) / 1000 };
+          const offs = s.offsets || (s.offsets = []), top = twTop(s), tol = twTol(s.picks);
+          const judge = (tt) => { const x = twX(Math.max(s.swingStart, tt), s.swingStart, s.picks); return { x, ok: TW_EASY || Math.abs(x - top) <= tol }; };
+          const cands = [t, t - TW.grace, t + TW.grace].map(judge), pk = cands.find((c) => c.ok) || cands[0], ok = pk.ok, x = ok ? top + (pk.x - top) * TW_SNAP : pk.x, xr = Math.round(x * 1000) / 1000;
+          s.last = { x: xr, ok, miss: !ok, collapse: null, tol: Math.round(tol * 1000) / 1000 };
           if (!ok) finish(r, 'lost', 0);
           else { s.picks++; offs.push(xr); r.multiplier = twMult(s.picks); s.swingStart = now + TW.nextDelay; if (s.picks >= TW.maxSteps) finish(r, 'won', r.multiplier); }
         }
