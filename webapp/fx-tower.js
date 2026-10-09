@@ -364,6 +364,18 @@
         o2.setTransform(1, 0, 0, 1, 0, 0); o2.drawImage(this.tcv, 0, 0);       // outline + fill merged into one layer, so fading never shows the outline through the letters
         g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = ta; g.drawImage(this.tcv2, 0, 0); g.restore();
       }
+      if (this.loadStart == null) this.loadStart = Date.now();
+      const lp = (Date.now() - this.loadStart) / 5000;
+      if (lp < 1.05) {                                           // loading ring in the middle of the scene for the first 5 s
+        const la = clamp(Math.min(lp / 0.08, (1.05 - lp) / 0.1)), r = Math.min(w, h) * 0.085, cy = h * 0.5, ang = t * 5;
+        g.save(); g.globalAlpha = la; g.fillStyle = 'rgba(8,20,48,.38)'; g.beginPath(); g.arc(w / 2, cy, r * 1.9, 0, 6.283); g.fill();
+        g.lineWidth = r * 0.22; g.lineCap = 'round'; g.strokeStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.arc(w / 2, cy, r, 0, 6.283); g.stroke();
+        g.strokeStyle = '#ffc233'; g.beginPath(); g.arc(w / 2, cy, r, -1.5708, -1.5708 + 6.283 * clamp(lp)); g.stroke();
+        g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = r * 0.12; g.beginPath(); g.arc(w / 2, cy, r * 1.35, ang, ang + 0.9); g.stroke();
+        g.fillStyle = '#fff'; g.font = `800 ${Math.round(r * 0.5)}px 'Unbounded',system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(Math.round(clamp(lp) * 100) + '%', w / 2, cy);
+        g.font = `700 ${Math.round(r * 0.3)}px 'Unbounded',system-ui,sans-serif`; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText('Загрузка', w / 2, cy + r * 1.75);
+        g.restore();
+      }
       const vg = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.max(w, h) * 0.75); vg.addColorStop(0, 'rgba(0,30,70,0)'); vg.addColorStop(1, 'rgba(0,30,70,.22)'); g.fillStyle = vg; g.fillRect(0, 0, w, h);
       g.restore();
     }

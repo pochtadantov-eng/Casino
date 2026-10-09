@@ -22,6 +22,12 @@ function openGame(g) {
   state.game = g; state.round = null; unlockPlay(); state.tscene = null; state.tpending = false; Music.stop(); $('#stage').className = '';
   $('#gtitle').textContent = TITLES[g];
   show('game');
+  document.querySelector('.loadgate')?.remove();
+  if (g === 'tower') {                                       // 5 s loading screen: nothing in the app can be pressed meanwhile
+    const gate = document.createElement('div'); gate.className = 'loadgate'; document.body.append(gate);
+    const kill = (e) => { e.preventDefault(); e.stopPropagation(); }; ['click', 'pointerdown', 'touchstart', 'mousedown'].forEach((ev) => gate.addEventListener(ev, kill, { passive: false }));
+    setTimeout(() => gate.remove(), 5000);
+  }
   load();
 }
 document.querySelectorAll('[data-game]').forEach((c) => c.onclick = () => openGame(c.dataset.game));
