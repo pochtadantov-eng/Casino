@@ -27,6 +27,7 @@
   const TW_LIM = [0.5, 0.4, 0.3, 0.24, 0.19, 0.15, 0.12, 0.1, 0.085, 0.07], TW_HW = 1.9;
   const twLim = (j) => Math.max(0.05, TW_LIM[j] ?? 0.07 * Math.pow(0.93, j - 9));
   const twRanges = (offs) => { const full = [0, ...(offs || [])], m = full.length - 1, lv = []; for (let j = 0; j <= m; j++) { const cnt = m + 1 - j, d = twLim(j) * TW_HW / 2; let sum = 0; for (let i = j + 1; i <= m; i++) sum += full[i]; lv.push([(full[j] - d) * cnt - sum, (full[j] + d) * cnt - sum]); } return { lv, lo: Math.max(...lv.map((r) => r[0])), hi: Math.min(...lv.map((r) => r[1])) }; };
+  const twStress = (offs) => { const full = [0, ...(offs || [])], m = full.length - 1; let w = 0; for (let j = 0; j < m; j++) { let sum = 0; for (let i = j + 1; i <= m; i++) sum += full[i]; w = Math.max(w, Math.abs(sum / (m - j) - full[j]) / (twLim(j) * TW_HW / 2)); } return Math.round(w * 1000) / 1000; };
   const twX = (t, start, k) => TW.amp * Math.sin((2 * Math.PI * (t - start)) / twPeriod(k));
   const twMult = (n) => (n === 0 ? 1 : n <= TW.easyFloors ? floor2(Math.pow(TW.easyMult, n / TW.easyFloors)) : n <= TW.spaceFrom ? floor2(TW.easyMult * Math.pow(TW.ladderGrowth, n - TW.easyFloors)) : floor2(TW.easyMult * Math.pow(TW.ladderGrowth, TW.spaceFrom - TW.easyFloors) * Math.pow(TW.spaceGrowth, n - TW.spaceFrom)));
   const stepsCfg = {
@@ -40,7 +41,7 @@
   const view = (r, now) => {
     const s = r.state, done = r.status !== 'active';
     if (r.game === 'rocket') return { growth: GROWTH, startedAt: s.startedAt, serverNow: now, auto: s.auto, ...(done ? { crash: s.crash, cashedAt: s.cashedAt ?? null } : {}) };
-    if (r.game === 'tower') return { picks: s.picks, maxSteps: TW.maxSteps, last: s.last, serverNow: now, multipliers: Array.from({ length: TW.maxSteps }, (_, i) => twMult(i + 1)), offsets: s.offsets || [], hw: TW_HW, limits: twRanges(s.offsets).lv, range: [twRanges(s.offsets).lo, twRanges(s.offsets).hi], swing: { start: s.swingStart, period: twPeriod(s.picks), amp: TW.amp, tol: Math.max(0, (twRanges(s.offsets).hi - twRanges(s.offsets).lo) / 2) } };
+    if (r.game === 'tower') return { picks: s.picks, maxSteps: TW.maxSteps, last: s.last, serverNow: now, multipliers: Array.from({ length: TW.maxSteps }, (_, i) => twMult(i + 1)), offsets: s.offsets || [], hw: TW_HW, limits: twRanges(s.offsets).lv, stress: twStress(s.offsets), range: [twRanges(s.offsets).lo, twRanges(s.offsets).hi], swing: { start: s.swingStart, period: twPeriod(s.picks), amp: TW.amp, tol: Math.max(0, (twRanges(s.offsets).hi - twRanges(s.offsets).lo) / 2) } };
     if (r.game === 'mines') return { count: s.count, revealed: s.revealed, size: SIZE, ...(done ? { mines: s.mines } : {}) };
     return { variant: s.variant, choices: s.choices, bad: s.bad, maxSteps: s.max, picks: s.picks,
       multipliers: Array.from({ length: s.max }, (_, i) => stepsMult(s.choices, s.bad, i + 1)), ...(done ? { deadly: s.deadly } : {}) };

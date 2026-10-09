@@ -91,7 +91,7 @@
     reset() {
       this.state = 'idle'; this.u = 0; this.floors = []; this.base = 0; this.landed = 0; this.targetSucc = 0; this.queue = []; this.predQ = []; this.failQueued = false; this.pendingVerdicts = 0;
       this.debris = []; this.lostT = 0; this.camV = 0; this.wreckT = -1; this.pieces = []; this.tractorX = 0; this.tractorY = 0; this.tractorRot = 0; this.struck = false;
-      this.wob = 0; this.wv = 0; this.shake = 0; this.puffs = []; this.pops = []; this.fall = null; this.tumble = null; this.rest = null; this.pendingCollapse = null; this.limits = []; this.range = null; this.lastV = null; this.intro = null; this.hang = null; this.popFor = 0;
+      this.wob = 0; this.wv = 0; this.shake = 0; this.puffs = []; this.pops = []; this.fall = null; this.tumble = null; this.rest = null; this.pendingCollapse = null; this.stress = 0; this.limits = []; this.range = null; this.lastV = null; this.intro = null; this.hang = null; this.popFor = 0;
       this.th = 0; this.thv = 0; this.lrope = LROPE_HIDE; this.roundStatus = 'idle'; this.maxSteps = 10; this.mults = []; this.camBottom = -0.7; this.camSet = false;
     }
     resize() { const r = this.c.getBoundingClientRect(); this.w = Math.max(1, r.width); this.h = Math.max(1, r.height); this.c.width = Math.round(this.w * DPR); this.c.height = Math.round(this.h * DPR); this.g.setTransform(DPR, 0, 0, DPR, 0, 0); this.hv = Math.max(8.4, 6.9 / (this.w / this.h)); this.ppu = this.h / this.hv; window.TowerProps && TowerProps.clear(); }
@@ -102,7 +102,7 @@
     sync(round) {
       const first = (this.syncs = (this.syncs || 0) + 1) === 1;      // very first look at the scene: an already-running round is only resumed, the first house does not drop again
       if (!round) { if (this.roundId !== null) { this.reset(); this.roundId = null; } this._setReady(false); return; }
-      const v = round.view, succ = v.picks; this.swing = v.swing; this.limits = v.limits || []; this.range = v.range || null; this.lastV = v.last || null; this.clockOffset = v.serverNow - Date.now();
+      const v = round.view, succ = v.picks; this.swing = v.swing; this.limits = v.limits || []; this.stress = v.stress || 0; this.range = v.range || null; this.lastV = v.last || null; this.clockOffset = v.serverNow - Date.now();
       if (round.id !== this.roundId) {
         this.reset(); this.roundId = round.id;
         const fresh = round.status === 'active' && succ === 0 && !first, total = succ + (fresh ? 0 : 1);
@@ -156,7 +156,7 @@
       if (!this.c.isConnected) { this._ro.disconnect(); return; }
       requestAnimationFrame(this._loop);
       const dt = Math.min(0.05, (now - this.last) / 1000); this.last = now;
-      if (!this.w) return; this.update(dt); this.draw(this.g, now / 1000);
+      if (!this.w) return; this.update(dt, now / 1000); this.draw(this.g, now / 1000);
     }
     // chips/cracks live on the house (local coords: x, y in -0.5..0.5 of the body); debris flies off in the wall colour
     hit(target, edge, xFrac, power, who) {
@@ -199,13 +199,14 @@
       if (this.tractorX - 2.0 > this.w / 2 / this.ppu && !this.pieces.length) { this.wreckT = -2; }
     }
     support(x, top) { const c = this.floors.length ? this.floors[this.floors.length - 1].ox : 0, a = Math.abs(x - c); return a < HW / 2 + 0.25 ? top : a < SLAB_W / 2 ? SLAB_H : 0; }
-    update(dt) {
+    update(dt, t = performance.now() / 1000) {
       const tgt = this.roundId === null || (this.state === 'done' && this.camBottom <= -0.6 && this.wreckT === -2) ? 1 : 0;      // the title is back once the camera is at the bottom and the round is over
       this.titleA = (this.titleA == null ? 1 : this.titleA) + (tgt - (this.titleA == null ? 1 : this.titleA)) * Math.min(1, dt * (tgt ? 3 : 5));
       if (this.state === 'done' && (this.roundStatus === 'lost' || this.roundStatus === 'won') && this.wreckT === -1 && this.lostT > 0.9) this.wreck();      // the bulldozer rolls in while the plaque is still up
       if (this.wreckT >= 0) this.stepWreck(dt);
       const tS = this.now(), sw0 = this.swing ? this.swing.start : tS, top = this.landTop();
-      this.u += dt; this.wv += (-60 * this.wob - 5.5 * this.wv) * dt; this.wob += this.wv * dt;
+      this.u += dt; if (this.stress > 0.45 && this.roundStatus === 'active' && this.state !== 'done') this.wv += Math.cos(t * 7.7) * Math.min(1, (this.stress - 0.45) / 0.55) * 30 * dt;      // the tower creaks when it is close to the limit
+      this.wv += (-60 * this.wob - 5.5 * this.wv) * dt; this.wob += this.wv * dt;
       for (const f of this.floors) if (f.sq) { f.sq *= Math.exp(-9 * dt); if (f.sq < 0.002) f.sq = 0; }
       let hasHouse = false;
       switch (this.state) {
@@ -221,6 +222,7 @@
       }
       if (this.state === 'drop' || this.state === 'land' || this.state === 'tumble') this.stepFall(dt, top, tS, sw0);
       if (this.pendingCollapse != null && this.state === 'land' && this.u > 0.55) this.collapse(this.pendingCollapse);
+      else if (this.pendingCollapse != null && !this.overloadPop) { this.overloadPop = true; this.pops.push({ txt: 'Перевес!', x: 0, y0: this.landTop() + INC + 0.3, life: 1.3, max: 1.3 }); }
       if (this.wreckT < 0 && this.pieces.length) this.stepFree(dt);
       if (hasHouse && this.swing) { const sp = this.swingAt(tS); this.th = Math.asin(clamp(sp.x / R, -0.95, 0.95)); this.thv = sp.v / 1000 / R; } else { this.thv *= 0.9; this.th *= 0.92; }
       this._setReady(this.state === 'sway' && this.roundStatus === 'active' && !this.fall && !!this.swing && tS >= this.swing.start + 60);
@@ -238,7 +240,7 @@
     }
     // the stack cannot carry the new weight: everything above level j slides off the weak house, tumbling to the side of the lean
     collapse(j) {
-      this.pendingCollapse = null; j = clamp(j, 0, this.floors.length - 1);
+      this.pendingCollapse = null; this.overloadPop = false; j = clamp(j, 0, this.floors.length - 1);
       const above = this.floors.slice(j + 1); if (!above.length) return;
       const com = above.reduce((a, f) => a + f.ox, 0) / above.length, side = Math.abs(com - this.floors[j].ox) < 0.02 ? (Math.random() < 0.5 ? -1 : 1) : Math.sign(com - this.floors[j].ox);
       above.forEach((f, k) => this.pieces.push({ v: f.v, dmg: f.dmg, free: true, side, hit: 0, x: f.ox + this.wob * 0.2, y: SLAB_H + (j + 1 + k) * INC + HH / 2, vx: side * (1.0 + k * 0.45 + rand(0, 0.5)), vy: rand(0.4, 1.4) + k * 0.15, rot: f.tilt, vr: -side * rand(0.9, 2.1) * (1 + k * 0.1), age: 0, down: 0 }));
@@ -380,6 +382,10 @@
       if (sy < h + 60) this.drawRamps(g, gy, 1);                     // permanent plank ramps, flush with the platform's corners
       const n = this.floors.length;
       this.floors.forEach((f, i) => { const k = n > 1 ? i / (n - 1) : 1, kf = 0.1 + 0.9 * k, wy = SLAB_H + i * INC + HH / 2; if (this.Y(wy) < -HH * ppu) return; this.drawHouse(g, f.v, f.ox + this.wob * 0.2 * kf, wy, f.tilt - this.wob * 0.02 * kf, f.sq, f.dmg); });
+      if (this.pendingCollapse != null && this.floors[this.pendingCollapse]) {                  // the level that cannot hold the weight glows red
+        const f = this.floors[this.pendingCollapse], ty = this.Y(SLAB_H + this.pendingCollapse * INC + HH), a = 0.7 + 0.3 * Math.sin(t * 22);
+        g.save(); g.fillStyle = `rgba(255,50,50,${a})`; g.shadowColor = 'rgba(255,40,40,.9)'; g.shadowBlur = 14; g.fillRect(this.X(f.ox) - HW * ppu * 0.5 - 4, ty - 4, HW * ppu + 8, 8); g.restore();
+      }
       if (this.intro) this.drawHouse(g, this.intro.v, this.intro.x, this.intro.y, this.intro.rot);
       if (this.fall) this.drawHouse(g, this.fall.v, this.fall.x, this.fall.y, this.fall.rot, 0, this.fall.dmg);
       if (this.tumble) this.drawHouse(g, this.tumble.v, this.tumble.x, this.tumble.y, this.tumble.rot, 0, this.tumble.dmg);
@@ -392,7 +398,7 @@
       if (this.swing && ['arrive', 'sway'].includes(this.state) && this.roundStatus === 'active') {
         const rg = this.range || [-this.swing.tol, this.swing.tol], lo = Math.max(rg[0], -2), hi = Math.min(rg[1], 2); if (hi <= lo) { /* nothing can hold the next house any more */ }
         const x1 = this.X(lo), x2 = this.X(Math.max(lo, hi)), y = this.Y(this.landTop()), live = this.state === 'sway', pulse = 0.5 + 0.5 * Math.sin(t * 5);
-        g.save(); g.fillStyle = `rgba(80,255,150,${live ? 0.3 + 0.2 * pulse : 0.12})`; g.fillRect(x1, y - 5, x2 - x1, 5); g.strokeStyle = `rgba(190,255,215,${live ? 0.95 : 0.4})`; g.lineWidth = 1.5; g.setLineDash([4, 3]); g.lineDashOffset = -t * 12; g.strokeRect(x1, y - 5, x2 - x1, 5); g.restore();
+        g.save(); g.fillStyle = `rgba(80,255,150,${live ? 0.4 + 0.25 * pulse : 0.15})`; g.fillRect(x1, y - 9, x2 - x1, 9); g.strokeStyle = `rgba(190,255,215,${live ? 1 : 0.45})`; g.lineWidth = 2; g.strokeRect(x1, y - 9, x2 - x1, 9); g.fillStyle = `rgba(190,255,215,${live ? 0.95 : 0.4})`; g.beginPath(); g.moveTo((x1 + x2) / 2 - 6, y - 24 - 3 * pulse); g.lineTo((x1 + x2) / 2 + 6, y - 24 - 3 * pulse); g.lineTo((x1 + x2) / 2, y - 14 - 3 * pulse); g.closePath(); g.fill(); g.restore();
       }
       this.drawHook(g);
       for (const d of this.debris) { g.save(); g.globalAlpha = clamp(d.life / 0.35); g.translate(this.X(d.x), this.Y(d.y)); g.rotate(d.rot); g.fillStyle = d.col; const z = d.s * this.ppu; g.fillRect(-z / 2, -z / 2, z, z * 0.7); g.restore(); }

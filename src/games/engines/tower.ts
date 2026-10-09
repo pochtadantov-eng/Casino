@@ -52,6 +52,15 @@ interface State {
   offsets: number[];        // x of every landed house above the base (the base sits at 0)
   last: { x: number; ok: boolean; miss: boolean; collapse: number | null; tol: number } | null;
 }
+/** 0..1+: how close the weakest level is to its limit (the phone wobbles the tower as a warning) */
+const stressOf = (offsets: number[] = []) => {
+  const full = [0, ...offsets], m = full.length - 1; let worst = 0;
+  for (let j = 0; j < m; j++) {
+    let sum = 0; for (let i = j + 1; i <= m; i++) sum += full[i];
+    worst = Math.max(worst, Math.abs(sum / (m - j) - full[j]) / (levelLim(j) * TOWER.hw / 2));
+  }
+  return Math.round(worst * 1000) / 1000;
+};
 const ranges = (offsets: number[] = []) => {
   const lv = levelRanges([0, ...offsets]);
   return { lv, lo: Math.max(...lv.map((r) => r[0])), hi: Math.min(...lv.map((r) => r[1])) };
@@ -85,7 +94,7 @@ export const tower: Engine<State> = {
     const { lv, lo, hi } = ranges(state.offsets);
     return {
       picks: state.picks, maxSteps: TOWER.maxSteps, last: state.last, serverNow: now, offsets: state.offsets ?? [], hw: TOWER.hw,
-      limits: lv, range: [lo, hi],
+      limits: lv, range: [lo, hi], stress: stressOf(state.offsets),
       multipliers: Array.from({ length: TOWER.maxSteps }, (_, i) => towerMultiplier(i + 1)),
       swing: { start: state.swingStart, period: periodAt(state.picks), amp: TOWER.amp, tol: Math.max(0, (hi - lo) / 2) },
     };
