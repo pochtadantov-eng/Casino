@@ -329,6 +329,7 @@
       if (this.tumble) this.drawHouse(g, this.tumble.v, this.tumble.x, this.tumble.y, this.tumble.rot, 0, this.tumble.dmg);
       if (this.rest) { const q = this.rest, sup = this.support(q.x, this.landTop()), low = (HW / 2) * Math.abs(Math.sin(q.rot)) + (HH / 2) * Math.abs(Math.cos(q.rot)); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(this.X(q.x), this.Y(sup) + 2, HW * ppu * 0.55, 5, 0, 0, 6.283); g.fill(); this.drawHouse(g, q.v, q.x, sup + low, q.rot, 0, q.dmg); }
       for (const q of this.pieces) { g.save(); g.globalAlpha = clamp(1 - q.age / 0.9); this.drawHouse(g, q.v, q.x, q.y, q.rot, 0, q.dmg); g.restore(); }
+      if (gp < h + 8 * ppu) this.propsSide(g, gp);
       if (this.wreckT >= 0) this.drawTractor(g, this.tractorX, gy);
       if (gp < h + 8 * ppu) this.propsFront(g, gp);                // foreman, speaker, cones: in front of the bulldozer lane, so nothing of theirs gets run over
       // the allowed release window on the roof of the tower while the swing is live
@@ -409,10 +410,11 @@
         g.restore();
       }
     }
-    propsFront(g, gy) {                             // in front of the slab: bricks on a pallet, traffic cones
-      const { ppu } = this, P = TowerProps;
-      this.drawCrew(g, gy, this._t || 0);
-      this.sprite(g, P.pallet(ppu), 3.0, gy + 0.15 * ppu); const c = P.cone(ppu); this.sprite(g, c, -2.85, gy + 0.15 * ppu); this.sprite(g, c, 2.4, gy + 0.15 * ppu);
+    propsSide(g, gy) {                              // bricks on a pallet + right cone: the bulldozer drives in front of these
+      const { ppu } = this, P = TowerProps; this.sprite(g, P.pallet(ppu), 3.0, gy + 0.15 * ppu); this.sprite(g, P.cone(ppu), 2.4, gy + 0.15 * ppu);
+    }
+    propsFront(g, gy) {                             // foreman, speaker and left cone: in front of the bulldozer lane
+      const { ppu } = this; this.drawCrew(g, gy, this._t || 0); this.sprite(g, TowerProps.cone(ppu), -2.85, gy + 0.15 * ppu);
     }
     drawTractor(g, wx, gy) {
       const u = this.ppu, x = this.X(wx), bob = Math.sin(this.tw * 3.1) * 0.012 * u;
