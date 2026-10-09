@@ -413,9 +413,9 @@
         this.hvel = (this.hvel || 0) + (((this.heliOff - (this.hprev ?? this.heliOff)) / Math.max(hdt, 1e-3)) - (this.hvel || 0)) * Math.min(1, hdt * 6); this.hprev = this.heliOff; }
       const ta = this.heliOff > 0 ? base * clamp(1 - this.heliOff / (w * 0.95)) : base;   // starts invisible and fades in over the ~4 s song intro; then stays until Play is pressed
       if (ta > 0.01) {
-        const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.38, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
+        const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.35, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
         // the helicopter flies in from the left, hovers and holds the title on two ropes; when the round starts it flies away to the right with it
-        const hs = Math.min(w * 0.5, 420) / 1080, bob = Math.sin(t * 1.4) * 3 + Math.sin(t * 2.3) * 1.2;
+        const hs = Math.min(w * 0.3, 260) / 1080, bob = Math.sin(t * 1.4) * 3 + Math.sin(t * 2.3) * 1.2;
         const hx = cx + this.heliOff, hy = h * 0.155 + bob - clamp(this.heliOff / w) * h * 0.05, dx = this.heliOff, dy = bob - clamp(this.heliOff / w) * h * 0.05;
         const swing = Math.sin(t * 1.3) * 0.022 + clamp((this.hvel || 0) / w * 0.12, -0.14, 0.14), topY = y1 - fs1 * 0.58, halfW = fs1 * 1.55;
         const xf = (px, py) => { const c = Math.cos(swing), sn = Math.sin(swing), ax = px - cx, ay = py - topY; return [cx + dx + ax * c - ay * sn, topY + dy + ax * sn + ay * c]; };
