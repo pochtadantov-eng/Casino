@@ -15,7 +15,7 @@
       this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); this.r.shadowMap.enabled = true; this.r.shadowMap.type = THREE.PCFSoftShadowMap;
       this.scene = new THREE.Scene(); this.scene.fog = new THREE.Fog(0xdce9f4, 42, 95);
       this.camera = new THREE.PerspectiveCamera(30, 1, 0.5, 200);
-      this.az = 0.52; this.el = 0.43; this.camTy = 7; this.camH = 21; this.jibY = 13.8;
+      this.az = 0.52; this.el = 0.43; this.camTy = 3.5; this.camH = 11; this.jibY = 13.8;
       this.buildMaterials(); this.buildSky(); this.buildLights(); this.buildGround(); this.buildPlatform(); this.buildProps(); this.buildCrane(); this.buildExtras();
       this.ci = 0; this.roundId = null; this.onReady = null; this._ready = null; this.houseGroup = new THREE.Group(); this.scene.add(this.houseGroup);
       this.reset(); this.resize(); this.update(0, 0);                // place the camera before the first paint
@@ -146,7 +146,7 @@
     // ---------------------------------------------------------------- state
     reset() {
       for (const f of this.floors || []) this.houseGroup.remove(f); for (const o of [this.fall?.obj, this.hang, this.tumble?.obj, this.restObj]) if (o?.parent) o.parent.remove(o);
-      this.state = 'idle'; this.u = 0; this.floors = []; this.landed = 0; this.targetSucc = 0; this.queue = []; this.failQueued = false; this.wob = 0; this.wv = 0; this.th = 0; this.thv = 0; this.sw = 0;
+      this.state = 'idle'; this.u = 0; this.floors = []; this.base = 0; this.intro = null; this.landed = 0; this.targetSucc = 0; this.queue = []; this.failQueued = false; this.wob = 0; this.wv = 0; this.th = 0; this.thv = 0; this.sw = 0;
       this.trolleyX = 0; this.L = 0.25; this.hookStart = 0.25; this.fall = null; this.hang = null; this.tumble = null; this.restObj = null; this.roundStatus = 'idle'; this.maxSteps = 10; this.mults = []; this.badgeT = 0; this.badgeText = '';
       this.badge.visible = false;
     }
@@ -158,17 +158,24 @@
       const v = round.view, succ = round.status === 'lost' ? v.picks.length - 1 : v.picks.length;
       if (round.id !== this.roundId) {                       // a different round: rebuild the tower from its state, no animation
         this.reset(); this.roundId = round.id;
-        for (let i = 0; i < succ; i++) { const h = this.makeHouse(this.ci++); h.position.set(0, PLAT_TOP + i * INC + HALF, 0); this.houseGroup.add(h); this.floors.push(h); }
-        this.landed = this.targetSucc = succ;
-        if (round.status === 'active') { this.state = 'arrive'; this.newHang(); }
+        const fresh = round.status === 'active' && succ === 0;                       // a brand-new round: the first house comes down from the sky
+        const total = succ + (fresh ? 0 : 1);
+        for (let i = 0; i < total; i++) { const h = this.makeHouse(this.ci++); h.position.set(0, PLAT_TOP + i * INC + HALF, 0); h.userData = { ox: 0, tilt: 0, sq: 0 }; this.houseGroup.add(h); this.floors.push(h); }
+        this.base = fresh ? 0 : 1; this.landed = this.targetSucc = succ;
+        if (fresh) { this.startIntro(); }
+        else if (round.status === 'active') { this.state = 'arrive'; this.newHang(); }
         else { this.state = 'done'; if (round.status === 'lost') { this.failQueued = true; const h = this.makeHouse(this.ci++); h.position.set(3.6, 1.0, 0.6); h.rotation.z = -Math.PI / 2; this.scene.add(h); this.restObj = h; } }
-        this.jibY = this.jibTarget(); this.camTy = 6;
+        this.jibY = this.jibTarget(); this.camTy = 3.5;
       }
       this.maxSteps = v.maxSteps; this.mults = v.multipliers; this.roundStatus = round.status;
       while (this.targetSucc < succ) { this.queue.push({ ok: true }); this.targetSucc++; }
       if (round.status === 'lost' && !this.failQueued) { this.queue.push({ ok: false, side: Math.random() < 0.5 ? -1 : 1 }); this.failQueued = true; }
       if (round.status === 'won' && !this.queue.length && (this.state === 'sway' || this.state === 'arrive')) { this.state = 'leave'; this.u = 0; this.hookStart = this.L; }
       this.updateBadge();
+    }
+    startIntro() {
+      const h = this.makeHouse(this.ci++); h.position.set(0.15, PLAT_TOP + 17, 0); h.rotation.set(0.05, 0.5, 0.12); this.scene.add(h);
+      this.intro = { obj: h, vy: -2, vr: 0.9 }; this.state = 'intro'; this.u = 0;
     }
     newHang() { if (this.hang?.parent) this.hang.parent.remove(this.hang); this.hang = this.makeHouse(this.ci++); this.asm.add(this.hang); this.hang.scale.setScalar(0.01); }
     // The house leaves the hook at the moment of the tap and flies on with the crane's and the pendulum's momentum.
@@ -182,7 +189,7 @@
     }
     tap() { if (this.state === 'sway' && this.roundStatus === 'active' && this.hang && !this.fall) this.release(null); }
     _setReady(v) { if (v !== this._ready) { this._ready = v; this.onReady?.(v); } }
-    jibTarget() { return Math.max(13.8, PLAT_TOP + this.landed * INC + 6.4); }
+    jibTarget() { return Math.max(13.8, PLAT_TOP + (this.landed + this.base) * INC + 6.4); }
     updateBadge() {
       const n = this.landed, txt = n && this.mults[n - 1] != null ? 'x' + this.mults[n - 1].toFixed(2) : '';
       if (txt === this.badgeText) return; this.badgeText = txt; this.badgeT = 1;
@@ -202,7 +209,7 @@
     update(dt, t) {
       const A = 1.5, OM = (Math.PI * 2) / 3.4, om2 = 24, damp = 1.9, ropeLen = 66 / 22;
       this.jibY += (this.jibTarget() - this.jibY) * (dt === 0 ? 1 : Math.min(1, dt * 2.2));
-      const trolleyY = this.jibY - 0.4, landBottom = PLAT_TOP + this.landed * INC, hoverCenter = landBottom + HALF + 2.2;
+      const trolleyY = this.jibY - 0.4, landBottom = PLAT_TOP + (this.landed + this.base) * INC, hoverCenter = landBottom + HALF + 2.2;
       const Lhover = trolleyY - (hoverCenter + HALF + ROPE) - HOOKH, Lhide = 0.3;
       this.u += dt; this.sw += dt;
       let L = this.L, ax = 0, hasHouse = !!this.hang && ['arrive', 'sway', 'leave'].includes(this.state);
@@ -246,6 +253,18 @@
           }
           if (this.state === 'land' && this.u > 1.05) { if (this.roundStatus === 'active' && this.landed < this.maxSteps) { this.state = 'arrive'; this.u = 0; this.newHang(); } else this.state = 'done'; }
           break; }
+        case 'intro': {
+          L = lerp(L, Lhide, clamp(dt * 3)); this.trolleyX = swayPos(this.sw, 0.6); ax = 0;
+          const f = this.intro;
+          if (f) {
+            f.vy -= 24 * dt; const o = f.obj; o.position.y += f.vy * dt; o.rotation.y += f.vr * dt * Math.min(1, (o.position.y - landBottom) / 6); o.rotation.x *= 0.97; o.rotation.z *= 0.97;
+            o.position.x = lerp(o.position.x, 0, clamp(dt * 2));
+            if (o.position.y - HALF <= landBottom) {
+              const impact = -f.vy; o.position.set(0, landBottom + HALF, 0); o.rotation.set(0, Math.round(o.rotation.y / (Math.PI / 2)) * (Math.PI / 2) * 0, 0); o.userData = { ox: 0, tilt: 0.012, sq: 0.1 };
+              this.floors.push(o); this.houseGroup.add(o); this.base = 1; this.intro = null; this.wv += 3.2 + impact * 0.12; this.puff(0, landBottom + 0.1, 0, 14); this.state = 'land'; this.u = 0; this.shake = 0.6;
+            }
+          }
+          break; }
         case 'leave': { L = lerp(this.hookStart, Lhide, sm(clamp(this.u / 0.9))); if (this.hang) this.hang.scale.setScalar(clamp(1.35 - this.u / 0.9 * 1.3, 0.01, 1)); if (this.u >= 0.9) { if (this.hang) { this.asm.remove(this.hang); this.hang = null; } this.state = 'done'; this.u = 0; } break; }
         default: L = lerp(L, Lhide, clamp(dt * 3));
       }
@@ -276,15 +295,16 @@
       const show = ['arrive', 'sway', 'align'].includes(this.state) && this.roundStatus === 'active', pulse = 0.5 + 0.5 * Math.sin(t * 4.2);
       this.targetMat.opacity = lerp(this.targetMat.opacity, show ? 0.65 + 0.35 * pulse : 0, clamp(dt * 8)); this.target.position.set(0, landBottom + 0.03, 0); this.target.rotation.z = 0;
       this.arrow.visible = show; this.arrow.position.set(0, landBottom + 1.15 + pulse * 0.25, 0);
-      if (this.landed && this.badge.visible) { this.badgeT = Math.max(0, this.badgeT - dt * 0.7); const top = PLAT_TOP + this.landed * INC; this.badge.position.set(1.9 + this.wob * 0.9, top - 0.5, 1.4); this.badge.scale.set(2.2 * (1 + this.badgeT * 0.3), 0.82 * (1 + this.badgeT * 0.3), 1); }
+      if (this.landed && this.badge.visible) { this.badgeT = Math.max(0, this.badgeT - dt * 0.7); const top = PLAT_TOP + (this.landed + this.base) * INC; this.badge.position.set(1.9 + this.wob * 0.9, top - 0.5, 1.4); this.badge.scale.set(2.2 * (1 + this.badgeT * 0.3), 0.82 * (1 + this.badgeT * 0.3), 1); }
       for (const q of this.puffs) { if (q.life <= 0) continue; q.life -= dt; if (q.life <= 0) { q.s.visible = false; continue; } const a = q.life / q.max; q.s.position.x += q.vx * dt; q.s.position.y += q.vy * dt; q.s.position.z += q.vz * dt; q.s.scale.setScalar(q.size * (2.2 - a)); q.s.material.opacity = 0.75 * a; }
 
       // camera: follows the tower, dollies out when it gets tall
-      const topNext = PLAT_TOP + this.landed * INC + 3.2, yLow = Math.max(-1.1, topNext - 12.5), yHigh = this.jibY + 1.7;
-      const Hv = Math.max(21, yHigh - yLow, 16.5 / this.aspect), ty = Math.max(yLow + Hv / 2 - 0.2, (yLow + yHigh) / 2);
-      const ke = dt === 0 ? 1 : Math.min(1, dt * 2.2); this.camTy += (ty - this.camTy) * ke; this.camH += (Hv - this.camH) * ke;
+      const top = PLAT_TOP + (this.landed + this.base) * INC, yLow = Math.max(-0.9, top - 3.3), yHigh = top + 7.1;
+      const Hv = Math.max(yHigh - yLow, 10.4 / this.aspect), ty = (yLow + yHigh) / 2;
+      const ke = dt === 0 ? 1 : Math.min(1, dt * 2.4); this.camTy += (ty - this.camTy) * ke; this.camH += (Hv - this.camH) * ke;
       const dist = this.camH / 2 / Math.tan((this.camera.fov * Math.PI) / 360), cx = 0.9, ce = Math.cos(this.el);
-      this.camera.position.set(cx + dist * Math.sin(this.az) * ce, this.camTy + dist * Math.sin(this.el), dist * Math.cos(this.az) * ce); this.camera.lookAt(cx, this.camTy, 0);
+      this.camera.position.set(cx + dist * Math.sin(this.az) * ce, this.camTy + dist * Math.sin(this.el), dist * Math.cos(this.az) * ce); if (this.shake > 0) { this.camera.position.y += Math.sin(t * 70) * this.shake * 0.14; this.camera.position.x += Math.cos(t * 55) * this.shake * 0.08; this.shake = Math.max(0, this.shake - dt * 2.2); }
+      this.camera.lookAt(cx, this.camTy, 0);
       this.sun.position.set(-9, this.camTy + 12, 10); this.sun.target.position.set(0, this.camTy - 2, 0); this.sun.target.updateMatrixWorld();
       this._setReady(this.state === 'sway' && this.roundStatus === 'active' && !this.queue.length);
     }
