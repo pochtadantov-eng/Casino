@@ -2,6 +2,7 @@
 // The swing is a function of SERVER time (view.swing); a tap releases the house at once, and the server's verdict
 // (computed from the same formula) is only reconciled afterwards. Nothing here decides who wins.
 (() => {
+  const TowerFx = { worker: null, loading: false };
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
   const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
   const lerp = (a, b, t) => a + (b - a) * t;
@@ -292,6 +293,7 @@
     }
     sprite(g, s, wx, baseY, flip = false) { const ax = s.anchorX != null ? s.anchorX : s.w / 2; g.save(); g.translate(this.X(wx), baseY); if (flip) g.scale(-1, 1); g.drawImage(s.cv, -ax, -s.h, s.w, s.h); g.restore(); }
     draw(g, t) {
+      this._t = t;
       const { w, h, ppu } = this, cam = this.camBottom;
       g.save(); if (this.shake > 0) g.translate((Math.random() - 0.5) * 7 * this.shake, (Math.random() - 0.5) * 7 * this.shake);
       const sk = g.createLinearGradient(0, 0, 0, h); sk.addColorStop(0, '#1f78d8'); sk.addColorStop(0.45, '#4aa6ee'); sk.addColorStop(0.8, '#9ad6f7'); sk.addColorStop(1, '#d8f0fb'); g.fillStyle = sk; g.fillRect(-10, -10, w + 20, h + 20);
@@ -339,8 +341,32 @@
       this.sprite(g, P.tree('birch', ppu), -3.15, gy + 0.05 * ppu); this.sprite(g, P.tree('linden', ppu), 3.35, gy + 0.05 * ppu);
       const l = P.lamp(ppu); this.sprite(g, l, -2.95 + (l.anchorX != null ? 0 : 0), gy + 0.02 * ppu);
     }
+    // the foreman and his speaker on the ground in front: he sways to the beat, the speaker cone pumps and notes float up
+    drawCrew(g, gy, t) {
+      const u = this.ppu, beat = 0.5, ph = (t % beat) / beat, pulse = Math.pow(Math.max(0, Math.cos(ph * 6.283)), 3);
+      if (!TowerFx.loading) { TowerFx.loading = true; const im = new Image(); im.onload = () => { TowerFx.worker = im; }; im.src = window.WORKER_SRC || 'img/worker.webp' + (window.BUILD ? '?v=' + window.BUILD : ''); }
+      const sx = this.X(-2.3), sw = 0.62 * u, sh = 0.9 * u, shake = pulse * 0.6;
+      g.save(); g.translate(sx + (Math.random() - 0.5) * shake, gy + 0.1 * u);
+      g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, sw * 0.75, 4, 0, 0, 6.283); g.fill();
+      let gr = g.createLinearGradient(-sw / 2, 0, sw / 2, 0); gr.addColorStop(0, '#2a2f38'); gr.addColorStop(0.5, '#3d4452'); gr.addColorStop(1, '#20242b'); g.fillStyle = gr;
+      g.beginPath(); g.roundRect ? g.roundRect(-sw / 2, -sh, sw, sh, 6) : g.rect(-sw / 2, -sh, sw, sh); g.fill(); g.strokeStyle = '#11141a'; g.lineWidth = 1.5; g.stroke();
+      const cone = (cy, r, k) => { const rr = r * (1 + 0.1 * pulse * k); const cg = g.createRadialGradient(0, cy, rr * 0.1, 0, cy, rr); cg.addColorStop(0, '#6b7482'); cg.addColorStop(0.45, '#1a1d23'); cg.addColorStop(1, '#2d323b'); g.fillStyle = cg; g.beginPath(); g.arc(0, cy, rr, 0, 6.283); g.fill(); g.strokeStyle = '#8b94a3'; g.lineWidth = 1.5; g.stroke(); g.fillStyle = '#9aa3b1'; g.beginPath(); g.arc(0, cy, rr * 0.2, 0, 6.283); g.fill(); };
+      cone(-sh * 0.3, sw * 0.34, 1); cone(-sh * 0.74, sw * 0.18, 0.6);
+      g.fillStyle = '#ff3b5c'; g.beginPath(); g.arc(sw * 0.34, -sh * 0.95, 2.2, 0, 6.283); g.fill();
+      for (let i = 0; i < 2; i++) { const k = ((t * 1.1 + i * 0.5) % 1); g.strokeStyle = `rgba(255,255,255,${0.35 * (1 - k)})`; g.lineWidth = 2; g.beginPath(); g.arc(0, -sh * 0.45, sw * (0.6 + k * 0.8), -0.9, 0.9); g.stroke(); g.beginPath(); g.arc(0, -sh * 0.45, sw * (0.6 + k * 0.8), 3.14 - 0.9, 3.14 + 0.9); g.stroke(); }
+      g.font = `700 ${Math.round(0.34 * u)}px system-ui,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      for (let i = 0; i < 3; i++) { const k = ((t * 0.5 + i / 3) % 1); g.globalAlpha = Math.sin(k * Math.PI) * 0.95; g.fillStyle = i % 2 ? '#ffd84a' : '#ffffff'; g.shadowColor = 'rgba(0,0,0,.5)'; g.shadowBlur = 3; g.fillText(i % 2 ? '♪' : '♫', (i - 1) * 0.28 * u + Math.sin(k * 6) * 5, -sh - k * 1.5 * u); }
+      g.restore();
+      const im = TowerFx.worker;
+      if (im && im.width) {
+        const hgt = 1.8 * u, wid = hgt * im.width / im.height, bob = Math.abs(Math.sin(ph * Math.PI)) * 0.09 * u;
+        g.save(); g.translate(this.X(-1.45), gy + 0.12 * u); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0, wid * 0.5, 4.5, 0, 0, 6.283); g.fill();
+        g.translate(Math.sin(t * 3.14) * 0.03 * u, -bob); g.rotate(Math.sin(t * 6.283) * 0.07); g.scale(1 + 0.025 * pulse, 1 - 0.03 * pulse); g.drawImage(im, -wid / 2, -hgt, wid, hgt); g.restore();
+      }
+    }
     propsFront(g, gy) {                             // in front of the slab: bricks on a pallet, traffic cones
       const { ppu } = this, P = TowerProps;
+      this.drawCrew(g, gy, this._t || 0);
       this.sprite(g, P.pallet(ppu), 3.0, gy + 0.1 * ppu); const c = P.cone(ppu); this.sprite(g, c, -2.85, gy + 0.14 * ppu); this.sprite(g, c, 2.4, gy + 0.14 * ppu);
     }
     drawTractor(g, wx, gy) {
