@@ -1,11 +1,20 @@
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: casino
-      POSTGRES_PASSWORD: casino
+      POSTGRES_PASSWORD: casino          # change it in production (and DATABASE_URL below)
       POSTGRES_DB: casino
-    ports: ["5432:5432"]
+    ports: ["127.0.0.1:5432:5432"]       # not exposed to the internet
     volumes: [pgdata:/var/lib/postgresql/data]
+  app:                                    # docker compose up -d --build   (the whole casino: API + bot + Mini App on :3000)
+    build: .
+    restart: unless-stopped
+    depends_on: [db]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://casino:casino@db:5432/casino
+    ports: ["3000:3000"]
 volumes:
   pgdata:

@@ -19,11 +19,22 @@ RTP игр 92% (`HOUSE_EDGE`; Мины — 85%, `MINES_EDGE`; Башня — н�
 
 ## Запуск
 ```bash
-cp .env.example .env        # BOT_TOKEN, WEBAPP_URL, DATABASE_URL ...
-docker compose up -d db
-npm install && npm run build && npm start   # API + бот + Mini App на :3000
+cp .env.example .env        # BOT_TOKEN, WEBAPP_URL, ADMIN_IDS, ROCKET_SECRET, DATABASE_URL ...
+docker compose up -d --build   # база + всё казино (API, бот, Mini App) на :3000
+npm install && npm run setup:bot   # проверка токена и Stars-платежей, команды бота, кнопка Mini App
 npm test
 ```
+Без Docker: `docker compose up -d db && npm install && npm run build && npm start`.
+
+### Подключение настоящего пополнения Stars (чек-лист)
+1. @BotFather → `/newbot` → токен в `BOT_TOKEN`. Для Stars (XTR) платёжный провайдер не нужен.
+2. Сервер с публичным **HTTPS** (VPS + Caddy/nginx, Render, Fly.io…) на порт 3000; адрес — в `WEBAPP_URL`.
+3. @BotFather → `/mybots` → ваш бот → Bot Settings → Configure Mini App → тот же URL.
+4. В `.env`: `ADMIN_IDS` (ваш Telegram id), свой длинный `ROCKET_SECRET`, `CHEST_UNLIMITED=0`, `DEV_AUTH=0`, надёжный пароль базы.
+5. `docker compose up -d --build`, затем `npm run setup:bot` — должны быть зелёные галочки (токен, команды, кнопка, счёт на Stars).
+6. Откройте бота → «Играть» → «+» у баланса → оплатите 50 ⭐ → баланс вырастет за пару секунд; в профиле появится запись. Тестовый платёж возвращается командой `/refund <charge_id>` (id виден в чеке Telegram и в логах).
+Страница GitHub Pages (`scripts/build-pages.mjs`) — это **демо** без сервера: пополнение там игрушечное. Настоящие платежи работают только когда Mini App открыт с вашего сервера.
+
 Mini App нужен публичный HTTPS (ngrok / cloudflared / домен): укажите его в `WEBAPP_URL` и в @BotFather → Mini App.
 Локально без Telegram: `DEV_AUTH=1` и открыть `http://localhost:3000/?dev=123` (**только для разработки**).
 
