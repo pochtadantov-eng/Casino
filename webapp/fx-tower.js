@@ -9,7 +9,7 @@
   const sm = (t) => t * t * t * (t * (t * 6 - 15) + 10);
   const rand = (a, b) => a + Math.random() * (b - a);
 
-  const HW = 1.9, HH = 1.55, INC = 1.66, SLAB_H = 0.55, SLAB_W = 5.4, LOW = 0.3;       // house width/height, floor step, foundation slab (world units)
+  const HW = 1.9, HH = 1.55, INC = 1.66, SLAB_H = 0.55, SLAB_W = 5.4, LOW = 0.2;       // house width/height, floor step, foundation slab (world units)
   const R = 5.4, SLING = 0.95, PIVOT_UP = 8.8;                               // pendulum: the pivot hangs above the frame
   const LROPE_HOVER = R - SLING - HH / 2, LROPE_HIDE = -3.4;
 
@@ -118,7 +118,7 @@
       if (round.status === 'won' && !this.queue.length && ['sway', 'arrive'].includes(this.state)) { this.state = 'leave'; this.u = 0; this.leaveFrom = this.lrope; }
     }
     reconcile(ok) { if (this.fall && this.fall.ok !== ok) { this.fall.ok = ok; this.fall.kicked = false; } }       // the server's verdict is final
-    startIntro() { this.intro = { x: 0.1, y: SLAB_H + 14 + HH / 2, vy: -2, rot: 0.25, vr: -0.9, v: this.ci++ }; this.state = 'intro'; this.u = 0; }
+    startIntro() { this.intro = { x: 0.1, y: Math.max(SLAB_H + 6, this.camBottom + this.hv) + HH, vy: -1, rot: 0.25, vr: -0.9, v: this.ci++ }; this.state = 'intro'; this.u = 0; }
     newHang() { this.hang = { v: this.ci++ }; }
     _setReady(v) { if (v !== this._ready) { this._ready = v; this.onReady?.(v); } }
     landTop() { return SLAB_H + (this.landed + this.base) * INC; }
@@ -185,7 +185,7 @@
       let hasHouse = false;
       switch (this.state) {
         case 'intro': {
-          const f = this.intro; f.vy -= 22 * dt; f.y += f.vy * dt; f.rot += f.vr * dt * Math.min(1, (f.y - HH / 2 - top) / 5); f.x = lerp(f.x, 0, clamp(dt * 2));
+          const f = this.intro; f.vy -= 11 * dt; f.y += f.vy * dt; f.rot += f.vr * dt * Math.min(1, (f.y - HH / 2 - top) / 5); f.x = lerp(f.x, 0, clamp(dt * 2));
           if (f.y - HH / 2 <= top) { this.floors.push({ v: f.v, ox: 0, tilt: 0.01, sq: 0.1, dmg: [] }); this.base = 1; this.intro = null; this.wv += 3.4; this.shake = 0.7; this.puff(0, top + 0.1, 14, 1.1); this.state = 'land'; this.u = 0; }
           break; }
         case 'land': case 'drop': case 'tumble': this.lrope = lerp(this.lrope, LROPE_HIDE, clamp(dt * 3.2)); break;
@@ -424,7 +424,7 @@
       if (this.hang) {
         const roofX = px + (L + SLING) * ppu * sx, roofY = py + (L + SLING) * ppu * cs, ex = Math.cos(th), ey = -Math.sin(th), half = HW * ppu * 0.44, ax = hx + 30 * sx, ay = hy + 30 * cs;
         g.strokeStyle = 'rgba(30,38,48,.9)'; g.lineWidth = 1.6; for (const o of [-1, 0, 1]) { g.beginPath(); g.moveTo(ax, ay); g.lineTo(roofX + o * half * ex, roofY + o * half * ey); g.stroke(); }
-        const d = L + SLING + HH / 2; g.shadowColor = 'rgba(0,0,0,.3)'; g.shadowBlur = 10; g.shadowOffsetY = 5; this.drawHouse(g, this.hang.v, d * sx, this.pivotY() - d * cs, th);
+        const d = L + SLING + HH / 2; g.shadowColor = 'rgba(0,0,0,.3)'; g.shadowBlur = 10; g.shadowOffsetY = 5; this.drawHouse(g, this.hang.v, d * sx, this.pivotY() - d * cs + LOW, th);
       }
       g.restore();
     }
