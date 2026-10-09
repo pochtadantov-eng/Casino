@@ -444,13 +444,14 @@
         const dp = 0.2 * u, dir = x1 > x0 ? 1 : -1;           // visual depth of the deck seen slightly from above
         g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse((x0 + x1) / 2, base + 1, Math.abs(x1 - x0) / 2, 3, 0, 0, 6.283); g.fill();
         let gr = g.createLinearGradient(0, base - top, 0, base); gr.addColorStop(0, '#a29c91'); gr.addColorStop(1, '#6b665c'); g.fillStyle = gr;          // front face (a wedge)
-        g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - top); g.lineTo(x1, base); g.closePath(); g.fill();
-        g.strokeStyle = 'rgba(40,36,30,.35)'; g.lineWidth = 1; for (let i = 1; i < 4; i++) { const f = i / 4, x = x0 + (x1 - x0) * f; g.beginPath(); g.moveTo(x, base); g.lineTo(x, base - top * f); g.stroke(); }
+        const tf = top - dp;                                  // the front face is lower by the deck depth, so the back edge of the ramp meets the platform top exactly
+        g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - tf); g.lineTo(x1, base); g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(40,36,30,.35)'; g.lineWidth = 1; for (let i = 1; i < 4; i++) { const f = i / 4, x = x0 + (x1 - x0) * f; g.beginPath(); g.moveTo(x, base); g.lineTo(x, base - tf * f); g.stroke(); }
         gr = g.createLinearGradient(0, base - top - dp, 0, base); gr.addColorStop(0, '#e2dccf'); gr.addColorStop(1, '#c6bfb1'); g.fillStyle = gr;                  // sloped top face
-        g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - top); g.lineTo(x1, base - top - dp); g.lineTo(x0 + dir * 0.1 * u, base - dp); g.closePath(); g.fill();
-        g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0 + dir * 0.1 * u, base - dp); g.lineTo(x1, base - top - dp); g.stroke();
-        g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - top); g.stroke();
-        g.fillStyle = 'rgba(0,0,0,.16)'; for (let i = 0; i < 6; i++) { const f = 0.15 + i * 0.14, x = x0 + (x1 - x0) * f; g.beginPath(); g.arc(x, base - top * f * 0.35 - dp * 0.5, 1 + (i % 3) * 0.5, 0, 6.283); g.fill(); }
+        g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - tf); g.lineTo(x1, base - top); g.lineTo(x0 + dir * 0.1 * u, base - dp); g.closePath(); g.fill();
+        g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0 + dir * 0.1 * u, base - dp); g.lineTo(x1, base - top); g.stroke();
+        g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - tf); g.stroke();
+        g.fillStyle = 'rgba(0,0,0,.16)'; for (let i = 0; i < 6; i++) { const f = 0.15 + i * 0.14, x = x0 + (x1 - x0) * f; g.beginPath(); g.arc(x, base - tf * f - dp * 0.5, 1 + (i % 3) * 0.5, 0, 6.283); g.fill(); }
       };
       ramp(xl - L, xl); ramp(xr + L, xr); g.restore();
     }
