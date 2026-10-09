@@ -407,7 +407,15 @@
       if (this.t0 == null) this.t0 = t;
       const mt = typeof Music !== 'undefined' && Music.time ? Music.time() : null, since = mt != null ? mt : t - this.t0, base = clamp(Math.max(since, t - this.t0) / 3.8), ta = this.titleA * base;   // starts invisible and fades in over the ~4 s song intro; then stays until Play is pressed
       if (ta > 0.01) {
-        const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.22, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
+        const fs1 = Math.min(w * 0.14, 54), fs2 = fs1 * 0.62, cx = w / 2, y1 = h * 0.3, y2 = y1 + fs1 * 0.78, DP = g.getTransform();
+        // the helicopter flies in from the left, hovers and holds the title on two ropes; when the round starts it flies away to the right with it
+        const hk = sm(clamp(base)), away = 1 - this.titleA, hs = Math.min(w * 0.034, 17), bob = Math.sin(t * 1.4) * 3 + Math.sin(t * 2.3) * 1.2;
+        const hx = cx - 1.2 * hs - (1 - hk) * w * 0.9 + away * away * w * 1.1, hy = h * 0.115 + bob - away * h * 0.06, dx = hx - (cx - 1.2 * hs), dy = bob - away * h * 0.06;
+        const swing = Math.sin(t * 1.3) * 0.022 - ((1 - hk) + away) * 0.07, topY = y1 - fs1 * 0.58, halfW = fs1 * 1.55, ropeY = hy + 2.15 * hs;
+        const xf = (px, py) => { const c = Math.cos(swing), sn = Math.sin(swing), ax = px - cx, ay = py - topY; return [cx + dx + ax * c - ay * sn, topY + dy + ax * sn + ay * c]; };
+        g.save(); g.globalAlpha = ta; this.drawHeli(g, hx, hy, hs, t); g.strokeStyle = 'rgba(40,36,34,.9)'; g.lineWidth = 1.6;
+        for (const [rx, ax] of [[hx - 1.0 * hs, -halfW], [hx + 2.3 * hs, halfW]]) { const [tx, ty] = xf(cx + ax, topY + 4); g.beginPath(); g.moveTo(rx, ropeY); g.quadraticCurveTo((rx + tx) / 2 + Math.sin(t * 2 + ax) * 2, (ropeY + ty) / 2 + 3, tx, ty); g.stroke(); g.fillStyle = '#2b2622'; g.beginPath(); g.arc(tx, ty, 2.6, 0, 6.283); g.fill(); }
+        g.restore();
         if (!this.tcv || this.tcv.width !== g.canvas.width || this.tcv.height !== g.canvas.height) { this.tcv = document.createElement('canvas'); this.tcv.width = g.canvas.width; this.tcv.height = g.canvas.height; }
         const oc = this.tcv.getContext('2d'); oc.setTransform(1, 0, 0, 1, 0, 0); oc.clearRect(0, 0, oc.canvas.width, oc.canvas.height); oc.setTransform(DP);
         const lines = [['NOVA', y1, fs1, ['#fff6b0', '#ffc233', '#ff8a14']], ['БАШНИ', y2, fs2, ['#ffd1c2', '#ff5a4a', '#c8202a']]];
@@ -425,7 +433,7 @@
         oc.globalCompositeOperation = 'source-atop';           // the glint runs over the letters only
         const sx = ((t * 0.5) % 1.7 - 0.35) * w, sh = oc.createLinearGradient(sx - 36, y1 - 40, sx + 36, y1 + 120); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5, 'rgba(255,255,255,.75)'); sh.addColorStop(1, 'rgba(255,255,255,0)'); oc.fillStyle = sh; oc.fillRect(0, 0, w, h); oc.globalCompositeOperation = 'source-over';
         o2.setTransform(1, 0, 0, 1, 0, 0); o2.drawImage(this.tcv, 0, 0);       // outline + fill merged into one layer, so fading never shows the outline through the letters
-        g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = ta; g.drawImage(this.tcv2, 0, 0); g.restore();
+        g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = ta; { const k = DP.a; g.translate((cx + dx) * k, (topY + dy) * k); g.rotate(swing); g.translate(-cx * k, -topY * k); } g.drawImage(this.tcv2, 0, 0); g.restore();
       }
       if (this.loadStart == null) this.loadStart = Date.now();
       const lp = (Date.now() - this.loadStart) / 5000;
@@ -567,6 +575,56 @@
       if (my > -mr * 2 && my < h + mr * 2) { const mg = g.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.1, mx, my, mr); mg.addColorStop(0, '#f4f4f0'); mg.addColorStop(1, '#8a8f99'); g.fillStyle = mg; g.beginPath(); g.arc(mx, my, mr, 0, 6.283); g.fill(); g.fillStyle = 'rgba(90,95,105,.35)'; for (const [dx, dy, rr] of [[-0.3, -0.2, 0.22], [0.25, 0.1, 0.28], [-0.05, 0.4, 0.16]]) { g.beginPath(); g.arc(mx + dx * mr, my + dy * mr, rr * mr, 0, 6.283); g.fill(); } }
       const k = (t % 7) / 1.2;                                                // a shooting star every few seconds
       if (k < 1) { const sx = w * (0.9 - 0.7 * k), sy = h * (0.08 + 0.3 * k); const tg = g.createLinearGradient(sx, sy, sx + 70, sy - 26); tg.addColorStop(0, `rgba(255,255,255,${1 - k})`); tg.addColorStop(1, 'rgba(255,255,255,0)'); g.strokeStyle = tg; g.lineWidth = 2; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + 70, sy - 26); g.stroke(); }
+      g.restore();
+    }
+    // a dark-red helicopter (side view, nose to the right, sliding door open, a guy in the doorway waving). s = pixels per unit, the hull is ~14 units long
+    drawHeli(g, x, y, s, t) {
+      g.save(); g.translate(x, y); g.scale(s, s); g.lineJoin = 'round'; g.lineCap = 'round';
+      const rot = t * 40;                                              // rotor phase
+      // shadow-free: skids first
+      g.strokeStyle = '#5a1015'; g.lineWidth = 0.26;
+      g.beginPath(); g.moveTo(-2.7, 2.15); g.lineTo(3.0, 2.15); g.quadraticCurveTo(3.7, 2.15, 3.9, 1.7); g.stroke();
+      g.beginPath(); g.moveTo(-1.3, 2.15); g.lineTo(-1.0, 1.15); g.moveTo(2.0, 2.15); g.lineTo(2.2, 1.1); g.stroke();
+      // tail boom, fin, stabiliser, tail rotor
+      let gr = g.createLinearGradient(0, -1, 0, 1); gr.addColorStop(0, '#a3202a'); gr.addColorStop(1, '#4e0d12');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(-2.2, -0.9); g.lineTo(-8.3, -1.0); g.lineTo(-8.3, -0.35); g.lineTo(-2.2, 0.8); g.closePath(); g.fill();
+      g.fillStyle = '#8c1a22'; g.beginPath(); g.moveTo(-7.4, -1.0); g.lineTo(-8.5, -3.3); g.lineTo(-9.0, -3.2); g.lineTo(-8.5, -0.4); g.closePath(); g.fill();
+      g.fillStyle = '#5a1015'; g.beginPath(); g.ellipse(-6.2, -0.45, 0.9, 0.16, 0, 0, 6.283); g.fill();
+      g.strokeStyle = 'rgba(30,30,34,.85)'; g.lineWidth = 0.14; const tl = 1.2 * Math.cos(rot * 1.7); g.beginPath(); g.moveTo(-8.2, -1.9 - tl); g.lineTo(-8.2, -1.9 + tl); g.stroke();
+      g.fillStyle = '#2b2b30'; g.beginPath(); g.arc(-8.2, -1.9, 0.18, 0, 6.283); g.fill();
+      // fuselage
+      gr = g.createLinearGradient(0, -2.4, 0, 1.4); gr.addColorStop(0, '#c4303a'); gr.addColorStop(0.45, '#8f1a22'); gr.addColorStop(1, '#4a0c11');
+      g.fillStyle = gr; g.beginPath(); g.moveTo(-2.6, 0.7); g.lineTo(-2.6, -0.8); g.quadraticCurveTo(-2.4, -2.1, -0.9, -2.3); g.lineTo(1.6, -2.3); g.quadraticCurveTo(3.1, -2.1, 3.7, -0.7);
+      g.quadraticCurveTo(5.2, -0.1, 5.5, 0.5); g.quadraticCurveTo(5.4, 1.1, 4.5, 1.2); g.lineTo(0.5, 1.45); g.quadraticCurveTo(-2.4, 1.4, -2.6, 0.7); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(20,4,6,.7)'; g.lineWidth = 0.1; g.stroke();
+      g.strokeStyle = 'rgba(255,190,190,.38)'; g.lineWidth = 0.14; g.beginPath(); g.moveTo(-1.8, -1.8); g.quadraticCurveTo(0.5, -2.35, 2.9, -1.7); g.stroke();          // roof glint
+      g.fillStyle = '#3a0a0e'; g.beginPath(); g.ellipse(-0.7, -2.55, 1.5, 0.45, 0, 0, 6.283); g.fill();                                                                // engine hump
+      g.fillStyle = '#1d1d22'; g.beginPath(); g.ellipse(-2.1, -1.55, 0.55, 0.38, 0, 0, 6.283); g.fill();                                                               // exhaust
+      // cabin windows
+      for (const [wx0, ww] of [[-1.7, 1.3], [-0.1, 1.3]]) { g.fillStyle = '#2d4a58'; g.fillRect(wx0, -1.2, ww, 1.1); g.fillStyle = 'rgba(190,230,245,.35)'; g.fillRect(wx0 + 0.1, -1.15, ww * 0.35, 0.5); }
+      // open door: cream interior with the guy standing in it
+      g.fillStyle = '#d9ccb0'; g.fillRect(1.55, -1.75, 1.75, 2.55); g.fillStyle = 'rgba(70,50,30,.35)'; g.fillRect(1.55, -1.75, 0.22, 2.55); g.fillRect(1.55, -1.75, 1.75, 0.18);
+      g.fillStyle = '#7a5a3a'; g.fillRect(1.75, 0.15, 1.4, 0.55);                                                                                                           // seat
+      const wave = Math.sin(t * 7);
+      g.fillStyle = '#ff8a1a'; g.beginPath(); g.roundRect ? g.roundRect(2.05, -0.75, 0.95, 1.35, 0.25) : g.rect(2.05, -0.75, 0.95, 1.35); g.fill();                         // hi-vis jacket
+      g.fillStyle = '#2a2f3a'; g.fillRect(2.15, 0.5, 0.35, 0.45); g.fillRect(2.55, 0.5, 0.35, 0.45);                                                                       // legs
+      g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(2.05, -0.2, 0.95, 0.1);
+      g.fillStyle = '#f0c49a'; g.beginPath(); g.arc(2.55, -1.1, 0.36, 0, 6.283); g.fill();                                                                                 // head
+      g.fillStyle = '#2b1d14'; g.beginPath(); g.arc(2.55, -1.18, 0.37, Math.PI, 0); g.fill(); g.fillStyle = '#1f2f4a'; g.fillRect(2.18, -1.2, 0.75, 0.12);                  // hair + cap brim
+      g.fillStyle = '#111'; g.beginPath(); g.arc(2.67, -1.05, 0.04, 0, 6.283); g.fill();
+      g.save(); g.translate(2.98, -0.55); g.rotate(-1.15 + wave * 0.5);                                                                                                       // waving arm
+      g.strokeStyle = '#ff8a1a'; g.lineWidth = 0.3; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -0.95); g.stroke(); g.fillStyle = '#f0c49a'; g.beginPath(); g.arc(0, -1.1, 0.19, 0, 6.283); g.fill(); g.restore();
+      g.strokeStyle = '#ff8a1a'; g.lineWidth = 0.28; g.beginPath(); g.moveTo(2.12, -0.5); g.lineTo(2.0, 0.3); g.stroke();                                                   // other arm
+      // windshield and nose
+      g.fillStyle = '#8fc4dc'; g.beginPath(); g.moveTo(3.45, -1.6); g.quadraticCurveTo(4.5, -1.1, 5.1, 0.0); g.lineTo(3.55, 0.05); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.moveTo(3.7, -1.3); g.lineTo(4.3, -0.9); g.lineTo(3.8, -0.1); g.closePath(); g.fill();
+      g.fillStyle = '#e8e2dc'; g.font = 'italic 800 0.75px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SHS', 0.9, 0.62);
+      g.fillStyle = '#ff3b3b'; g.beginPath(); g.arc(0.6, -2.35, 0.1, 0, 6.283); g.fill();
+      // main rotor: blur disc + blade streaks whose apparent length flickers as they spin
+      g.fillStyle = 'rgba(160,170,180,.5)'; g.fillRect(0.12, -3.05, 0.16, 0.7); g.fillStyle = '#9aa0a8'; g.fillRect(-0.15, -3.3, 0.7, 0.28);
+      g.fillStyle = 'rgba(30,34,40,.16)'; g.beginPath(); g.ellipse(0.2, -3.2, 7.8, 0.3, 0, 0, 6.283); g.fill();
+      g.strokeStyle = 'rgba(25,28,34,.9)'; g.lineWidth = 0.17;
+      for (let b = 0; b < 2; b++) { const len = 7.6 * Math.cos(rot + b * 1.57); g.beginPath(); g.moveTo(0.2, -3.25); g.lineTo(0.2 + len, -3.25 + (b ? 0.12 : -0.08)); g.stroke(); }
       g.restore();
     }
     drawHook(g) {
