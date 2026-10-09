@@ -283,5 +283,6 @@
       g.restore();
     }
   }
+  TowerGame.prototype.tap = function () { return this.state === 'sway' && this.roundStatus === 'active' && !this.queue.length; };   // the 2D fallback acts once the verdict arrives
   window.TowerGame2D = TowerGame;
 })();

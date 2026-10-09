@@ -192,7 +192,7 @@
       this.fall = { obj, vy: 0, vx, ok: item ? item.ok : null, side, ox, tilt, wait: 0 };
       this.hookStart = this.L; this.state = 'drop'; this.u = 0; this.thv *= 0.35;
     }
-    tap() { if (this.state === 'sway' && this.roundStatus === 'active' && this.hang && !this.fall) this.pendingTap = true; }
+    tap() { if (this.state === 'sway' && this.roundStatus === 'active' && this.hang && !this.fall) { this.release(null); return true; } return false; }
     _setReady(v) { if (v !== this._ready) { this._ready = v; this.onReady?.(v); } }
     jibTarget() { return Math.max(13.8, PLAT_TOP + (this.landed + this.base) * INC + 6.4); }
     updateBadge() {
@@ -217,7 +217,7 @@
       this.update(dt, now / 1000); this.r.render(this.scene, this.camera);
     }
     update(dt, t) {
-      const A = 0, TH0 = 0.33, OM = (Math.PI * 2) / 3.3, om2 = 24, damp = 1.9, ropeLen = 66 / 22;
+      const A = 0, TH0 = 0.27, OM = (Math.PI * 2) / 3.3, om2 = 24, damp = 1.9, ropeLen = 66 / 22;
       this.jibY += (this.jibTarget() - this.jibY) * (dt === 0 ? 1 : Math.min(1, dt * 2.2));
       const landBottom = PLAT_TOP + (this.landed + this.base) * INC, hoverCenter = landBottom + HALF + 5.6, pivot = landBottom + 11.8;
       const Lhover = pivot - (hoverCenter + HALF + ROPE) - HOOKH, Lhide = 0.3;
@@ -228,13 +228,7 @@
       this.trolleyVx = this.prevTx === undefined ? 0 : (this.trolleyX - this.prevTx) / Math.max(dt, 1e-3); 
       switch (this.state) {
         case 'arrive': { const k = sm(clamp(this.u / 1.1)); L = lerp(Lhide, Lhover, k); this.trolleyX = swayPos(this.sw, k); ax = -A * k * OM * OM * Math.sin(OM * this.sw);  if (this.u >= 1.1) { this.state = 'sway'; this.u = 0; } break; }
-        case 'sway': { L = Lhover;
-          if (this.hang && (this.queue.length || this.pendingTap)) {
-            this.tapWait = (this.tapWait || 0) + dt; const hx = (L + HOOKH + ROPE + HALF) * Math.sin(this.th);
-            if (this.queue.length) { const it = this.queue[0]; if (it.ok ? Math.abs(hx) < 0.85 : Math.abs(hx) > 1.3) { this.release(this.queue.shift()); this.pendingTap = false; this.tapWait = 0; } }   // a miss is released over the edge, a hit over the tower
-            else if (this.tapWait > 3) { this.pendingTap = false; this.tapWait = 0; }
-          } else this.tapWait = 0;
-          break; }
+        case 'sway': { L = Lhover; if (this.queue.length && this.hang) this.release(this.queue.shift()); break; }      // a verdict that arrived without a tap (resumed round)
         case 'drop': case 'land': case 'tumble': {
           this.trolleyX = swayPos(this.sw, 1); ax = -A * OM * OM * Math.sin(OM * this.sw);
           L = lerp(this.hookStart, Lhide, sm(clamp((this.u - 0.05) / 0.85)));
@@ -242,10 +236,13 @@
           if (f) {
             if (f.ok === null && this.queue.length) f.ok = this.queue.shift().ok;                // the server's verdict
             const o = f.obj; f.vy -= 28 * dt; o.position.y += f.vy * dt;
-            f.vx *= Math.exp(-5 * dt); o.position.x += f.vx * dt;
-            const tx = f.ok === false ? o.position.x : f.ox;                                       // a missed house keeps falling straight down
-            o.position.x = lerp(o.position.x, tx, clamp(dt * 4.5)); o.position.z = lerp(o.position.z, 0, clamp(dt * 6));
-            o.rotation.z = lerp(o.rotation.z, f.ok === false ? o.rotation.z : f.tilt, clamp(dt * 7)); o.rotation.y *= 0.92;
+            if (f.y0 === undefined) f.y0 = o.position.y - f.vy * dt;
+            const prog = clamp((f.y0 - o.position.y) / Math.max(1, f.y0 - (landBottom + HALF)));
+            if (f.ok === false && !f.kicked) { f.kicked = true; if (Math.abs(o.position.x) < 0.9) f.vx += f.side * (2.2 - Math.abs(o.position.x)); }
+            f.vx *= Math.exp(-(f.ok ? 5 : 0.5) * dt); o.position.x += f.vx * dt;
+            if (f.ok) o.position.x = lerp(o.position.x, f.ox, clamp(dt * (1.2 + 16 * prog * prog)));
+            o.position.z = lerp(o.position.z, 0, clamp(dt * 6));
+            o.rotation.z = f.ok === false ? o.rotation.z - f.side * 0.7 * dt : lerp(o.rotation.z, f.tilt, clamp(dt * 7)); o.rotation.y *= 0.92;
             if (o.position.y - HALF <= landBottom) {
               if (f.ok === null) { o.position.y = landBottom + HALF; f.vy = 0; f.wait += dt; if (f.wait > 2.5) { this.scene.remove(o); this.fall = null; this.state = 'arrive'; this.u = 0; this.newHang(); } }
               else if (f.ok) {
@@ -263,7 +260,8 @@
             const contact = sup(o.position.x), low = Math.abs(Math.sin(o.rotation.z)) * 1.0 + Math.abs(Math.cos(o.rotation.z)) * HALF;
             if (o.position.y - low <= contact && q.vy < 0) {
               o.position.y = contact + low; q.hit++; this.puff(o.position.x, contact + 0.1, o.position.z, 8); this.wv += -Math.sign(q.vx) * 0.6;
-              if (q.hit >= 3 || (q.hit >= 2 && Math.abs(q.vy) < 3.2)) { const r = -q.side * (Math.PI / 2), c2 = sup(o.position.x); o.rotation.z = r; o.position.y = c2 + Math.abs(Math.sin(r)) + Math.abs(Math.cos(r)) * HALF; this.restObj = o; this.tumble = null; this.state = 'done'; this.u = 0; this.puff(o.position.x, c2 + 0.1, 0, 6); }
+              if (Math.abs(o.position.x) < 1.3 && q.hit < 6) { q.vx = q.side * Math.max(Math.abs(q.vx), 2.6); q.vy = Math.max(Math.abs(q.vy) * 0.5, 2.4); q.vr = -q.side * 3.0; }      // still on top of the tower: shove it over the edge
+              else if (q.hit >= 3 || (q.hit >= 2 && Math.abs(q.vy) < 3.2)) { const r = -q.side * (Math.PI / 2), c2 = sup(o.position.x); o.rotation.z = r; o.position.y = c2 + Math.abs(Math.sin(r)) + Math.abs(Math.cos(r)) * HALF; this.restObj = o; this.tumble = null; this.state = 'done'; this.u = 0; this.puff(o.position.x, c2 + 0.1, 0, 6); }
               else { q.vy *= -0.3; q.vx *= 0.6; q.vr *= 0.55; }
             }
           }

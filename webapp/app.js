@@ -149,7 +149,13 @@ R.tower = (round) => {                       // 3D construction site; the server
     state.tpending = true; st.classList.add('towerstage');
     const mount = () => { st.innerHTML = '<canvas class="cv" id="cv-tgame"></canvas>'; return $('#cv-tgame'); };
     let canvas = mount();
-    const done = (sc, cv) => { state.tpending = false; if (!st.contains(cv)) return; state.tscene = sc; sc.onReady = (ok) => { $('#place').disabled = !ok; $('#cash').disabled = !ok; }; sc.sync(state.round); };
+    const done = (sc, cv) => {
+      state.tpending = false; if (!st.contains(cv)) return; state.tscene = sc;
+      const hint = document.createElement('div'); hint.className = 'taphint'; hint.textContent = 'Тапни по экрану, чтобы поставить'; st.append(hint);
+      sc.onReady = (ok) => { $('#cash').disabled = !ok; hint.classList.toggle('on', ok); };
+      cv.addEventListener('pointerdown', (e) => { e.preventDefault(); if (state.tscene === sc && sc._ready && sc.tap()) { $('#cash').disabled = true; hint.classList.remove('on'); act({ choice: 0 }); } });
+      sc.sync(state.round);
+    };
     ensureThree().then(() => {
       let sc; try { sc = new TowerGame3D(canvas); } catch (e) { console.warn('WebGL unavailable, using the 2D scene', e); canvas = mount(); sc = new TowerGame2D(canvas); }
       done(sc, canvas);
@@ -185,8 +191,8 @@ function apply(j) {
   R[state.game](r);
   const active = r?.status === 'active';
   const towerActive = active && state.game === 'tower';
-  $('#go').hidden = active; $('#cash').hidden = !active; $('#place').hidden = !towerActive;
-  $('#place').disabled = towerActive ? !state.tscene?._ready : false;      // the tower scene says when a house is ready to be placed
+  $('#go').hidden = active; $('#cash').hidden = !active; $('#place').hidden = true;
+  
   $('#cash').disabled = towerActive ? !state.tscene?._ready : false;
   $('#cash').textContent = active ? `Забрать ${Math.floor(r.bet * (state.game === 'rocket' ? 1 : r.multiplier))} ⭐` : 'Забрать';
   if (state.game === 'rocket') $('#cash').textContent = 'Забрать';
