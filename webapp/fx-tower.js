@@ -154,7 +154,7 @@
     spray(x, y, n, col) { for (let i = 0; i < n; i++) this.debris.push({ x: x + rand(-0.25, 0.25), y: y + rand(-0.05, 0.15), vx: rand(-2.2, 2.2), vy: rand(1.2, 4.2), rot: rand(0, 6), vr: rand(-9, 9), s: rand(0.035, 0.09), col: Math.random() < 0.65 ? col : '#8d949b', life: rand(0.6, 1.2) }); }
     puff(x, y, n = 10, spread = 0.9) { for (let i = 0; i < n; i++) { const s = i % 2 ? 1 : -1; this.puffs.push({ x: x + s * spread * rand(0.7, 1.1), y: y + rand(0, 0.12), vx: s * rand(0.5, 1.9), vy: rand(0.05, 0.5), r: rand(0.22, 0.45), life: rand(0.5, 0.95), max: 0.95 }); } }
     // after a loss: once the plaque is gone a bulldozer drives in from the left, knocks the tower over and the houses fall apart and vanish
-    wreck() { if (this.state !== 'done' || this.roundStatus !== "lost" || this.wreckT !== -1) return; this.wreckT = 0; this.struck = false; this.tractorX = -(this.w / 2 / this.ppu + 2.0); }
+    wreck() { if (this.state !== 'done' || (this.roundStatus !== 'lost' && this.roundStatus !== 'won') || this.wreckT !== -1) return; this.wreckT = 0; this.struck = false; this.tractorX = -(this.w / 2 / this.ppu + 2.0); }
     stepWreck(dt) {
       this.wreckT += dt; const v = 4.6; this.tractorX += v * dt; this.tw = (this.tw || 0) + v * dt * 1.6;
       if (Math.random() < dt * 14) this.puffs.push({ x: this.tractorX - 1.9, y: 0.12, vx: -rand(0.3, 0.9), vy: rand(0.4, 0.9), r: rand(0.18, 0.32), life: 0.7, max: 0.7 });
@@ -178,9 +178,9 @@
     }
     support(x, top) { const a = Math.abs(x); return a < HW / 2 + 0.25 ? top : a < SLAB_W / 2 ? SLAB_H : 0; }
     update(dt) {
-      const tgt = this.roundId === null || (this.state === 'done' && this.camBottom <= -0.6 && this.lostT > 3.7 && (this.roundStatus === 'won' || this.wreckT === -2)) ? 1 : 0;      // the title is back once the camera is at the bottom and the round is over
+      const tgt = this.roundId === null || (this.state === 'done' && this.camBottom <= -0.6 && this.wreckT === -2) ? 1 : 0;      // the title is back once the camera is at the bottom and the round is over
       this.titleA = (this.titleA == null ? 1 : this.titleA) + (tgt - (this.titleA == null ? 1 : this.titleA)) * Math.min(1, dt * (tgt ? 3 : 5));
-      if (this.state === 'done' && this.roundStatus === 'lost' && this.wreckT === -1 && this.lostT > 0.9) this.wreck();      // the bulldozer rolls in while the plaque is still up
+      if (this.state === 'done' && (this.roundStatus === 'lost' || this.roundStatus === 'won') && this.wreckT === -1 && this.lostT > 0.9) this.wreck();      // the bulldozer rolls in while the plaque is still up
       if (this.wreckT >= 0) this.stepWreck(dt);
       const tS = this.now(), sw0 = this.swing ? this.swing.start : tS, top = this.landTop();
       this.u += dt; this.wv += (-60 * this.wob - 5.5 * this.wv) * dt; this.wob += this.wv * dt;

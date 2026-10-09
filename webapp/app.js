@@ -177,7 +177,7 @@ function showResult(r, delay, kind) {          // "win" / "loss" plaque over the
     : `<b>${RES_LOSS[state.game] || 'ПРОИГРЫШ'}</b><span>−${r.bet} ⭐</span>`;
   $('#stage').append(el);
   setTimeout(() => el.remove(), (delay + 3.4) * 1000);
-  lockPlay((delay + (kind === 'loss' && state.game === 'tower' ? 3.4 : 2.95)) * 1000);               // no new round while the result animation is still playing
+  lockPlay((delay + (state.game === 'tower' ? 3.4 : 2.95)) * 1000);               // no new round while the result animation is still playing
 }
 // Play button stays disabled until the animation has finished
 function lockPlay(ms) {
