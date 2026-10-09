@@ -23,7 +23,7 @@ function openGame(g) {
   $('#gtitle').textContent = TITLES[g];
   show('game');
   document.querySelector('.loadgate')?.remove();
-  if (g === 'mines') Music.play('mines');
+  if (g === 'mines' || g === 'rocket') Music.play(g);
   if (g === 'tower') {                                       // 5 s loading screen: nothing in the app can be pressed meanwhile
     const gate = document.createElement('div'); gate.className = 'loadgate'; document.body.append(gate);
     const kill = (e) => { e.preventDefault(); e.stopPropagation(); }; ['click', 'pointerdown', 'touchstart', 'mousedown'].forEach((ev) => gate.addEventListener(ev, kill, { passive: false }));
