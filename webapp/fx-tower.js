@@ -9,7 +9,7 @@
   const sm = (t) => t * t * t * (t * (t * 6 - 15) + 10);
   const rand = (a, b) => a + Math.random() * (b - a);
 
-  const HW = 1.9, HH = 1.55, INC = 1.66, SLAB_H = 0.55, SLAB_W = 5.4, LOW = 0.1;       // house width/height, floor step, foundation slab (world units)
+  const HW = 1.9, HH = 1.55, INC = 1.66, SLAB_H = 0.55, SLAB_W = 5.4, LOW = 0.1, RAMP = 2.1;       // house width/height, floor step, foundation slab (world units)
   const R = 5.4, SLING = 0.95, PIVOT_UP = 8.8;                               // pendulum: the pivot hangs above the frame
   const LROPE_HOVER = R - SLING - HH / 2, LROPE_HIDE = -3.4;
 
@@ -156,8 +156,8 @@
     // after a loss: once the plaque is gone a bulldozer drives in from the left, knocks the tower over and the houses fall apart and vanish
     wreck() { if (this.state !== 'done' || (this.roundStatus !== 'lost' && this.roundStatus !== 'won') || this.wreckT !== -1) return; this.wreckT = 0; this.struck = false; this.tractorX = -(this.w / 2 / this.ppu + 2.0); }
     stepWreck(dt) {
-      this.wreckT += dt; const v = 4.6; this.tractorX += v * dt;
-      { const top = SLAB_H - LOW + 0.02, sm3 = (q) => { q = clamp(q); return q * q * (3 - 2 * q); }, xl = -SLAB_W / 2, xr = SLAB_W / 2, Hh = (x) => top * sm3((x - (xl - 0.55)) / 0.95) * (1 - sm3((x - (xr - 0.4)) / 0.95)), hf = Hh(this.tractorX + 1.1), hr = Hh(this.tractorX - 1.1);
+      this.wreckT += dt; const v = 4.2; this.tractorX += v * dt;
+      { const top = SLAB_H - LOW + 0.02, sm3 = (q) => { q = clamp(q); return q * q * (3 - 2 * q); }, xl = -SLAB_W / 2, xr = SLAB_W / 2, Hh = (x) => top * sm3((x - (xl - RAMP)) / RAMP) * (1 - sm3((x - xr) / RAMP)), hf = Hh(this.tractorX + 1.1), hr = Hh(this.tractorX - 1.1);
         this.tractorY = (hf + hr) / 2; this.tractorRot = Math.atan2(hf - hr, 2.2); }       // it climbs onto the platform, shoves the tower from there and drives down the far side
       this.tw = (this.tw || 0) + v * dt * 1.6;
       if (Math.random() < dt * 14) this.puffs.push({ x: this.tractorX - 1.9, y: 0.12, vx: -rand(0.3, 0.9), vy: rand(0.4, 0.9), r: rand(0.18, 0.32), life: 0.7, max: 0.7 });
@@ -169,7 +169,7 @@
       }
       const tip = this.tractorX + 1.95, late = this.struck && this.tractorX > 1.5;
       for (const q of this.pieces) {
-        if (tip > q.x - HW / 2 && q.x < tip + HW) { q.x = Math.max(q.x, tip + HW / 2 * Math.abs(Math.cos(q.rot)) + 0.02); q.vx = Math.max(q.vx, 4.6 * 1.7); }    // the blade shoves everything ahead of it
+        if (tip > q.x - HW / 2 && q.x < tip + HW) { q.x = Math.max(q.x, tip + HW / 2 * Math.abs(Math.cos(q.rot)) + 0.02); q.vx = Math.max(q.vx, 4.2 * 1.8); }    // the blade shoves everything ahead of it
         if (late) q.age += dt * 1.5;
         q.vy -= 22 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.rot += q.vr * dt;
         const low = (HW / 2) * Math.abs(Math.sin(q.rot)) + (HH / 2) * Math.abs(Math.cos(q.rot)), gnd = Math.abs(q.x) < SLAB_W / 2 ? SLAB_H : 0;
@@ -339,7 +339,7 @@
       if (this.rest) { const q = this.rest, sup = this.support(q.x, this.landTop()), low = (HW / 2) * Math.abs(Math.sin(q.rot)) + (HH / 2) * Math.abs(Math.cos(q.rot)); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(this.X(q.x), this.Y(sup) + 2, HW * ppu * 0.55, 5, 0, 0, 6.283); g.fill(); this.drawHouse(g, q.v, q.x, sup + low, q.rot, 0, q.dmg); }
       for (const q of this.pieces) { g.save(); g.globalAlpha = clamp(1 - q.age / 0.9); this.drawHouse(g, q.v, q.x, q.y, q.rot, 0, q.dmg); g.restore(); }
       if (gp < h + 8 * ppu) this.propsSide(g, gp);
-      if (this.wreckT >= 0) this.drawTractor(g, this.tractorX, gy);
+      if (this.wreckT >= 0) { this.drawRamps(g, gy, clamp(this.wreckT / 0.3)); this.drawTractor(g, this.tractorX, gy); }
       if (gp < h + 8 * ppu) this.propsFront(g, gp);                // foreman, speaker, cones: in front of the bulldozer lane, so nothing of theirs gets run over
       // the allowed release window on the roof of the tower while the swing is live
       if (this.swing && ['arrive', 'sway'].includes(this.state) && this.roundStatus === 'active') {
@@ -436,6 +436,17 @@
     propsFront(g, gy) {                             // foreman, speaker and left cone: in front of the bulldozer lane
       const { ppu } = this; this.drawCrew(g, gy, this._t || 0); this.sprite(g, TowerProps.cone(ppu), -2.85, gy + 0.15 * ppu);
     }
+    drawRamps(g, gy, a) {                       // two plank ramps up to the platform: the bulldozer drives up one side and down the other
+      const u = this.ppu, base = gy + 0.15 * u, top = (SLAB_H - LOW + 0.02) * u, xl = this.X(-SLAB_W / 2), xr = this.X(SLAB_W / 2), L = RAMP * u;
+      g.save(); g.globalAlpha = a;
+      const ramp = (x0, x1, up) => {            // x0 = foot on the ground, x1 = top edge on the platform
+        g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse((x0 + x1) / 2, base + 1, Math.abs(x1 - x0) / 2, 3, 0, 0, 6.283); g.fill();
+        const gr = g.createLinearGradient(0, base - top, 0, base); gr.addColorStop(0, '#c99a5b'); gr.addColorStop(1, '#8a6232'); g.fillStyle = gr;
+        g.beginPath(); g.moveTo(x0, base); g.lineTo(x1, base - top); g.lineTo(x1, base); g.closePath(); g.fill(); g.strokeStyle = 'rgba(50,30,10,.7)'; g.lineWidth = 1.5; g.stroke();
+        g.strokeStyle = 'rgba(50,30,10,.45)'; g.lineWidth = 1; for (let i = 1; i < 6; i++) { const f = i / 6, x = x0 + (x1 - x0) * f; g.beginPath(); g.moveTo(x, base); g.lineTo(x, base - top * f); g.stroke(); }
+      };
+      ramp(xl - L, xl, true); ramp(xr + L, xr, false); g.restore();
+    }
     drawTractor(g, wx, gy) {
       const u = this.ppu, x = this.X(wx), bob = Math.sin(this.tw * 3.1) * 0.012 * u;
       g.save(); g.translate(x, gy + 0.15 * u + bob - (this.tractorY || 0) * u); g.rotate(-(this.tractorRot || 0));
@@ -455,10 +466,22 @@
       g.fillStyle = '#3a3f46'; rr(0.82 * u, -1.62 * u, 0.1 * u, 0.36 * u, 0.03 * u); g.fill();                         // exhaust
       g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = 1.2; rr(-1.2 * u, -1.0 * u, 2.5 * u, 0.5 * u, 0.06 * u); g.stroke();
       g.fillStyle = '#ffee9a'; g.beginPath(); g.arc(1.24 * u, -1.08 * u, 0.06 * u, 0, 6.283); g.fill();
-      // blade
-      const bg = g.createLinearGradient(1.5 * u, 0, 1.9 * u, 0); bg.addColorStop(0, '#9aa4ae'); bg.addColorStop(1, '#5b6570'); g.fillStyle = bg;
-      g.beginPath(); g.moveTo(1.48 * u, -1.22 * u); g.lineTo(1.9 * u, -1.1 * u); g.lineTo(1.98 * u, -0.1 * u); g.lineTo(1.5 * u, -0.05 * u); g.closePath(); g.fill();
-      g.strokeStyle = '#444c55'; g.lineWidth = 3; g.beginPath(); g.moveTo(1.25 * u, -0.75 * u); g.lineTo(1.55 * u, -0.7 * u); g.stroke();
+      // blade: a deep curved moldboard with a rolled top edge, bolted cutting edge, side plate, push arms and a hydraulic ram
+      const bx0 = 1.4 * u, bx1 = 1.98 * u, byT = -1.22 * u, byB = -0.04 * u;
+      g.strokeStyle = '#2b3037'; g.lineWidth = 0.09 * u; g.lineCap = 'round';                                          // push arms from the track frame to the blade
+      g.beginPath(); g.moveTo(0.9 * u, -0.5 * u); g.lineTo(bx0 + 0.1 * u, -0.28 * u); g.stroke(); g.beginPath(); g.moveTo(0.9 * u, -0.78 * u); g.lineTo(bx0 + 0.1 * u, -0.78 * u); g.stroke();
+      g.strokeStyle = '#c9d0d8'; g.lineWidth = 0.05 * u; g.beginPath(); g.moveTo(1.05 * u, -1.0 * u); g.lineTo(bx0 + 0.12 * u, -1.12 * u); g.stroke();   // chrome piston
+      g.strokeStyle = '#59616b'; g.lineWidth = 0.09 * u; g.beginPath(); g.moveTo(0.85 * u, -0.96 * u); g.lineTo(1.1 * u, -1.01 * u); g.stroke();
+      const sideW = 0.22 * u;                                                                                             // far side plate, drawn first (darker)
+      g.fillStyle = '#9a6c00'; g.beginPath(); g.moveTo(bx0 + 0.02 * u, byT + 0.08 * u); g.lineTo(bx1 + 0.04 * u, byT); g.lineTo(bx1 + 0.04 * u, byB); g.lineTo(bx0 + 0.02 * u, byB); g.closePath(); g.fill();
+      let bg = g.createLinearGradient(bx0, 0, bx1, 0); bg.addColorStop(0, '#d89a00'); bg.addColorStop(0.45, '#ffd54a'); bg.addColorStop(1, '#e5a600'); g.fillStyle = bg;            // curved face
+      g.beginPath(); g.moveTo(bx0, byT + 0.1 * u); g.quadraticCurveTo(bx0 + 0.28 * u, byT - 0.06 * u, bx1, byT + 0.02 * u); g.lineTo(bx1 + 0.06 * u, byB - 0.12 * u); g.quadraticCurveTo(bx0 + 0.5 * u, byB + 0.08 * u, bx0 + 0.02 * u, byB); g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(60,40,0,.7)'; g.lineWidth = 1.6; g.stroke();
+      g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.moveTo(bx0 + 0.08 * u, byT + 0.14 * u); g.quadraticCurveTo(bx0 + 0.3 * u, byT + 0.02 * u, bx1 - 0.04 * u, byT + 0.1 * u); g.lineTo(bx1 - 0.04 * u, byT + 0.2 * u); g.quadraticCurveTo(bx0 + 0.3 * u, byT + 0.14 * u, bx0 + 0.08 * u, byT + 0.26 * u); g.closePath(); g.fill();   // rolled top edge highlight
+      g.fillStyle = '#2a2f36'; g.fillRect(bx0 - 0.02 * u, byB - 0.12 * u, bx1 - bx0 + 0.1 * u, 0.12 * u);                  // bolted cutting edge
+      g.fillStyle = '#9aa3ad'; for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(bx0 + 0.1 * u + i * 0.15 * u, byB - 0.06 * u, 0.02 * u, 0, 6.283); g.fill(); }
+      g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = 1.2; for (const yy of [0.35, 0.65]) { g.beginPath(); g.moveTo(bx0 + 0.04 * u, byT + (byB - byT) * yy); g.quadraticCurveTo(bx0 + 0.4 * u, byT + (byB - byT) * yy + 0.04 * u, bx1 + 0.02 * u, byT + (byB - byT) * yy - 0.02 * u); g.stroke(); }
+      g.fillStyle = '#f2b705'; g.beginPath(); g.moveTo(bx1, byT + 0.02 * u); g.lineTo(bx1 + sideW * 0.5, byT + 0.14 * u); g.lineTo(bx1 + sideW * 0.5, byB - 0.06 * u); g.lineTo(bx1 + 0.06 * u, byB - 0.12 * u); g.closePath(); g.fill(); g.strokeStyle = 'rgba(20,24,30,.6)'; g.lineWidth = 1.2; g.stroke();   // near side plate
       g.restore();
     }
     space(g, sp, t, cam) {
