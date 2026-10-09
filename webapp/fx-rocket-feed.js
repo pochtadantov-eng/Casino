@@ -39,15 +39,9 @@
     return 'e' + Math.floor(r() * 10) + chunk(5);                 // e1dnejx — digit sandwiched
   }
 
-  // avatars: real portrait SVGs bundled with the app (webapp/img/avatars/av0.svg..av39.svg).
-  // When they haven't finished loading we fall back to a painted cartoon face so nothing is empty.
-  const avCache = new Map();
-  const avUrl = (i) => (window.AV_SRC && window.AV_SRC['av' + i]) || `img/avatars/av${i}.svg` + (window.BUILD ? '?v=' + window.BUILD : '');
-
-  function makeAvatar(seed) {
-    if (avCache.has(seed)) return avCache.get(seed);
-    const real = avUrl(seed % 40); avCache.set(seed, real); return real;
-  }
+  // one shared default avatar for everyone — drop your own file into webapp/img/avatars/default.* to replace
+  const DEFAULT_AVATAR = (window.AV_SRC && window.AV_SRC.default) || `img/avatars/default.svg` + (window.BUILD ? '?v=' + window.BUILD : '');
+  function makeAvatar() { return DEFAULT_AVATAR; }
   function paintedAvatar(seed) {                                   // fallback when SVGs are missing — not normally reached
     if (avCache.has('p' + seed)) return avCache.get('p' + seed);
     const r = rng(seed + 1), size = 72, c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d');
