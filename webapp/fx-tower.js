@@ -608,20 +608,21 @@
       g.fillStyle = '#1d1d22'; g.beginPath(); g.ellipse(-2.1, -1.55, 0.55, 0.38, 0, 0, 6.283); g.fill();                                                               // exhaust
       // cabin windows
       for (const [wx0, ww] of [[-1.7, 1.3], [-0.1, 1.3]]) { g.fillStyle = '#2d4a58'; g.fillRect(wx0, -1.2, ww, 1.1); g.fillStyle = 'rgba(190,230,245,.35)'; g.fillRect(wx0 + 0.1, -1.15, ww * 0.35, 0.5); }
-      // open door: cream interior with the cartoon builder standing in it, waving
-      g.fillStyle = '#d9ccb0'; g.fillRect(1.35, -1.95, 2.05, 2.75); g.fillStyle = 'rgba(70,50,30,.35)'; g.fillRect(1.35, -1.95, 0.22, 2.75); g.fillRect(1.35, -1.95, 2.05, 0.18);
-      g.fillStyle = '#7a5a3a'; g.fillRect(1.6, 0.15, 1.6, 0.55);                                                                                                            // seat
+      // open door: an opening inside the fuselage contour, cream interior, the cartoon builder standing in it and waving (everything clipped to the opening)
+      const door = () => { g.beginPath(); g.moveTo(1.45, -1.7); g.lineTo(3.0, -1.7); g.lineTo(3.35, -1.1); g.lineTo(3.35, 0.9); g.lineTo(1.45, 0.9); g.closePath(); };
+      g.save(); door(); g.fillStyle = '#d9ccb0'; g.fill(); g.clip();
+      g.fillStyle = 'rgba(70,50,30,.35)'; g.fillRect(1.45, -1.7, 0.2, 2.6); g.fillRect(1.45, -1.7, 2, 0.16); g.fillStyle = '#7a5a3a'; g.fillRect(1.6, 0.2, 1.7, 0.5);                       // frame shadow, seat
       if (!TowerFx.bld) { TowerFx.bld = {}; for (const n of ['body', 'arm']) { const im = new Image(); im.onload = () => { TowerFx.bld[n] = im; }; im.src = (window.BUILDER_SRC && window.BUILDER_SRC[n]) || `img/builder_${n}.webp` + (window.BUILD ? '?v=' + window.BUILD : ''); } }
       if (TowerFx.bld.body && TowerFx.bld.arm) {
-        const k = 2.75 / 505, bob = Math.sin(t * 3.4) * 0.02;
-        g.save(); g.beginPath(); g.rect(1.35, -1.95, 2.05, 2.75); g.clip(); g.translate(1.2, -1.95 + bob); g.scale(k, k); g.drawImage(TowerFx.bld.body, 0, 0);
-        g.restore();
-        g.save(); g.translate(1.2, -1.95 + bob); g.scale(k, k); g.translate(492 - 180, 540 - 310); g.rotate(Math.sin(t * 7) * 0.3 - 0.05); g.translate(-(492 - 180), -(540 - 310)); g.drawImage(TowerFx.bld.arm, 0, 0); g.restore();   // the raised arm swings about the shoulder
+        const k = 2.45 / 505, bob = Math.sin(t * 3.4) * 0.02;
+        g.save(); g.translate(1.36, -1.6 + bob); g.scale(k, k); g.drawImage(TowerFx.bld.body, 0, 0); g.restore();
+        g.save(); g.translate(1.36, -1.6 + bob); g.scale(k, k); g.translate(492 - 180, 540 - 310); g.rotate(Math.sin(t * 7) * 0.22 - 0.04); g.translate(-(492 - 180), -(540 - 310)); g.drawImage(TowerFx.bld.arm, 0, 0); g.restore();   // the raised arm swings about the shoulder
       }
+      g.restore(); door(); g.strokeStyle = 'rgba(30,6,8,.85)'; g.lineWidth = 0.12; g.stroke();          // door frame
       // windshield and nose
       g.fillStyle = '#8fc4dc'; g.beginPath(); g.moveTo(3.45, -1.6); g.quadraticCurveTo(4.5, -1.1, 5.1, 0.0); g.lineTo(3.55, 0.05); g.closePath(); g.fill();
       g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.moveTo(3.7, -1.3); g.lineTo(4.3, -0.9); g.lineTo(3.8, -0.1); g.closePath(); g.fill();
-      g.fillStyle = '#e8e2dc'; g.font = 'italic 800 0.75px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SHS', 0.9, 0.62);
+      g.save(); g.fillStyle = '#f1ece6'; g.font = 'italic 800 0.78px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.transform(1, 0, -0.18, 1, 0, 0); g.fillText('Nova', -0.55, 0.66); g.restore();      // livery on the side under the windows
       g.fillStyle = '#ff3b3b'; g.beginPath(); g.arc(0.6, -2.35, 0.1, 0, 6.283); g.fill();
       // main rotor: blur disc + blade streaks whose apparent length flickers as they spin
       g.fillStyle = 'rgba(160,170,180,.5)'; g.fillRect(0.12, -3.05, 0.16, 0.7); g.fillStyle = '#9aa0a8'; g.fillRect(-0.15, -3.3, 0.7, 0.28);
