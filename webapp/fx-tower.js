@@ -121,7 +121,7 @@
     newHang() { this.hang = { v: this.ci++ }; }
     _setReady(v) { if (v !== this._ready) { this._ready = v; this.onReady?.(v); } }
     landTop() { return SLAB_H + (this.landed + this.base) * INC; }
-    camTarget() { return Math.max(-0.7, this.landTop() - 0.26 * this.hv); }
+    camTarget() { return Math.max(-0.7, this.landTop() - 0.42 * this.hv); }
     pivotY() { return this.landTop() + PIVOT_UP; }
     tap() {
       if (this.state !== 'sway' || this.roundStatus !== 'active' || !this.hang || this.fall || !this.swing) return false;
@@ -173,7 +173,7 @@
       if (this.state === 'done' && this.roundStatus === 'lost') this.lostT += dt;
       if (this.lostT > 1.7) {                                  // the result plaque is up: the camera drops to the first house, faster and faster
         const floor = -0.7; if (this.camBottom > floor) { this.camV += 17 * dt; this.camBottom = Math.max(floor, this.camBottom - this.camV * dt); if (this.camBottom <= floor) { this.camV = 0; this.shake = Math.max(this.shake, 0.35); } }
-      } else { const ct = this.camTarget(); this.camBottom = this.camSet ? this.camBottom + (ct - this.camBottom) * Math.min(1, dt * 2.4) : ct; }
+      } else { const ct = this.camTarget(); this.camBottom = this.camSet ? this.camBottom + (ct - this.camBottom) * Math.min(1, dt * 1.5) : ct; }
       this.camSet = true;
       this.shake = Math.max(0, this.shake - dt * 2.2);
       for (const p of this.puffs) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.r += dt * 0.5; } this.puffs = this.puffs.filter((p) => p.life > 0);
