@@ -314,7 +314,6 @@
         const bandH = (gy - sy) * 0.3, by = sy + (gy - sy) * 0.18; g.save(); g.beginPath(); g.rect(x, by, sw, bandH); g.clip(); for (let i = -2, ix = x; ix < x + sw + 40; i++, ix += 22) { g.fillStyle = i % 2 ? '#2b333c' : '#f6b50b'; g.beginPath(); g.moveTo(ix, by + bandH); g.lineTo(ix + 11, by + bandH); g.lineTo(ix + 22, by); g.lineTo(ix + 11, by); g.fill(); } g.restore();
         g.fillStyle = '#6f7c89'; for (const bx of [x + 8, x + sw - 8]) { g.beginPath(); g.arc(bx, by + bandH + (gy - sy) * 0.18, 2.6, 0, 6.283); g.fill(); }
       }
-      if (gp < h + 8 * ppu) this.propsFront(g, gp);
       const n = this.floors.length;
       this.floors.forEach((f, i) => { const k = n > 1 ? i / (n - 1) : 1, kf = 0.1 + 0.9 * k, wy = SLAB_H + i * INC + HH / 2; if (this.Y(wy) < -HH * ppu) return; this.drawHouse(g, f.v, f.ox + this.wob * 0.2 * kf, wy, f.tilt - this.wob * 0.02 * kf, f.sq, f.dmg); });
       if (this.intro) this.drawHouse(g, this.intro.v, this.intro.x, this.intro.y, this.intro.rot);
@@ -323,6 +322,7 @@
       if (this.rest) { const q = this.rest, sup = this.support(q.x, this.landTop()), low = (HW / 2) * Math.abs(Math.sin(q.rot)) + (HH / 2) * Math.abs(Math.cos(q.rot)); g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(this.X(q.x), this.Y(sup) + 2, HW * ppu * 0.55, 5, 0, 0, 6.283); g.fill(); this.drawHouse(g, q.v, q.x, sup + low, q.rot, 0, q.dmg); }
       for (const q of this.pieces) { g.save(); g.globalAlpha = clamp(1 - q.age / 0.9); this.drawHouse(g, q.v, q.x, q.y, q.rot, 0, q.dmg); g.restore(); }
       if (this.wreckT >= 0) this.drawTractor(g, this.tractorX, gy);
+      if (gp < h + 8 * ppu) this.propsFront(g, gp);                // foreman, speaker, cones: in front of the bulldozer lane, so nothing of theirs gets run over
       // the allowed release window on the roof of the tower while the swing is live
       if (this.swing && ['arrive', 'sway'].includes(this.state) && this.roundStatus === 'active') {
         const tol = this.swing.tol, x1 = this.X(-tol), x2 = this.X(tol), y = this.Y(this.landTop()), live = this.state === 'sway', pulse = 0.5 + 0.5 * Math.sin(t * 5);
@@ -385,7 +385,7 @@
     }
     drawTractor(g, wx, gy) {
       const u = this.ppu, x = this.X(wx), bob = Math.sin(this.tw * 3.1) * 0.012 * u;
-      g.save(); g.translate(x, gy + 0.05 * u + bob);
+      g.save(); g.translate(x, gy + 0.02 * u + bob);
       g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(0, 0.02 * u, 1.9 * u, 0.1 * u, 0, 0, 6.283); g.fill();
       const rr = (X, Y, W, H, R) => { g.beginPath(); g.roundRect ? g.roundRect(X, Y, W, H, R) : g.rect(X, Y, W, H); };
       // tracks
