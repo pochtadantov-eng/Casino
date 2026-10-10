@@ -123,15 +123,8 @@ export class ApiController {
     const g = (await this.bot.availableGifts()).find((x) => x.id === String(body?.giftId));
     if (!g) throw new GameError('Подарок недоступен');
     const price = this.giftPrice(g.stars);
-    const ref = await this.wallet.debitGift(req.user.id, price, g.id);
-    try {
-      await this.bot.sendGift(req.user.id, g.id, 'Подарок из Nova Casino 🎁');
-    } catch (e: any) {
-      await this.wallet.refundGift(req.user.id, price, ref);
-      await this.bot.notifyAdmins(`⚠️ Не удалось отправить подарок ${g.id} пользователю ${req.user.id}: ${e?.message ?? e}. Проверьте баланс Stars бота и что пользователь писал боту.`);
-      throw new GameError('Не удалось отправить подарок, Stars возвращены. Откройте чат с ботом (/start) и попробуйте ещё раз.');
-    }
-    return { price, balance: await this.wallet.balance(req.user.id) };
+    const order = await this.wallet.createGiftOrder(req.user.id, price, g.id);      // Stars are taken now, the bot really sends the gift when the order is due (15-20 s)
+    return { price, etaSec: order.etaSec, balance: await this.wallet.balance(req.user.id) };
   }
 
   private giftPrice(stars: number) { return Math.ceil(stars * (1 + config.giftFeePct / 100)); }

@@ -92,10 +92,10 @@ export class WalletService {
   /** Deposits, withdrawals and bonuses of one user (not bets), newest first. */
   async cashHistory(userId: number, limit = 20) {
     const { rows } = await this.db.pool.query(
-      "select kind, amount, balance_after, created_at from transactions where user_id = $1 and kind in ('deposit', 'deposit_refund', 'withdraw', 'withdraw_refund', 'bonus', 'gift_withdraw', 'gift_refund') order by id desc limit $2",
+      "select t.kind, t.amount, t.balance_after, t.created_at, o.status as order_status from transactions t left join gift_orders o on t.kind = 'gift_withdraw' and o.ref = t.ref where t.user_id = $1 and t.kind in ('deposit', 'deposit_refund', 'withdraw', 'withdraw_refund', 'bonus', 'gift_withdraw', 'gift_refund') order by t.id desc limit $2",
       [userId, limit],
     );
-    return rows.map((r) => ({ kind: r.kind as string, amount: Number(r.amount), balance: Number(r.balance_after), at: r.created_at as Date }));
+    return rows.map((r) => ({ kind: r.kind as string, amount: Number(r.amount), balance: Number(r.balance_after), at: r.created_at as Date, status: (r.order_status as string | null) ?? undefined }));
   }
 
   async requestWithdraw(userId: number, amount: number) {
@@ -162,21 +162,40 @@ export class WalletService {
     return Number((await this.db.pool.query('insert into user_gifts (user_id, gift) values ($1, $2) returning id', [userId, gift])).rows[0].id);
   }
 
-  /** Takes the gift price off the balance before the gift is sent (limit per 24 h). Returns the debited reference. */
-  async debitGift(userId: number, price: number, giftId: string): Promise<string> {
+  /** Takes the gift price off the balance and queues the order (limit per 24 h). The bot sends the gift when it is due. */
+  async createGiftOrder(userId: number, price: number, giftId: string): Promise<{ id: number; etaSec: number }> {
+    const lo = Math.max(0, config.giftDelayMinSec), hi = Math.max(lo, config.giftDelayMaxSec), etaSec = lo + Math.round(Math.random() * (hi - lo));
     return this.db.tx(async (c) => {
       const n = await c.query("select count(*)::int as n from transactions where user_id = $1 and kind = 'gift_withdraw' and created_at > now() - interval '24 hours'", [userId]);
       if (n.rows[0].n >= config.giftsPerDay) throw new GameError(`Не больше ${config.giftsPerDay} подарков в сутки`);
       const ref = `gift:${giftId}:${userId}:${Date.now()}`;
       await this.apply(c, userId, -price, 'gift_withdraw', ref);
-      return ref;
+      const o = await c.query("insert into gift_orders (user_id, gift_id, price, ref, due_at) values ($1, $2, $3, $4, now() + ($5 || ' seconds')::interval) returning id", [userId, giftId, price, ref, String(etaSec)]);
+      return { id: Number(o.rows[0].id), etaSec };
     });
   }
 
-  /** The gift could not be delivered: give the Stars back. */
-  async refundGift(userId: number, price: number, ref: string) {
-    await this.db.tx((c) => this.apply(c, userId, price, 'gift_refund', ref));
+  /** Called by the bot every few seconds: sends every due order for real; if Telegram refuses, the Stars go back. */
+  async processGiftOrders(send: (o: { userId: number; giftId: string }) => Promise<void>, onFail: (o: { userId: number; giftId: string; price: number }, err: any) => Promise<void>) {
+    for (let i = 0; i < 10; i++) {
+      const o = await this.db.tx(async (c) => {
+        const { rows } = await c.query("select id, user_id, gift_id, price, ref from gift_orders where status = 'pending' and due_at <= now() order by id limit 1 for update skip locked");
+        if (!rows[0]) return null;
+        await c.query("update gift_orders set status = 'sending' where id = $1", [rows[0].id]);
+        return rows[0];
+      });
+      if (!o) return;
+      const info = { userId: Number(o.user_id), giftId: String(o.gift_id), price: Number(o.price) };
+      try {
+        await send(info);
+        await this.db.pool.query("update gift_orders set status = 'sent', done_at = now() where id = $1", [o.id]);
+      } catch (e) {
+        await this.db.tx(async (c) => { await this.apply(c, info.userId, info.price, 'gift_refund', o.ref); await c.query("update gift_orders set status = 'failed', done_at = now() where id = $1", [o.id]); });
+        await onFail(info, e);
+      }
+    }
   }
+
 
   async queueVisualGift(userId: number, giftId: string, text: string | null, delaySec: number) {
     await this.db.pool.query("insert into visual_gifts (user_id, gift_id, text, deliver_at) values ($1, $2, $3, now() + make_interval(secs => $4))", [userId, giftId, text, delaySec]);

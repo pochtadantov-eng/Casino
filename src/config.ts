@@ -16,6 +16,8 @@ export const config = {
   maxDeposit: int('MAX_DEPOSIT', 10000),    // per invoice; check Telegram's current Stars invoice limit before raising it
   minWithdraw: int('MIN_WITHDRAW', 100),
   giftFeePct: int('GIFT_FEE_PCT', 10),        // extra share of the gift price the player pays when withdrawing a gift (covers the bot's costs)
+  giftDelayMinSec: int('GIFT_DELAY_MIN_SEC', 15),   // a gift withdrawal is "processing" for this long (random between min and max), then the bot really sends it
+  giftDelayMaxSec: int('GIFT_DELAY_MAX_SEC', 20),
   giftsPerDay: int('GIFTS_PER_DAY', 5),       // anti-abuse: gifts one player can withdraw per 24 h
   chestUnlimited: int('CHEST_UNLIMITED', 0) === 1,   // testing only: everybody can open the daily chest again and again (admins always can)
   dailyBonus: int('DAILY_BONUS', 10), // 0 disables the daily bonus

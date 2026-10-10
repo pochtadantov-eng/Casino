@@ -444,7 +444,7 @@ async function openGifts() {
   } catch (e) { grid.innerHTML = ''; err.textContent = e.message; }
   go.onclick = async () => {
     if (!sel) return; go.disabled = true; go.textContent = 'Отправляем…';
-    try { const r = await api('gifts/send', { giftId: sel.id }); setBalance(r.balance); close(); toast(`Подарок ${sel.emoji} отправлен в чат с ботом`, 'ok', 4200); if (typeof loadCash === 'function') loadCash(); window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); if (window.Telegram?.WebApp?.close && !window.__mockApi) setTimeout(() => {}, 0); }
+    try { const r = await api('gifts/send', { giftId: sel.id }); setBalance(r.balance); close(); toast(`Подарок ${sel.emoji} в обработке: придёт в чат с ботом через ~${r.etaSec || 15} с`, 'wait', 5200); if (typeof loadCash === 'function') { loadCash(); let n = 0; const iv = setInterval(() => { loadCash(); if (++n > 12) clearInterval(iv); }, 4000); } window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); if (window.Telegram?.WebApp?.close && !window.__mockApi) setTimeout(() => {}, 0); }
     catch (e) { err.textContent = e.message; paint(); }
   };
 }

@@ -152,7 +152,7 @@ async function loadCash() {
   const box = $('#cash'); if (!box) return;
   try {
     const rows = await api('cash');
-    box.innerHTML = rows.length ? rows.map((r) => { const [t, c] = CASH_LABEL[r.kind] || [r.kind, '']; const d = new Date(r.at); return `<div class="hrow"><span>${t}<small class="hdate">${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</small></span><span class="${c}">${r.amount > 0 ? '+' : ''}${r.amount} ⭐</span></div>`; }).join('') : '<p class="hint">Пока пусто</p>';
+    box.innerHTML = rows.length ? rows.map((r) => { let [t, c] = CASH_LABEL[r.kind] || [r.kind, '']; if (r.kind === 'gift_withdraw') { if (r.status === 'pending' || r.status === 'sending') { t = '⏳ Подарок отправляется…'; c = 'l'; } else if (r.status === 'sent') t = '✅ Подарок отправлен в чат'; else if (r.status === 'failed') t = '❌ Подарок не отправлен'; } const d = new Date(r.at); return `<div class="hrow"><span>${t}<small class="hdate">${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</small></span><span class="${c}">${r.amount > 0 ? '+' : ''}${r.amount} ⭐</span></div>`; }).join('') : '<p class="hint">Пока пусто</p>';
   } catch (e) { box.innerHTML = `<p class="hint">${e.message}</p>`; }
 }
 async function loadProfile() {

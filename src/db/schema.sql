@@ -72,3 +72,17 @@ create table if not exists visual_gifts (
   created_at   timestamptz not null default now()
 );
 create index if not exists visual_gifts_pending on visual_gifts(user_id, deliver_at) where delivered_at is null;
+
+-- gift withdrawals: Stars are taken at once, the bot sends the gift when due_at has passed (a worker retries nothing: one try, refund on failure)
+create table if not exists gift_orders (
+  id         bigserial primary key,
+  user_id    bigint not null references users(id),
+  gift_id    text   not null,
+  price      bigint not null,
+  ref        text   not null unique,
+  status     text   not null default 'pending',   -- pending | sending | sent | failed
+  due_at     timestamptz not null,
+  created_at timestamptz not null default now(),
+  done_at    timestamptz
+);
+create index if not exists gift_orders_due on gift_orders(due_at) where status = 'pending';
