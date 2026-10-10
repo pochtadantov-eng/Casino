@@ -423,3 +423,29 @@ function openVolume() {
   paint();
 }
 $('#btn-sound').onclick = openVolume;
+
+
+// ---------- withdraw as a Telegram gift: pick a gift, the bot drops it into the chat with the bot ----------
+async function openGifts() {
+  if (document.querySelector('.giftsheet')) return;
+  const d = document.createElement('div'); d.className = 'paysheet giftsheet';
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><h3>Вывести подарком 🎁</h3><p class="psub" id="g-sub">Подарок прилетит вам в чат с ботом. Цена списывается с баланса.</p>
+    <div class="ggrid" id="g-grid"><p class="hint">Загружаем подарки…</p></div><p class="perr" id="g-err"></p>
+    <button class="primary pay" id="g-go" disabled>Выберите подарок</button><button class="plink" id="g-no">Закрыть</button></div>`;
+  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
+  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
+  d.querySelector('#g-no').onclick = close; d.onclick = (e) => { if (e.target === d) close(); };
+  const grid = d.querySelector('#g-grid'), go = d.querySelector('#g-go'), err = d.querySelector('#g-err'); let list = [], sel = null;
+  const paint = () => { go.disabled = !sel; go.textContent = sel ? (sel.price > state.balance ? `Не хватает ${sel.price - state.balance} ⭐` : `Отправить за ${sel.price} ⭐`) : 'Выберите подарок'; if (sel && sel.price > state.balance) go.disabled = true; grid.querySelectorAll('.gcard').forEach((c) => c.classList.toggle('on', sel && c.dataset.id === sel.id)); };
+  try {
+    const j = await api('gifts'); list = j.gifts; d.querySelector('#g-sub').textContent = `Подарок прилетит вам в чат с ботом. До ${j.perDay} в сутки, цена = стоимость подарка + комиссия.`;
+    grid.innerHTML = list.length ? list.map((g) => `<button class="gcard" data-id="${g.id}"><span class="gem">${g.emoji}</span><b>${g.price} ⭐</b>${g.limited ? '<i>лимит</i>' : ''}</button>`).join('') : '<p class="hint">Подарков пока нет</p>';
+    grid.querySelectorAll('.gcard').forEach((c) => c.onclick = () => { sel = list.find((g) => g.id === c.dataset.id); err.textContent = ''; paint(); });
+  } catch (e) { grid.innerHTML = ''; err.textContent = e.message; }
+  go.onclick = async () => {
+    if (!sel) return; go.disabled = true; go.textContent = 'Отправляем…';
+    try { const r = await api('gifts/send', { giftId: sel.id }); setBalance(r.balance); close(); toast(`Подарок ${sel.emoji} отправлен в чат с ботом`, 'ok', 4200); if (typeof loadCash === 'function') loadCash(); window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); if (window.Telegram?.WebApp?.close && !window.__mockApi) setTimeout(() => {}, 0); }
+    catch (e) { err.textContent = e.message; paint(); }
+  };
+}
+$('#btn-gift').onclick = openGifts;

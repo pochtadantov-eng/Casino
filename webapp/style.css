@@ -443,3 +443,10 @@ body.ingame .sndbtn{display:none}
 .cm-conf{position:absolute;left:50%;top:60%;width:9px;height:14px;border-radius:2px;pointer-events:none;animation:cmconf 1.5s cubic-bezier(.2,.8,.3,1) forwards}
 @keyframes cmconf{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(540deg)}}
 @media (prefers-reduced-motion:reduce){.cm-chest img,.cm-chest .rays{animation:none}}
+
+/* gift withdrawal */
+.ggrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 6px;max-height:42vh;overflow:auto;-webkit-overflow-scrolling:touch}
+.gcard{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 4px 10px;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff}
+.gcard .gem{font-size:38px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}.gcard b{font:800 14px/1 system-ui,sans-serif}.gcard i{position:absolute;top:5px;right:6px;font-style:normal;font-size:9px;color:#ffd84a}
+.gcard.on{background:rgba(255,200,40,.16);border-color:rgba(255,215,90,.85);box-shadow:0 0 14px rgba(255,200,40,.35)}
+.gcard:active{transform:scale(.95)}

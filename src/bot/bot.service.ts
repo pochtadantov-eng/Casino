@@ -149,6 +149,27 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     ]);
   }
 
+  private giftCache: { at: number; list: { id: string; stars: number; emoji: string; limited: boolean }[] } | null = null;
+
+  /** Regular Telegram gifts the bot can send (cached 10 min). Premium-only and sold-out gifts are left out. */
+  async availableGifts() {
+    if (!this.bot) throw new Error('Bot is not configured');
+    if (this.giftCache && Date.now() - this.giftCache.at < 600_000) return this.giftCache.list;
+    const { gifts } = await this.bot.api.getAvailableGifts();
+    const list = gifts
+      .filter((g) => !g.is_premium && g.remaining_count !== 0)
+      .map((g) => ({ id: g.id, stars: g.star_count, emoji: g.sticker.emoji ?? '🎁', limited: g.total_count != null }))
+      .sort((a, b) => a.stars - b.stars);
+    this.giftCache = { at: Date.now(), list };
+    return list;
+  }
+
+  /** The gift appears in the player's chat with the bot as a real Telegram gift message. */
+  async sendGift(userId: number, giftId: string, text: string) {
+    if (!this.bot) throw new Error('Bot is not configured');
+    await this.bot.api.sendGift(userId, giftId, { text: text.slice(0, 128) });
+  }
+
   async notifyAdmins(text: string) {
     if (!this.bot) return;
     await Promise.all(config.adminIds.map((id) => this.bot!.api.sendMessage(id, text).catch(() => {})));

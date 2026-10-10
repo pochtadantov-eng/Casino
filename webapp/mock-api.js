@@ -84,11 +84,14 @@
   const CHEST = CHEST_W.map(([id, stars]) => id === 'gift' ? { id, gift: 'nft1', label: 'NFT-подарок Telegram' } : { id, stars, label: stars + ' ⭐' });
   const drawChest = () => { const forced = new URLSearchParams(location.search).get('prize'); if (forced) { const f = CHEST.find((p) => p.id === forced); if (f) return f; } let r = Math.random() * CHEST_W.reduce((s, x) => s + x[2], 0); for (const [id, , w] of CHEST_W) { r -= w; if (r < 0) return CHEST.find((p) => p.id === id); } return CHEST[0]; };
 
+  const GIFTS = [['g1', '🧸', 15], ['g2', '❤️', 15], ['g3', '🎁', 25], ['g4', '🌹', 25], ['g5', '🎂', 50], ['g6', '💐', 50], ['g7', '🚀', 50], ['g8', '🏆', 100], ['g9', '💍', 100], ['g10', '💎', 100]].map(([id, emoji, stars]) => ({ id, emoji, stars }));
   const handlers = {
     me: () => ({ id: 1, balance: db.balance, limits: LIMITS }),
     history: () => db.hist.slice(0, 20).map((r) => present(r)),
     bonus: () => ({ enabled: true, unlimited: true, availableAt: null, prizes: CHEST }),      // demo: the chest can be opened again and again
     'bonus/daily': () => { db.lastDaily = Date.now(); const p = drawChest(); if (p.stars) { db.balance += p.stars; (db.cash = db.cash || []).unshift({ kind: 'bonus', amount: p.stars, balance: db.balance, at: new Date().toISOString() }); } save(); return { prize: { id: p.id, stars: p.stars, gift: p.gift, label: p.label }, balance: db.balance }; },
+    gifts: () => ({ perDay: 5, gifts: GIFTS.map((g) => ({ ...g, price: Math.ceil(g.stars * 1.1), limited: false })) }),
+    'gifts/send': (b) => { const g = GIFTS.find((x) => x.id === b.giftId); if (!g) fail('Подарок недоступен'); const price = Math.ceil(g.stars * 1.1); if (price > db.balance) fail('Недостаточно звёзд'); db.balance -= price; (db.cash = db.cash || []).unshift({ kind: 'gift_withdraw', amount: -price, balance: db.balance, at: new Date().toISOString() }); save(); return { price, balance: db.balance }; },
     cash: () => (db.cash || []).slice(0, 20),
     deposit: (b) => { const a = Number(b.amount) || 0; if (!Number.isInteger(a) || a < LIMITS.minDeposit || a > LIMITS.maxDeposit) fail(`Deposit must be ${LIMITS.minDeposit}..${LIMITS.maxDeposit} Stars`); db.balance += a; (db.cash = db.cash || []).unshift({ kind: 'deposit', amount: a, balance: db.balance, at: new Date().toISOString() }); save(); return { link: 'demo' }; },
     withdraw: (b) => { const a = Number(b.amount); if (a < LIMITS.minWithdraw) fail('Минимум ' + LIMITS.minWithdraw); if (a > db.balance) fail('Insufficient balance'); db.balance -= a; (db.cash = db.cash || []).unshift({ kind: 'withdraw', amount: -a, balance: db.balance, at: new Date().toISOString() }); save(); return { id: 1, balance: db.balance }; },

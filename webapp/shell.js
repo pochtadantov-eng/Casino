@@ -147,7 +147,7 @@ function openChestRoulette() {
 $('#bonus-claim').onclick = () => { if (!$('#bonus-claim').disabled) openChestRoulette(); };
 
 // ---------- profile ----------
-const CASH_LABEL = { deposit: ['⭐ Пополнение', 'w'], deposit_refund: ['↩️ Возврат пополнения', 'l'], withdraw: ['📤 Вывод (заявка)', 'l'], withdraw_refund: ['↩️ Вывод отклонён', 'w'], bonus: ['🎁 Бонус', 'w'] };
+const CASH_LABEL = { deposit: ['⭐ Пополнение', 'w'], deposit_refund: ['↩️ Возврат пополнения', 'l'], withdraw: ['📤 Вывод (заявка)', 'l'], withdraw_refund: ['↩️ Вывод отклонён', 'w'], bonus: ['🎁 Бонус', 'w'], gift_withdraw: ['🎁 Подарок в чат', 'l'], gift_refund: ['↩️ Подарок не доставлен', 'w'] };
 async function loadCash() {
   const box = $('#cash'); if (!box) return;
   try {

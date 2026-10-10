@@ -92,7 +92,7 @@ export class WalletService {
   /** Deposits, withdrawals and bonuses of one user (not bets), newest first. */
   async cashHistory(userId: number, limit = 20) {
     const { rows } = await this.db.pool.query(
-      "select kind, amount, balance_after, created_at from transactions where user_id = $1 and kind in ('deposit', 'deposit_refund', 'withdraw', 'withdraw_refund', 'bonus') order by id desc limit $2",
+      "select kind, amount, balance_after, created_at from transactions where user_id = $1 and kind in ('deposit', 'deposit_refund', 'withdraw', 'withdraw_refund', 'bonus', 'gift_withdraw', 'gift_refund') order by id desc limit $2",
       [userId, limit],
     );
     return rows.map((r) => ({ kind: r.kind as string, amount: Number(r.amount), balance: Number(r.balance_after), at: r.created_at as Date }));
@@ -157,6 +157,22 @@ export class WalletService {
       if (prize.gift) giftId = Number((await c.query('insert into user_gifts (user_id, gift) values ($1, $2) returning id', [userId, prize.gift])).rows[0].id);
       return { prize, giftId };
     });
+  }
+
+  /** Takes the gift price off the balance before the gift is sent (limit per 24 h). Returns the debited reference. */
+  async debitGift(userId: number, price: number, giftId: string): Promise<string> {
+    return this.db.tx(async (c) => {
+      const n = await c.query("select count(*)::int as n from transactions where user_id = $1 and kind = 'gift_withdraw' and created_at > now() - interval '24 hours'", [userId]);
+      if (n.rows[0].n >= config.giftsPerDay) throw new GameError(`Не больше ${config.giftsPerDay} подарков в сутки`);
+      const ref = `gift:${giftId}:${userId}:${Date.now()}`;
+      await this.apply(c, userId, -price, 'gift_withdraw', ref);
+      return ref;
+    });
+  }
+
+  /** The gift could not be delivered: give the Stars back. */
+  async refundGift(userId: number, price: number, ref: string) {
+    await this.db.tx((c) => this.apply(c, userId, price, 'gift_refund', ref));
   }
 
   async pendingGifts() {
