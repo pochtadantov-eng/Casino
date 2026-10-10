@@ -182,13 +182,18 @@ export class WalletService {
     await this.db.pool.query("insert into visual_gifts (user_id, gift_id, text, deliver_at) values ($1, $2, $3, now() + make_interval(secs => $4))", [userId, giftId, text, delaySec]);
   }
 
-  /** Visual gifts that are due; each is handed out exactly once. */
-  async takeVisualGifts(userId: number): Promise<{ id: number; giftId: string; text: string | null }[]> {
+  /** Visual gifts that are due and not yet acknowledged by the client. */
+  async dueVisualGifts(userId: number): Promise<{ id: number; giftId: string; text: string | null }[]> {
     const { rows } = await this.db.pool.query(
-      "update visual_gifts set delivered_at = now() where id in (select id from visual_gifts where user_id = $1 and delivered_at is null and deliver_at <= now() order by id limit 20 for update skip locked) returning id, gift_id, text",
+      'select id, gift_id, text from visual_gifts where user_id = $1 and delivered_at is null and deliver_at <= now() order by id limit 20',
       [userId],
     );
-    return rows.map((r) => ({ id: Number(r.id), giftId: r.gift_id, text: r.text }));
+    return rows.map((r: any) => ({ id: Number(r.id), giftId: r.gift_id, text: r.text }));
+  }
+
+  /** The client drew these gifts: never hand them out again. */
+  async ackVisualGifts(userId: number, ids: number[]) {
+    await this.db.pool.query('update visual_gifts set delivered_at = now() where user_id = $1 and id = any($2::bigint[]) and delivered_at is null', [userId, ids]);
   }
 
   async pendingGifts() {
