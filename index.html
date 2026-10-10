@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<script>window.BUILD='06e1cbcad2';(function(){var B='06e1cbcad2';try{var q=new URLSearchParams(location.search);fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j.v&&j.v!==B&&q.get('v')!==j.v){q.set('v',j.v);location.replace(location.pathname+'?'+q.toString()+location.hash)}}).catch(function(){})}catch(e){}})();</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Stars Casino</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="style.css?v=06e1cbcad2">
+</head>
+<body>
+<header id="topbar">
+  <div class="user"><div class="ava" id="ava"></div><span id="uname">Гость</span></div>
+  <button class="sndbtn" id="btn-sound" aria-label="Громкость музыки"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path id="snd-w1" d="M15 9.2a4 4 0 0 1 0 5.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path id="snd-w2" d="M17.4 6.8a7.4 7.4 0 0 1 0 10.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+  <button class="balchip" id="btn-deposit"><span id="balance">0</span><span class="star">⭐</span><i>+</i></button>
+</header>
+
+<!-- ============ ИГРАТЬ ============ -->
+<section id="view-play" class="view on">
+  <div class="card c-daily wide" data-go="bonus" style="--c:251,191,36">
+    <div class="txt"><h3>Ежедневный сундук</h3><p>Крути рулетку каждый день!</p></div>
+    <div class="chestbox"><img class="chest" src="img/chest.webp?v=06e1cbcad2" alt=""><i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i></div>
+  </div>
+
+  <div class="cards">
+    <div class="card c-mines" data-game="mines" style="--c:52,235,170">
+      <canvas class="cv" id="cv-mines"></canvas>
+      <div class="txt"><h3>Мины</h3><p>Разминируй поле</p></div>
+    </div>
+    <div class="card c-rocket" data-game="rocket" style="--c:96,165,250">
+      <canvas class="cv" id="cv-rocket"></canvas>
+      <div class="xval" id="x-rocket">x1.00</div>
+      
+      <div class="txt"><h3>Ракета</h3><p>Поставил — забрал</p></div>
+    </div>
+    <div class="card c-tower wide" data-game="tower" style="--c:253,186,116">
+      <canvas class="cv" id="cv-tower"></canvas>
+      <div class="txt"><h3>Башня</h3><p>Чем выше, тем больше икс</p></div>
+    </div>
+    <div class="card c-gull wide" data-game="seagull" style="--c:186,230,253">
+      <div class="txt"><h3>Чайка</h3><p>Угадай, кого она не схватит</p></div>
+      <img class="bird" src="img/gull.webp?v=06e1cbcad2" alt="">
+      <div class="mist"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ БОНУСЫ ============ -->
+<section id="view-bonus" class="view">
+  <h2 class="title">Бонусы</h2>
+  <div class="panel bonus" id="bonus-panel">
+    <div class="btxt"><h3>Ежедневный сундук</h3><p id="bonus-text">Загрузка…</p></div>
+    <div class="gift" id="gift"><i class="rays"></i><i class="halo"></i><img class="chest" src="img/chest.webp?v=06e1cbcad2" alt=""><i class="gs g1"></i><i class="gs g2"></i><i class="gs g3"></i><i class="gs g4"></i><i class="gs g5"></i></div>
+    <button class="primary" id="bonus-claim">Забрать</button>
+  </div>
+  <div class="panel soft"><h3>Скоро</h3><p>Турниры, реферальная программа и подарки Telegram.</p></div>
+</section>
+
+<!-- ============ ПРОФИЛЬ ============ -->
+<section id="view-profile" class="view">
+  <div class="panel prof">
+    <div class="ava big" id="ava2"></div>
+    <div><h3 id="pname">Гость</h3><p id="pid"></p></div>
+  </div>
+  <div class="panel">
+    <div class="row between"><span class="hint">Баланс</span><b class="gold"><span id="pbal">0</span> ⭐</b></div>
+    <div class="row"><button class="small" id="p-deposit">Пополнить</button><button class="small ghost" id="btn-withdraw">Вывод</button><button class="small ghost" id="btn-gift">🎁 Подарком</button></div>
+  </div>
+  <h3 class="sub">Пополнения и выводы</h3>
+  <div id="cash" class="panel list"><p class="hint">Пока пусто</p></div>
+  <h3 class="sub">Последние игры</h3>
+  <div id="history" class="panel list"><p class="hint">Пока пусто</p></div>
+</section>
+
+<!-- ============ ИГРА ============ -->
+<section id="view-game" class="view">
+  <div class="gamehead"><button id="back" aria-label="Назад">‹</button><h2 id="gtitle"></h2></div>
+  <section id="stage"></section>
+  <section id="rfeed-panel" hidden><div id="rhist" class="rhist"></div><h3 class="rfh">В игре сейчас</h3><div id="rfeed"></div></section>
+
+  <!-- controls live at the bottom of the screen -->
+  <div class="ctrl">
+    <section class="bet">
+      <div class="betbox">
+        <button class="bstep" id="bet-minus" aria-label="Меньше">−</button>
+        <label class="bval"><span class="bstar">⭐</span><input id="bet" type="number" inputmode="numeric" value="100" min="50" aria-label="Ставка"></label>
+        <button class="bstep" id="bet-plus" aria-label="Больше">+</button>
+      </div>
+      <div class="chips">
+        <button class="chip" data-bet="100">100</button><button class="chip" data-bet="500">500</button><button class="chip" data-bet="1000">1K</button><button class="chip" data-bet="5000">5K</button>
+        <button class="chip alt" id="bet-half">½</button><button class="chip alt" id="bet-x2">x2</button><button class="chip alt" id="bet-max">MAX</button>
+      </div>
+      <div id="opts"></div>
+    </section>
+    <p id="msg"></p>
+    <div class="row actions">
+      <button id="go" class="primary">Играть</button>
+      <button id="place" class="place" hidden>Поставить</button>
+      <button id="cash" class="cash" hidden>Забрать</button>
+    </div>
+  </div>
+</section>
+
+<!-- liquid glass dock -->
+<nav id="dock" aria-label="Разделы">
+  <div id="glass"><div class="blob"></div></div>
+  <button data-tab="play" class="on"><svg viewBox="0 0 24 24"><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01M17.3 5H6.7a4 4 0 0 0-3.9 3.2l-1.1 5.6A3 3 0 0 0 4.6 17c.8 0 1.5-.4 2-1l1.4-1.8h8l1.4 1.8c.5.6 1.2 1 2 1a3 3 0 0 0 2.9-3.2l-1.1-5.6A4 4 0 0 0 17.3 5Z"/></svg><span>Играть</span></button>
+  <button data-tab="bonus"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg><span>Бонусы</span></button>
+  <button data-tab="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Профиль</span></button>
+</nav>
+
+<script src="fx-rocket.js?v=06e1cbcad2"></script>
+<script src="fx-rocket-feed.js?v=06e1cbcad2"></script>
+<script src="mock-api.js?v=06e1cbcad2"></script>
+<script src="app.js?v=06e1cbcad2"></script>
+<script src="fx-cards.js?v=06e1cbcad2"></script>
+<script src="fx-props.js?v=06e1cbcad2"></script>
+<script src="fx-tower.js?v=06e1cbcad2"></script>
+<script src="shell.js?v=06e1cbcad2"></script>
+</body>
+</html>

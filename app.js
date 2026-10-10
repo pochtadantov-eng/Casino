@@ -1,0 +1,451 @@
+const tg = window.Telegram?.WebApp;
+tg?.ready(); tg?.expand();
+
+const $ = (s) => document.querySelector(s);
+const state = { game: 'rocket', round: null, balance: 0, limits: { minBet: 50, maxBet: 100000, minWithdraw: 100, minDeposit: 50, maxDeposit: 10000 }, busy: false, raf: 0 };
+
+const RU_ERR = {
+  'No active round': 'Раунд уже завершён', 'Insufficient balance': 'Недостаточно звёзд на балансе', 'Finish your current round first': 'Сначала завершите текущий раунд',
+  'Open at least one tile': 'Откройте хотя бы одну плитку', 'Make at least one move': 'Сделайте хотя бы один ход', 'Tile already open': 'Плитка уже открыта',
+  'Unknown game': 'Игра не найдена', 'Bad tile': 'Неверная плитка', 'Bad choice': 'Неверный выбор', 'Unknown variant': 'Неверная сложность', 'Too early': 'Подождите, пока домик раскачается', 'Bad auto cashout': 'Неверный авто-вывод',
+};
+function ruError(m) {
+  if (RU_ERR[m]) return RU_ERR[m];
+  if (/undefined|is not|null|TypeError|Failed to fetch|NetworkError|JSON|Unexpected/i.test(String(m))) { console.error(m); return 'Что-то пошло не так, попробуйте ещё раз'; }
+  const b = /^Bet must be (\d+)\.\.(\d+) Stars$/.exec(m); if (b) return `Ставка должна быть от ${b[1]} до ${b[2]} ⭐`;
+  const k = /^mines must be/.exec(m); if (k) return 'Количество мин: от 3 до 24';
+  return m;
+}
+async function api(path, body) {
+  const t0 = performance.now();
+  try { return await api0(path, body); } finally { const d = performance.now() - t0; state.rtt = state.rtt ? state.rtt * 0.7 + d * 0.3 : d; }
+}
+async function api0(path, body) {
+  if (window.__mockApi) { try { return await window.__mockApi(path, body); } catch (e) { throw new Error(ruError(e.message)); } }
+  const headers = { 'Content-Type': 'application/json' };
+  if (tg?.initData) headers.Authorization = 'tma ' + tg.initData;
+  else headers['x-dev-user'] = new URLSearchParams(location.search).get('dev') || '1'; // works only if server has DEV_AUTH=1
+  const r = await fetch('/api/' + path, { method: body === undefined ? 'GET' : 'POST', headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(ruError(j.error || j.message || 'Ошибка ' + r.status));
+  return j;
+}
+
+const setBalance = (b) => { state.balance = b; $('#balance').textContent = b; const pb = $('#pbal'); if (pb) pb.textContent = b; };
+const say = (t, cls = '') => { const m = $('#msg'); m.textContent = t; m.className = cls; };
+const betValue = () => clampBet(Math.floor(Number($('#bet').value) || 0));
+const clampBet = (v) => Math.min(state.limits.maxBet, Math.max(state.limits.minBet, v));
+const setBet = (v) => { $('#bet').value = clampBet(Math.floor(v)); document.querySelectorAll('.chip[data-bet]').forEach((c) => c.classList.toggle('on', Number(c.dataset.bet) === Number($('#bet').value))); };
+const betStep = (v) => (v < 500 ? 50 : v < 1000 ? 100 : v < 5000 ? 500 : v < 20000 ? 1000 : 5000);
+
+
+// prompt() is unavailable in some webviews, so ask for amounts in the page itself
+function askAmount(title, def) {
+  return new Promise((resolve) => {
+    const d = document.createElement('div');
+    d.className = 'modal';
+    d.innerHTML = `<div class="box"><p>${title}</p><input id="ask" type="number" inputmode="numeric" value="${def}"><div class="row"><button class="small ghost" id="ask-no">Отмена</button><button class="small" id="ask-ok">ОК</button></div></div>`;
+    document.body.append(d);
+    const done = (v) => { d.remove(); resolve(v); };
+    d.querySelector('#ask-ok').onclick = () => done(Math.floor(Number(d.querySelector('#ask').value)) || 0);
+    d.querySelector('#ask-no').onclick = () => done(0);
+  });
+}
+
+// ---------- per-game option controls ----------
+const OPTS = {
+  rocket: () => `<label>Авто-вывод (необязательно)</label><div class="row"><input id="auto" type="number" step="0.1" min="1.01" placeholder="например 2.0"></div>`,
+  mines: () => `<label>Количество мин</label><div class="row"><select id="mines">${[3,5,7,10,15,20,24].map((n) => `<option ${n === 5 ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`,
+  tower: () => '',
+  towerOld: () => `<label>Сложность</label><div class="row"><select id="variant"><option value="easy">Лёгкая (1 из 4 плохой)</option><option value="medium" selected>Средняя (1 из 3)</option><option value="hard">Сложная (1 из 2)</option><option value="expert">Эксперт (2 из 3)</option></select></div>`,
+  seagull: () => '',
+};
+const startParams = () => ({
+  rocket: () => ({ autoCashout: $('#auto')?.value ? Number($('#auto').value) : undefined }),
+  mines: () => ({ mines: Number($('#mines').value) }),
+  tower: () => ({}),
+  seagull: () => ({}),
+}[state.game]());
+
+// ---------- renderers ----------
+const R = {};
+
+const tier = (m) => (m < 2 ? '' : m < 5 ? ' t2' : m < 10 ? ' t3' : ' t4');
+// Rocket is one shared endless sequence of rounds: 5 s betting window -> flight -> crash -> short pause -> next round.
+// The server owns the timeline; every client polls it and animates the same round. Bots (seeded by the round number) bet, cash out or crash with you.
+const RC = {
+  rr: null, off: 0, k: null, phase: null, poll: null, timer: null, lastSettle: 0,
+  start() { this.stop(); this.poll = setInterval(() => this.fetch(), 250); this.timer = setInterval(() => this.tick(), 100); this.fetch(); },
+  stop() { clearInterval(this.poll); clearInterval(this.timer); this.poll = this.timer = null; this.rr = null; this.k = null; this.phase = null; },
+  async fetch() { try { const j = await api('games/rocket/round'); if (state.game !== 'rocket') return; this.rr = j; this.off = j.serverNow - Date.now(); } catch {} },
+  now() { return Date.now() + this.off; },
+  async settle() { if (Date.now() - this.lastSettle < 400) return; this.lastSettle = Date.now(); try { apply(await api('games/rocket/act', {})); } catch (e) { /* no active round */ } },
+  tick() {
+    const rr = this.rr, sc = state.scene, feed = state.rfeed, el = $('#mult');
+    if (state.game !== 'rocket' || !rr || !sc || !feed || !el) return;
+    const now = this.now();
+    if (rr.k !== this.k) { this.k = rr.k; this.phase = null; feed.begin(rr.k, rr.betStart); sc.polled = false; }
+    feed.setHistory(rr.history);
+    const phase = now < rr.flightStart ? 'bet' : rr.crash != null ? 'crash' : 'fly', prev = this.phase; this.phase = phase;
+    const round = state.round, mine = round && round.status === 'active' && round.view?.k === rr.k;
+    if (mine && !feed.me) feed.addMe({ name: tgUser ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') : 'Вы', photo: tgUser?.photo_url, bet: round.bet, auto: round.view.auto });
+    if (phase === 'bet') {
+      el.textContent = 'Старт через ' + Math.max(0, (rr.flightStart - now) / 1000).toFixed(1) + ' с'; el.className = 'big mult-over waiting';
+      feed.sync(now - rr.betStart, 1, 'bet');
+    } else if (phase === 'fly') {
+      if (prev !== 'fly' || sc.mode !== 'flying') {
+        sc.fly(rr.flightStart, this.off, rr.growth, (m) => {
+          if (this.phase !== 'fly') return;
+          el.textContent = m.toFixed(2) + 'x'; el.className = 'big mult-over ' + tier(m).trim();
+          feed.sync(this.now() - rr.betStart, m, 'fly');
+          const v = state.round?.view;
+          if (state.round?.status === 'active' && v?.auto && m >= v.auto && !sc.polled) { sc.polled = true; this.settle(); }
+          if (state.game === 'rocket' && state.round?.status === 'active') $('#cash').textContent = 'Забрать ' + Math.floor(state.round.bet * m) + ' ⭐';
+        });
+      }
+    } else if (prev !== 'crash') {                                      // the rocket has crashed
+      if (sc.mode === 'flying') sc.finish('lost');
+      el.textContent = rr.crash.toFixed(2) + 'x'; el.className = 'big mult-over crashed';
+      feed.sync(now - rr.betStart, rr.crash, 'crash', rr.crash);
+      if (state.round?.status === 'active') this.settle();
+    }
+    // the bet / cash-out buttons follow the phase
+    const go = $('#go'), cash = $('#cash'), active = state.round?.status === 'active';
+    go.hidden = active; cash.hidden = !active;
+    if (!active) { go.disabled = phase !== 'bet'; go.textContent = phase === 'bet' ? 'Поставить' : phase === 'fly' ? 'Идёт раунд…' : 'Ракета упала'; }
+    else if (phase === 'bet') { cash.disabled = true; cash.textContent = 'Ставка принята'; }
+    else if (phase === 'fly') cash.disabled = false;
+    else cash.disabled = true;
+  },
+};
+R.rocket = (round) => {
+  const st = $('#stage');
+  let sc = state.scene;
+  if (!sc || !st.contains(sc.canvas ?? sc.c)) { // keep one running scene; rebuild only after another game replaced the stage
+    st.classList.add('rocketstage');
+    st.innerHTML = '<canvas id="fx"></canvas><div class="big mult-over waiting" id="mult">…</div>';
+    sc = state.scene = new RocketScene($('#fx'));
+    state.rfeed = new RocketFeed($('#rfeed'), $('#rhist'));
+    RC.k = null;
+  }
+  const panel = $('#rfeed-panel'); if (panel) panel.hidden = false;
+  if (!RC.poll) RC.start();
+  const feed = state.rfeed, v = round?.view;
+  if (round && round.status === 'won') feed?.userWon(round.multiplier);
+  if (round && round.status === 'active' && v.k === RC.k && !feed.me) RC.tick();
+};
+
+// solid fills only (no gradient ids: 25 copies of one id make WebKit pick a hidden, dull copy)
+const STAR_SVG = '<svg class="gstar" viewBox="0 0 24 24"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1 5.9 20.6l1.5-6.8L2.2 9.2l6.9-.7z" fill="#ffd21f" stroke="#fff3a0" stroke-width="1.3" stroke-linejoin="round"/><path d="M12 5.6l1.7 3.9 4.2.4-3.2 2.8.9 4.1L12 14.6l-3.6 2.2.9-4.1-3.2-2.8 4.2-.4z" fill="#ffee7a"/></svg>';
+R.mines = (round) => {
+  const v = round?.view; const size = 25;
+  const prev = (round && v.revealed.length) ? (state.prevOpen || new Set()) : new Set();   // a fresh round starts with nothing open
+  const open = new Set();
+  let h = '<div class="grid">';
+  for (let i = 0; i < size; i++) {
+    const isRev = v?.revealed.includes(i), isGhost = !isRev && v?.mines?.includes(i);
+    const mine = isRev ? (v.mines?.includes(i) || (round.status === 'lost' && v.revealed.at(-1) === i)) : isGhost;
+    const isOpen = isRev || isGhost; if (isOpen) open.add(i);
+    const dis = !round || round.status !== 'active' || isOpen;
+    const cls = ['tile', isOpen ? 'open' : '', isOpen && !prev.has(i) ? 'anim' : '', isGhost ? 'ghost' : ''].join(' ');
+    const boom = isRev && mine && !prev.has(i);                      // the bomb the player stepped on blows up after the flip
+    let fx = ''; if (boom) { for (let k = 0; k < 14; k++) { const a = (k / 14) * 6.283 + Math.random() * 0.4, d = 34 + Math.random() * 36; fx += `<i style="--dx:${(Math.cos(a) * d).toFixed(1)}px;--dy:${(Math.sin(a) * d).toFixed(1)}px"></i>`; } }
+    h += `<button class="${cls}${boom ? ' boom' : ''}" data-i="${i}" ${dis ? 'disabled' : ''}><span class="inner"><span class="face front"></span><span class="face back ${mine ? 'mine' : 'safe'}">${mine ? '<span class="bomb">💣</span>' : STAR_SVG}</span></span>${boom ? `<span class="fx">${fx}</span>` : ''}</button>`;
+  }
+  state.prevOpen = open;
+  $('#stage').innerHTML = h.replace('<div class="grid">', open.size && round?.status === 'lost' && [...open].some((i) => !prev.has(i) && v.revealed.includes(i)) ? '<div class="grid shake">' : '<div class="grid">') + '</div>';
+  document.querySelectorAll('.tile').forEach((b) => b.onclick = () => act({ tile: Number(b.dataset.i) }));
+};
+
+const STEP_ICONS = { tower: ['🧱', '💥'], seagull: ['👶', '🕊'] };
+R.steps = (round) => {
+  const g = state.game; const v = round?.view;
+  if (!v) { $('#stage').innerHTML = `<div style="text-align:center;color:var(--hint)">${g === 'tower' ? 'Строй башню как можно выше 🏗' : 'Чайка летит над тремя детьми 🕊 — угадай, кого она не заберёт'}</div>`; return; }
+  const cur = v.picks.length; const over = round.status !== 'active';
+  const [ok, bad] = STEP_ICONS[g];
+  let h = '<div class="tower">';
+  for (let f = 0; f < v.maxSteps; f++) {
+    const cls = !over && f === cur ? 'floor cur' : 'floor';
+    h += `<div class="${cls}"><div class="x">${v.multipliers[f].toFixed(2)}x</div>`;
+    for (let c = 0; c < v.choices; c++) {
+      let label = g === 'seagull' ? '👶' : '▫️', k = '';
+      if (f < v.picks.length || (over && f === v.picks.length - 1)) {
+        const deadly = v.deadly ? v.deadly[f].includes(c) : false;
+        if (v.picks[f] === c) { k = deadly ? 'bad' : 'safe'; label = deadly ? bad : ok; }
+        else if (deadly) label = bad;
+      }
+      h += `<button class="${k}" data-c="${c}" ${over || f !== cur ? 'disabled' : ''}>${label}</button>`;
+    }
+    h += '</div>';
+  }
+  $('#stage').innerHTML = h + '</div>';
+  document.querySelectorAll('.floor button').forEach((b) => b.onclick = () => act({ choice: Number(b.dataset.c) }));
+};
+R.seagull = R.steps;
+// background track for the tower game: starts on entering the game (a user gesture), loops, stops on leaving / when the app is hidden
+const Music = (() => {
+  const LISTS = { tower: ['tower', 'tower2'] };      // the tower plays its first track, then the second, then starts over
+  const pos = {};                                    // per section: where the music was left ({ idx, t }) so coming back resumes instead of restarting
+  let a = null, want = false, cur = null, idx = 0, vol = 0.5, ctx = null, master = null;
+  // iOS ignores audio.volume, so the level goes through a Web Audio gain node (falls back to audio.volume where Web Audio is missing)
+  const ensureCtx = () => { if (ctx) return ctx; try { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; ctx = new AC(); master = ctx.createGain(); master.gain.value = vol; master.connect(ctx.destination); } catch { ctx = null; master = null; } return ctx; };
+  const url = (n) => (window.MUSIC_SRC && window.MUSIC_SRC[n]) || `audio/${n}.mp3` + (window.BUILD ? '?v=' + window.BUILD : '');
+  const list = () => LISTS[cur] || [cur];
+  const save = () => { if (a && cur) pos[cur] = { idx, t: a.currentTime || 0 }; };
+  const load = (startAt = 0) => {
+    a = new Audio(url(list()[idx])); a.loop = list().length === 1; a.volume = vol;
+    if (ensureCtx()) { try { ctx.createMediaElementSource(a).connect(master); a.volume = 1; ctx.resume?.(); } catch { a.volume = vol; } }
+    a.onended = () => { if (!want) return; idx = (idx + 1) % list().length; load(); };
+    if (startAt > 0.1) { const seek = () => { try { if (a.duration && startAt < a.duration - 1) a.currentTime = startAt; } catch {} }; a.addEventListener('loadedmetadata', seek, { once: true }); }
+    a.play().catch(() => {});
+  };
+  // browsers only allow sound after a tap: the first tap starts whatever should be playing
+  document.addEventListener('pointerdown', () => { ctx?.resume?.(); if (want && a && a.paused && !document.hidden) a.play().catch(() => {}); }, { capture: true });
+  return {
+    play(name = 'tower') { try {
+      if (a && cur === name) { want = true; a.play().catch(() => {}); return; }
+      if (a) { save(); a.onended = null; a.pause(); a = null; }
+      cur = name; const p = pos[name]; idx = p ? p.idx : 0; want = true; load(p ? p.t : 0);
+    } catch {} },
+    setVolume(v) { vol = Math.min(1, Math.max(0, Number(v) || 0)); if (master) master.gain.setTargetAtTime(vol, ctx.currentTime, 0.03); else if (a) a.volume = vol; },
+    getVolume() { return vol; },
+    time() { return a && want && cur === 'tower' && !a.paused && a.currentTime > 0 ? a.currentTime : null; },
+    track() { return cur === 'tower' ? list()[idx] : null; },
+    stop() { try { save(); want = false; if (a) { a.onended = null; a.pause(); a = null; } } catch {} },      // remembers the spot; the next play() of this section continues from it
+    pause(on) { try { if (a && want) { on ? a.pause() : a.play().catch(() => {}); } } catch {} },
+  };
+})();
+document.addEventListener('visibilitychange', () => Music.pause(document.hidden));
+R.tower = (round) => {                       // flat construction-site scene; the server decides every step
+  const st = $('#stage');
+  if (!state.tscene && !state.tpending) {
+    state.tpending = true; st.classList.add('towerstage'); st.innerHTML = '<canvas class="cv" id="cv-tgame"></canvas>';
+    const cv = $('#cv-tgame'), sc = new TowerGame(cv), hint = document.createElement('div');
+    hint.className = 'taphint'; hint.textContent = 'Тапни по экрану, чтобы поставить'; st.append(hint);
+    state.tpending = false; state.tscene = sc; Music.play();
+    sc.onReady = (ok) => { $('#cash').disabled = !ok; hint.classList.toggle('on', ok); };
+    cv.addEventListener('pointerdown', (e) => { e.preventDefault(); if (state.tscene === sc && sc._ready && sc.tap()) { $('#cash').disabled = true; hint.classList.remove('on'); act({ tap: true, lat: Math.round((state.rtt || 80) / 2) }); } });
+  }
+  state.tscene?.sync(round);
+};
+
+// ---------- flow ----------
+const RES_LOSS = { mines: 'ПРОИГРЫШ', tower: 'ПРОИГРЫШ', seagull: 'ПРОИГРЫШ', rocket: 'РАКЕТА УЛЕТЕЛА' };
+function showResult(r, delay, kind) {          // "win" / "loss" plaque over the board (glass background, opaque text)
+  document.querySelector('.resban')?.remove();
+  const el = document.createElement('div'); el.className = 'resban ' + kind + (kind === 'win' && state.game === 'tower' ? ' tw' : '') + (state.game === 'mines' ? ' mn' : ''); el.style.setProperty('--d', delay + 's');
+  el.innerHTML = kind === 'win'
+    ? `<b>ВЫИГРЫШ</b><span>+${r.payout} ⭐ <em>x${r.multiplier.toFixed(2)}</em></span>`
+    : `<b>${RES_LOSS[state.game] || 'ПРОИГРЫШ'}</b><span>−${r.bet} ⭐</span>`;
+  $('#stage').append(el);
+  setTimeout(() => el.remove(), (delay + (state.game === 'mines' ? 2.0 : 3.4)) * 1000);
+  if (state.game !== 'rocket') lockPlay((delay + (state.game === 'tower' ? 3.4 : state.game === 'mines' ? 1.7 : 2.95)) * 1000);               // no new round while the result animation is still playing
+}
+// Play button stays disabled until the animation has finished
+function lockPlay(ms) {
+  state.lockUntil = Date.now() + ms; $('#go').disabled = true;
+  clearTimeout(state.lockTimer);
+  state.lockTimer = setTimeout(() => { state.lockUntil = 0; $('#go').disabled = false; }, ms);
+}
+function unlockPlay() { clearTimeout(state.lockTimer); state.lockUntil = 0; $('#go').disabled = false; }
+// after a lost Mines round the board flips face down and the tiles shuffle around before the next game
+function mixMines() {
+  const grid = document.querySelector('#stage .grid'); if (!grid || state.game !== 'mines' || state.round?.status === 'active') return;
+  const tiles = [...grid.children].filter((t) => t.classList.contains('tile')), base = tiles.map((t) => t.getBoundingClientRect());
+  grid.classList.remove('shake');
+  const open = tiles.map((t) => t.classList.contains('open')); tiles.forEach((t, i) => { const inn = t.querySelector('.inner'); inn.style.animation = 'none'; inn.style.transform = open[i] ? 'rotateY(180deg)' : 'rotateY(0deg)'; t.classList.remove('anim', 'ghost', 'boom'); t.querySelector('.fx')?.remove(); t.disabled = true; });
+  grid.offsetWidth; grid.classList.add('mix');
+  tiles.forEach((t) => { t.querySelector('.inner').style.transform = 'rotateY(0deg)'; });                                    // everything flips back face down
+  const shuffle = () => { const p = tiles.map((_, i) => i); for (let i = p.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); [p[i], p[k]] = [p[k], p[i]]; } tiles.forEach((t, i) => { const j = p[i]; t.style.transform = `translate(${base[j].left - base[i].left}px,${base[j].top - base[i].top}px) rotate(${(Math.random() * 16 - 8).toFixed(1)}deg)`; }); };
+  state.mixTimers = [setTimeout(shuffle, 420), setTimeout(shuffle, 900), setTimeout(() => { tiles.forEach((t) => { t.style.transform = ''; }); }, 1380), setTimeout(() => { if (state.game === 'mines' && state.round?.status !== 'active') R.mines(null); }, 1900)];
+}
+function apply(j) {
+  clearTimeout(state.mixTimer); (state.mixTimers || []).forEach(clearTimeout); state.mixTimers = [];
+  if (j.balance !== undefined) setBalance(j.balance);
+  const prev = state.round;
+  state.round = j.round;
+  const r = j.round;
+  R[state.game](r);
+  renderDebug(r);
+  const active = r?.status === 'active';
+  const towerActive = active && state.game === 'tower';
+  $('#go').hidden = active; $('#cash').hidden = !active; $('#place').hidden = true;
+  
+  $('#cash').disabled = towerActive ? !state.tscene?._ready : false;
+  $('#cash').textContent = active ? `Забрать ${Math.floor(r.bet * (state.game === 'rocket' ? 1 : r.multiplier))} ⭐` : 'Забрать';
+  if (state.game === 'rocket') $('#cash').textContent = 'Забрать';
+  $('#cash').classList.toggle('dim', state.game === 'mines' && active && !r.view.revealed.length);      // greyed until the first tile is opened
+  if (r && !active && prev?.status === 'active') {
+    if (r.status === 'won') { showResult(r, state.game === 'tower' ? 0.9 : 0.15, 'win'); tg?.HapticFeedback?.notificationOccurred('success'); }
+    else {
+      const delay = state.game === 'mines' ? 0.6 : state.game === 'tower' ? 1.7 : 0.15;                  // mines: wait for the flip and the blast
+      showResult(r, delay, 'loss');
+      if (state.game === 'mines') state.mixTimer = setTimeout(mixMines, (delay + 1.1) * 1000);
+      setTimeout(() => tg?.HapticFeedback?.notificationOccurred('error'), delay * 1000);
+    }
+  } else if (active) say('');
+}
+
+async function guard(fn) {
+  if (state.busy) return; state.busy = true;
+  try { await fn(); } catch (e) { const m = ruError(e.message); say(m, 'lose'); try { apply(await api('games/' + state.game)); say(m, 'lose'); } catch {} } finally { state.busy = false; }
+}
+const act = (input) => guard(async () => apply(await api(`games/${state.game}/act`, input)));
+
+async function load() {
+  clearTimeout(state.pollTimer);
+  $('#opts').innerHTML = OPTS[state.game]();
+  say('');
+  try { apply(await api('games/' + state.game)); } catch (e) { say(e.message, 'lose'); }
+}
+
+$('#place').onclick = () => { if ($('#place').disabled) return; state.tscene?.tap?.(); $('#place').disabled = true; $('#cash').disabled = true; act({ choice: 0 }); };   // the house drops at once; the server's verdict arrives a moment later
+$('#go').onclick = () => { if (Date.now() < (state.lockUntil || 0)) return; guard(async () => apply(await api(`games/${state.game}/start`, { bet: betValue(), ...startParams() }))); };
+function fieldHint(txt) { document.querySelector('.fieldhint')?.remove(); const el = document.createElement('div'); el.className = 'fieldhint'; el.textContent = txt; $('#stage').append(el); setTimeout(() => el.remove(), 2000); }
+$('#cash').onclick = () => { if ($('#cash').classList.contains('dim')) { fieldHint('Открой хотя бы одну плитку, чтобы забрать'); return; } cashOut(); };
+const cashOut = () => guard(async () => apply(await api(`games/${state.game}/cashout`, {})));
+$('#bet-minus').onclick = () => setBet(betValue() - betStep(betValue() - 1));
+$('#bet-plus').onclick = () => setBet(betValue() + betStep(betValue()));
+$('#bet-x2').onclick = () => setBet(betValue() * 2);
+$('#bet-half').onclick = () => setBet(betValue() / 2);
+$('#bet-max').onclick = () => setBet(Math.min(state.limits.maxBet, state.balance || state.limits.maxBet));
+document.querySelectorAll('.chip[data-bet]').forEach((c) => c.onclick = () => setBet(Number(c.dataset.bet)));
+$('#bet').onchange = () => setBet(betValue());
+setBet(100);
+
+// ---------- deposit: a bottom sheet with presets and a custom amount, pays through a Telegram Stars invoice ----------
+const PAY_PRESETS = [50, 100, 250, 500, 1000, 2500];
+function openDeposit() {
+  if (document.querySelector('.paysheet')) return;
+  const lim = state.limits, min = lim.minDeposit || 50, max = lim.maxDeposit || 10000;
+  const d = document.createElement('div'); d.className = 'paysheet';
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><h3>Пополнить баланс</h3><p class="psub">Оплата в Telegram Stars ⭐. Зачисление сразу после оплаты.</p>
+    <div class="pgrid">${PAY_PRESETS.filter((a) => a >= min && a <= max).map((a) => `<button class="pchip" data-a="${a}"><b>${a}</b><span>⭐</span></button>`).join('')}</div>
+    <label class="pcustom"><span>Своя сумма</span><span class="pin"><span class="bstar">⭐</span><input id="pamt" type="number" inputmode="numeric" min="${min}" max="${max}" placeholder="${min}–${max}"></span></label>
+    <p class="perr" id="perr"></p>
+    <button class="primary pay" id="pgo" disabled>Выберите сумму</button>
+    <button class="plink" id="pno">Отмена</button></div>`;
+  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
+  const inp = d.querySelector('#pamt'), go = d.querySelector('#pgo'), err = d.querySelector('#perr');
+  const amount = () => Math.floor(Number(inp.value) || 0), valid = (a) => a >= min && a <= max;
+  const refresh = () => {
+    const a = amount(); d.querySelectorAll('.pchip').forEach((c) => c.classList.toggle('on', Number(c.dataset.a) === a));
+    err.textContent = a && !valid(a) ? `Сумма от ${min} до ${max} ⭐` : ''; go.disabled = !valid(a); go.textContent = valid(a) ? `Оплатить ${a} ⭐` : 'Выберите сумму';
+  };
+  d.querySelectorAll('.pchip').forEach((c) => c.onclick = () => { inp.value = c.dataset.a; refresh(); });
+  inp.oninput = refresh; refresh();
+  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
+  d.onclick = (e) => { if (e.target === d) close(); }; d.querySelector('#pno').onclick = close;
+  go.onclick = async () => {
+    const a = amount(); if (!valid(a)) return; go.disabled = true; go.textContent = 'Создаём счёт…';
+    try {
+      const { link } = await api('deposit', { amount: a });
+      if (window.__mockApi) { setBalance((await api('me')).balance); close(); toast(`Демо: +${a} ⭐`, 'ok'); return; }
+      if (!tg?.openInvoice) throw new Error('Оплата доступна только внутри Telegram');
+      tg.openInvoice(link, async (status) => {
+        if (status === 'paid') { close(); await waitCredit(a); }
+        else if (status === 'cancelled') { go.disabled = false; refresh(); err.textContent = 'Оплата отменена'; }
+        else { go.disabled = false; refresh(); err.textContent = status === 'failed' ? 'Оплата не прошла, попробуйте ещё раз' : 'Статус платежа: ' + status; }
+      });
+    } catch (e) { go.disabled = false; refresh(); err.textContent = e.message; }
+  };
+}
+// the bot credits the payment when Telegram confirms it; poll the balance for a few seconds
+async function waitCredit(amount) {
+  const before = state.balance, el = toast('Зачисляем платёж…', 'wait', 0);
+  for (let i = 0; i < 20; i++) {
+    await new Promise((r) => setTimeout(r, i < 4 ? 600 : 1500));
+    try { const me = await api('me'); if (me.balance > before) { setBalance(me.balance); el.remove(); toast(`+${me.balance - before} ⭐ зачислено`, 'ok'); if (typeof loadCash === 'function') loadCash(); return; } } catch {}
+  }
+  el.remove(); toast('Платёж обрабатывается, баланс обновится в течение минуты. Если нет — напишите /paysupport боту.', 'wait', 6000);
+}
+function toast(text, kind = 'ok', ms = 3200) {
+  const el = document.createElement('div'); el.className = 'ptoast ' + kind; el.textContent = text; document.body.append(el);
+  requestAnimationFrame(() => el.classList.add('on')); if (ms) setTimeout(() => { el.classList.remove('on'); setTimeout(() => el.remove(), 300); }, ms);
+  return el;
+}
+$('#btn-deposit').onclick = openDeposit;
+$('#p-deposit').onclick = openDeposit;
+
+$('#btn-withdraw').onclick = async () => {
+  const a = await askAmount(`Сколько Stars вывести? (минимум ${state.limits.minWithdraw})`, state.limits.minWithdraw);
+  if (!a) return;
+  try { const j = await api('withdraw', { amount: a }); setBalance(j.balance); say(`Заявка #${j.id} создана, ожидает проверки`, 'win'); } catch (e) { say(e.message, 'lose'); }
+};
+
+async function boot() { try { const me = await api('me'); setBalance(me.balance); state.limits = me.limits; } catch (e) { console.warn(e.message); } }
+
+// --- admin / demo debug overlay (opt-in): shows the round's hidden state while developing.
+// Enable with ?debug=1 in the URL, or in the console: localStorage.setItem('nova.debug','1')
+function renderDebug(round) {
+  let box = document.getElementById('dbgbox');
+  if (!round?.debug) { if (box) box.hidden = true; return; }
+  if (!box) {
+    box = document.createElement('div'); box.id = 'dbgbox'; box.className = 'dbgbox';
+    box.innerHTML = '<div class="dbg-h">ADMIN · раунд видно</div><div class="dbg-body"></div>';
+    document.getElementById('stage')?.append(box);
+  }
+  box.hidden = false;
+  const d = round.debug, body = box.querySelector('.dbg-body'); let html = '';
+  if (round.game === 'rocket') html = `<div>Крэш: <b>x${d.crash.toFixed(2)}</b></div><div>Авто-вывод: ${d.auto ? 'x' + d.auto.toFixed(2) : '—'}</div><div>До крэша: <b>${d.msToCrash}мс</b></div>`;
+  else if (round.game === 'mines') { const g = []; for (let i = 0; i < d.size; i++) g.push(`<span class="dbg-c ${d.mines.includes(i) ? 'bomb' : (d.revealed.includes(i) ? 'open' : 'safe')}">${d.mines.includes(i) ? '💣' : '·'}</span>`); html = `<div>Бомбы: ${d.mines.length} из ${d.size}</div><div class="dbg-grid">${g.join('')}</div>`; }
+  else if (round.game === 'tower') html = `<div>Этаж: ${d.picks + 1}</div><div>Старт качания: ${new Date(d.swingStart).toLocaleTimeString()}</div><div>Период: ${d.period}мс · допуск: ±${d.tol.toFixed(3)}</div>`;
+  body.innerHTML = html;
+}
+
+
+// ---------- music volume: a slider in the lobby, saved with a button, restored when the mini app is opened again ----------
+const VOL_KEY = 'nova.musicVolume';
+const volStore = {
+  get() { try { const v = localStorage.getItem(VOL_KEY); if (v !== null && v !== '') return Math.min(1, Math.max(0, Number(v))); } catch {} return null; },
+  set(v) { try { localStorage.setItem(VOL_KEY, String(v)); } catch {} try { tg?.CloudStorage?.setItem(VOL_KEY, String(v)); } catch {} },      // CloudStorage keeps it across devices / reinstalls
+};
+let savedVol = volStore.get() ?? 0.5;
+Music.setVolume(savedVol);
+if (volStore.get() === null) { try { tg?.CloudStorage?.getItem(VOL_KEY, (err, val) => { if (!err && val !== '' && val != null && volStore.get() === null) { savedVol = Math.min(1, Math.max(0, Number(val))); Music.setVolume(savedVol); } }); } catch {} }
+const paintSnd = () => { const v = Music.getVolume(); $('#snd-w1').style.opacity = v > 0.02 ? 1 : 0; $('#snd-w2').style.opacity = v > 0.5 ? 1 : 0; };
+paintSnd();
+function openVolume() {
+  if (document.querySelector('.volsheet')) return;
+  const d = document.createElement('div'); d.className = 'paysheet volsheet';
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><h3>Громкость музыки</h3><p class="psub">Применяется ко всей музыке в приложении.</p>
+    <div class="volrow"><span class="vico" id="v-mute">🔈</span><input type="range" id="v-range" min="0" max="100" step="1" value="${Math.round(Music.getVolume() * 100)}"><b id="v-val">0%</b></div>
+    <button class="primary pay" id="v-save">Сохранить</button><button class="plink" id="v-no">Отмена</button></div>`;
+  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
+  const r = d.querySelector('#v-range'), val = d.querySelector('#v-val'), ico = d.querySelector('#v-mute'), save = d.querySelector('#v-save');
+  const paint = () => { const p = Number(r.value); val.textContent = p + '%'; ico.textContent = p === 0 ? '🔇' : p < 40 ? '🔈' : p < 75 ? '🔉' : '🔊'; r.style.setProperty('--p', p + '%'); save.disabled = p / 100 === savedVol; save.textContent = save.disabled ? 'Сохранено' : 'Сохранить'; paintSnd(); };
+  r.oninput = () => { Music.setVolume(r.value / 100); paint(); };               // live preview while dragging
+  ico.onclick = () => { r.value = Number(r.value) === 0 ? 50 : 0; r.oninput(); };
+  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
+  const cancel = () => { Music.setVolume(savedVol); paintSnd(); close(); };                      // closing without saving puts the saved level back
+  save.onclick = () => { savedVol = r.value / 100; volStore.set(savedVol); toast('Громкость сохранена', 'ok'); close(); };
+  d.querySelector('#v-no').onclick = cancel; d.onclick = (e) => { if (e.target === d) cancel(); };
+  paint();
+}
+$('#btn-sound').onclick = openVolume;
+
+
+// ---------- withdraw as a Telegram gift: pick a gift, the bot drops it into the chat with the bot ----------
+async function openGifts() {
+  if (document.querySelector('.giftsheet')) return;
+  const d = document.createElement('div'); d.className = 'paysheet giftsheet';
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><h3>Вывести подарком 🎁</h3><p class="psub" id="g-sub">Подарок прилетит вам в чат с ботом. Цена списывается с баланса.</p>
+    <div class="ggrid" id="g-grid"><p class="hint">Загружаем подарки…</p></div><p class="perr" id="g-err"></p>
+    <button class="primary pay" id="g-go" disabled>Выберите подарок</button><button class="plink" id="g-no">Закрыть</button></div>`;
+  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
+  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
+  d.querySelector('#g-no').onclick = close; d.onclick = (e) => { if (e.target === d) close(); };
+  const grid = d.querySelector('#g-grid'), go = d.querySelector('#g-go'), err = d.querySelector('#g-err'); let list = [], sel = null;
+  const paint = () => { go.disabled = !sel; go.textContent = sel ? (sel.price > state.balance ? `Не хватает ${sel.price - state.balance} ⭐` : `Отправить за ${sel.price} ⭐`) : 'Выберите подарок'; if (sel && sel.price > state.balance) go.disabled = true; grid.querySelectorAll('.gcard').forEach((c) => c.classList.toggle('on', sel && c.dataset.id === sel.id)); };
+  try {
+    const j = await api('gifts'); list = j.gifts; d.querySelector('#g-sub').textContent = `Подарок прилетит вам в чат с ботом. До ${j.perDay} в сутки, цена = стоимость подарка + комиссия.`;
+    grid.innerHTML = list.length ? list.map((g) => `<button class="gcard" data-id="${g.id}"><span class="gem">${g.emoji}</span><b>${g.price} ⭐</b>${g.limited ? '<i>лимит</i>' : ''}</button>`).join('') : '<p class="hint">Подарков пока нет</p>';
+    grid.querySelectorAll('.gcard').forEach((c) => c.onclick = () => { sel = list.find((g) => g.id === c.dataset.id); err.textContent = ''; paint(); });
+  } catch (e) { grid.innerHTML = ''; err.textContent = e.message; }
+  go.onclick = async () => {
+    if (!sel) return; go.disabled = true; go.textContent = 'Отправляем…';
+    try { const r = await api('gifts/send', { giftId: sel.id }); setBalance(r.balance); close(); toast(`Подарок ${sel.emoji} в обработке: придёт в чат с ботом через ~${r.etaSec || 15} с`, 'wait', 5200); if (typeof loadCash === 'function') { loadCash(); let n = 0; const iv = setInterval(() => { loadCash(); if (++n > 12) clearInterval(iv); }, 4000); } window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); if (window.Telegram?.WebApp?.close && !window.__mockApi) setTimeout(() => {}, 0); }
+    catch (e) { err.textContent = e.message; paint(); }
+  };
+}
+$('#btn-gift').onclick = openGifts;
