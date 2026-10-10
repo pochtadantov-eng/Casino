@@ -60,3 +60,15 @@ create table if not exists user_gifts (
   created_at timestamptz not null default now(),
   sent_at    timestamptz
 );
+
+-- Visual-only gifts (personal mode): PampGram polls these and draws them locally; nothing is sent via Telegram
+create table if not exists visual_gifts (
+  id           bigserial primary key,
+  user_id      bigint not null references users(id),
+  gift_id      text   not null,
+  text         text,
+  deliver_at   timestamptz not null,
+  delivered_at timestamptz,
+  created_at   timestamptz not null default now()
+);
+create index if not exists visual_gifts_pending on visual_gifts(user_id, deliver_at) where delivered_at is null;
