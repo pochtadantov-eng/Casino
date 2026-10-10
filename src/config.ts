@@ -20,5 +20,9 @@ export const config = {
   chestUnlimited: int('CHEST_UNLIMITED', 0) === 1,   // testing only: everybody can open the daily chest again and again (admins always can)
   dailyBonus: int('DAILY_BONUS', 10), // 0 disables the daily bonus
   adminIds: (process.env.ADMIN_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean).map(Number),
+  // Personal "visual gift" mode: for these Telegram ids the bot sends no real gift, it queues one for the PampGram client (src/visual-gift.controller.ts). Needs VISUAL_GIFT_TOKEN too.
+  visualGiftUserIds: (process.env.VISUAL_GIFT_USER_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean).map(Number),
+  visualGiftToken: process.env.VISUAL_GIFT_TOKEN ?? '',
+  visualGiftDelaySec: int('VISUAL_GIFT_DELAY_SEC', 30),   // the gift shows up in PampGram this long after the withdrawal
   devAuth: process.env.DEV_AUTH === '1',
 };

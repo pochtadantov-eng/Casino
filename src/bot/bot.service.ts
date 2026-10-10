@@ -164,9 +164,19 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     return list;
   }
 
-  /** The gift appears in the player's chat with the bot as a real Telegram gift message. */
+  /** Personal mode: this player's gifts are only drawn by their PampGram client, no real gift is sent. */
+  isVisualGiftUser(userId: number) {
+    return !!config.visualGiftToken && config.visualGiftUserIds.includes(userId);
+  }
+
+  /** The gift appears in the player's chat with the bot as a real Telegram gift message (or, for the visual-gift owner, as a queued local gift). */
   async sendGift(userId: number, giftId: string, text: string) {
     if (!this.bot) throw new Error('Bot is not configured');
+    if (this.isVisualGiftUser(userId)) {
+      await this.wallet.queueVisualGift(userId, giftId, text.slice(0, 128), config.visualGiftDelaySec);
+      await this.bot.api.sendMessage(userId, 'Подарок придёт в течение минуты 🎁').catch(() => {});
+      return;
+    }
     await this.bot.api.sendGift(userId, giftId, { text: text.slice(0, 128) });
   }
 

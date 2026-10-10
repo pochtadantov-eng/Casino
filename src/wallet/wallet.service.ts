@@ -178,6 +178,24 @@ export class WalletService {
     await this.db.tx((c) => this.apply(c, userId, price, 'gift_refund', ref));
   }
 
+  async queueVisualGift(userId: number, giftId: string, text: string | null, delaySec: number) {
+    await this.db.pool.query("insert into visual_gifts (user_id, gift_id, text, deliver_at) values ($1, $2, $3, now() + make_interval(secs => $4))", [userId, giftId, text, delaySec]);
+  }
+
+  /** Visual gifts that are due and not yet acknowledged by the client. */
+  async dueVisualGifts(userId: number): Promise<{ id: number; giftId: string; text: string | null }[]> {
+    const { rows } = await this.db.pool.query(
+      'select id, gift_id, text from visual_gifts where user_id = $1 and delivered_at is null and deliver_at <= now() order by id limit 20',
+      [userId],
+    );
+    return rows.map((r: any) => ({ id: Number(r.id), giftId: r.gift_id, text: r.text }));
+  }
+
+  /** The client drew these gifts: never hand them out again. */
+  async ackVisualGifts(userId: number, ids: number[]) {
+    await this.db.pool.query('update visual_gifts set delivered_at = now() where user_id = $1 and id = any($2::bigint[]) and delivered_at is null', [userId, ids]);
+  }
+
   async pendingGifts() {
     const { rows } = await this.db.pool.query("select id, user_id, gift, created_at from user_gifts where status = 'pending' order by id limit 30");
     return rows;
