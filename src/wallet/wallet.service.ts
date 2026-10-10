@@ -141,7 +141,7 @@ export class WalletService {
   }
 
   /** Opens the daily chest, once per 24 h. The UPDATE is the lock: a concurrent second claim matches no row. Stars are credited at once; a gift is queued for an admin. */
-  async openChest(userId: number): Promise<{ prize: ChestPrize; giftId: number | null }> {
+  async openChest(userId: number): Promise<{ prize: ChestPrize }> {
     if (config.dailyBonus <= 0) throw new GameError('Бонус сейчас недоступен');
     return this.db.tx(async (c) => {
       const r = await c.query(
@@ -152,11 +152,14 @@ export class WalletService {
       );
       if (!r.rowCount) throw new GameError('Бонус уже получен, приходите позже');
       const prize = drawPrize();
-      let giftId: number | null = null;
       if (prize.stars) await this.apply(c, userId, prize.stars, 'bonus', `chest:${userId}:${Date.now()}`);
-      if (prize.gift) giftId = Number((await c.query('insert into user_gifts (user_id, gift) values ($1, $2) returning id', [userId, prize.gift])).rows[0].id);
-      return { prize, giftId };
+      return { prize };
     });
+  }
+
+  /** A gift prize the bot could not deliver on its own: queued for an admin (/gifts, /sent <id>). */
+  async queueGift(userId: number, gift: string): Promise<number> {
+    return Number((await this.db.pool.query('insert into user_gifts (user_id, gift) values ($1, $2) returning id', [userId, gift])).rows[0].id);
   }
 
   /** Takes the gift price off the balance before the gift is sent (limit per 24 h). Returns the debited reference. */

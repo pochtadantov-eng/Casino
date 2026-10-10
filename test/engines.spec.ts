@@ -197,7 +197,7 @@ describe('rocket shared rounds', () => {
 describe('daily chest', () => {
   it('prizes match the promised list and draw frequencies follow the weights', () => {
     expect(CHEST_PRIZES.filter((p) => p.stars).map((p) => p.stars)).toEqual([15, 25, 50, 100, 150, 500, 1000]);
-    expect(CHEST_PRIZES.some((p) => p.gift)).toBe(true);
+    expect(CHEST_PRIZES.some((p) => p.giftStars)).toBe(true);
     const N = 100_000, cnt: Record<string, number> = {};
     for (let i = 0; i < N; i++) { const p = drawPrize(); cnt[p.id] = (cnt[p.id] ?? 0) + 1; }
     const total = CHEST_PRIZES.reduce((a, p) => a + p.weight, 0);

@@ -80,16 +80,17 @@
   const reply = (r) => { save(); return { round: r ? present(r) : null, balance: db.balance }; };
 
   // daily chest (mirrors src/wallet/chest.ts)
-  const CHEST_W = [['s15', 15, 55], ['s25', 25, 25], ['s50', 50, 12], ['s100', 100, 5], ['s150', 150, 1.8], ['s500', 500, 0.8], ['s1000', 1000, 0.3], ['gift', 0, 0.1]];
-  const CHEST = CHEST_W.map(([id, stars]) => id === 'gift' ? { id, gift: 'nft1', label: 'NFT-подарок Telegram' } : { id, stars, label: stars + ' ⭐' });
-  const drawChest = () => { const forced = new URLSearchParams(location.search).get('prize'); if (forced) { const f = CHEST.find((p) => p.id === forced); if (f) return f; } let r = Math.random() * CHEST_W.reduce((s, x) => s + x[2], 0); for (const [id, , w] of CHEST_W) { r -= w; if (r < 0) return CHEST.find((p) => p.id === id); } return CHEST[0]; };
+  const CHEST_W = [['s15', 15, 55], ['s25', 25, 25], ['s50', 50, 12], ['s100', 100, 5], ['s150', 150, 1.8], ['s500', 500, 0.8], ['s1000', 1000, 0.3], ['g25', 0, 0.5], ['g50', 0, 0.25], ['g100', 0, 0.1]];
+  const CHEST = CHEST_W.map(([id, stars]) => id[0] === 'g' ? { id, giftStars: Number(id.slice(1)), label: 'Подарок ≈' + id.slice(1) + ' ⭐' } : { id, stars, label: stars + ' ⭐' });
+  const GIFT_EMOJI = { 25: ['🎁', '🌹'], 50: ['🎂', '🚀', '💐'], 100: ['🏆', '💍', '💎'] };
+  const drawChest = () => { const forced = new URLSearchParams(location.search).get('prize'); if (forced === 'gift') return CHEST.find((p) => p.id === 'g50'); if (forced) { const f = CHEST.find((p) => p.id === forced); if (f) return f; } let r = Math.random() * CHEST_W.reduce((s, x) => s + x[2], 0); for (const [id, , w] of CHEST_W) { r -= w; if (r < 0) return CHEST.find((p) => p.id === id); } return CHEST[0]; };
 
   const GIFTS = [['g1', '🧸', 15], ['g2', '❤️', 15], ['g3', '🎁', 25], ['g4', '🌹', 25], ['g5', '🎂', 50], ['g6', '💐', 50], ['g7', '🚀', 50], ['g8', '🏆', 100], ['g9', '💍', 100], ['g10', '💎', 100]].map(([id, emoji, stars]) => ({ id, emoji, stars }));
   const handlers = {
     me: () => ({ id: 1, balance: db.balance, limits: LIMITS }),
     history: () => db.hist.slice(0, 20).map((r) => present(r)),
     bonus: () => ({ enabled: true, unlimited: true, availableAt: null, prizes: CHEST }),      // demo: the chest can be opened again and again
-    'bonus/daily': () => { db.lastDaily = Date.now(); const p = drawChest(); if (p.stars) { db.balance += p.stars; (db.cash = db.cash || []).unshift({ kind: 'bonus', amount: p.stars, balance: db.balance, at: new Date().toISOString() }); } save(); return { prize: { id: p.id, stars: p.stars, gift: p.gift, label: p.label }, balance: db.balance }; },
+    'bonus/daily': () => { db.lastDaily = Date.now(); const p = drawChest(); if (p.stars) { db.balance += p.stars; (db.cash = db.cash || []).unshift({ kind: 'bonus', amount: p.stars, balance: db.balance, at: new Date().toISOString() }); } save(); const gift = p.giftStars ? { emoji: GIFT_EMOJI[p.giftStars][Math.floor(Math.random() * GIFT_EMOJI[p.giftStars].length)], stars: p.giftStars, delivered: true } : null; return { prize: { id: p.id, stars: p.stars, giftStars: p.giftStars, label: p.label, gift }, balance: db.balance }; },
     gifts: () => ({ perDay: 5, gifts: GIFTS.map((g) => ({ ...g, price: Math.ceil(g.stars * 1.1), limited: false })) }),
     'gifts/send': (b) => { const g = GIFTS.find((x) => x.id === b.giftId); if (!g) fail('Подарок недоступен'); const price = Math.ceil(g.stars * 1.1); if (price > db.balance) fail('Недостаточно звёзд'); db.balance -= price; (db.cash = db.cash || []).unshift({ kind: 'gift_withdraw', amount: -price, balance: db.balance, at: new Date().toISOString() }); save(); return { price, balance: db.balance }; },
     cash: () => (db.cash || []).slice(0, 20),

@@ -450,3 +450,5 @@ body.ingame .sndbtn{display:none}
 .gcard .gem{font-size:38px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}.gcard b{font:800 14px/1 system-ui,sans-serif}.gcard i{position:absolute;top:5px;right:6px;font-style:normal;font-size:9px;color:#ffd84a}
 .gcard.on{background:rgba(255,200,40,.16);border-color:rgba(255,215,90,.85);box-shadow:0 0 14px rgba(255,200,40,.35)}
 .gcard:active{transform:scale(.95)}
+.rcard{min-width:0;width:98px;overflow:hidden}
+.rcard.gift b{font-size:14px;letter-spacing:.2px}

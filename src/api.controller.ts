@@ -33,9 +33,22 @@ export class ApiController {
 
   @Post('bonus/daily')
   async claimBonus(@Req() req: any) {
-    const { prize, giftId } = await this.wallet.openChest(req.user.id);
-    if (prize.gift) await this.bot.notifyAdmins(`🎁 Выигран подарок «${prize.label}» (#${giftId}): user ${req.user.id}\nОтправьте его вручную и отметьте: /sent ${giftId}   (список: /gifts)`);
-    return { prize: { id: prize.id, stars: prize.stars, gift: prize.gift, label: prize.label }, balance: await this.wallet.balance(req.user.id) };
+    const { prize } = await this.wallet.openChest(req.user.id);
+    let gift: { emoji: string; stars: number; delivered: boolean } | null = null;
+    if (prize.giftStars) {
+      // a real Telegram gift lands in the player's chat with the bot; if the bot cannot send it (empty bot balance, user never started the bot) an admin gets it in the queue
+      try {
+        const all = await this.bot.availableGifts(), best = Math.min(...all.map((g) => Math.abs(g.stars - prize.giftStars!)));
+        const pool = all.filter((g) => Math.abs(g.stars - prize.giftStars!) === best), pick = pool[Math.floor(Math.random() * pool.length)];
+        await this.bot.sendGift(req.user.id, pick.id, 'Подарок из ежедневного сундука Nova Casino 🎁');
+        gift = { emoji: pick.emoji, stars: pick.stars, delivered: true };
+      } catch (e: any) {
+        const id = await this.wallet.queueGift(req.user.id, prize.id);
+        await this.bot.notifyAdmins(`🎁 Подарок «${prize.label}» (#${id}) для user ${req.user.id} не отправился сам (${e?.message ?? e}). Отправьте вручную и отметьте: /sent ${id}   (список: /gifts)`);
+        gift = { emoji: '🎁', stars: prize.giftStars, delivered: false };
+      }
+    }
+    return { prize: { id: prize.id, stars: prize.stars, giftStars: prize.giftStars, label: prize.label, gift }, balance: await this.wallet.balance(req.user.id) };
   }
 
   /** Deposits / withdrawals / bonuses for the profile screen. */
