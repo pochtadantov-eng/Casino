@@ -92,10 +92,10 @@ export class WalletService {
   /** Deposits, withdrawals and bonuses of one user (not bets), newest first. */
   async cashHistory(userId: number, limit = 20) {
     const { rows } = await this.db.pool.query(
-      "select t.kind, t.amount, t.balance_after, t.created_at, o.status as order_status from transactions t left join gift_orders o on t.kind = 'gift_withdraw' and o.ref = t.ref where t.user_id = $1 and t.kind in ('deposit', 'deposit_refund', 'withdraw', 'withdraw_refund', 'bonus', 'gift_withdraw', 'gift_refund') order by t.id desc limit $2",
+      "select t.kind, t.amount, t.balance_after, t.created_at, o.status as order_status, w.status as wd_status from transactions t left join gift_orders o on t.kind = 'gift_withdraw' and o.ref = t.ref left join withdrawals w on t.kind = 'withdraw' and w.id::text = t.ref where t.user_id = $1 and t.kind in ('deposit', 'deposit_refund', 'withdraw', 'withdraw_refund', 'bonus', 'gift_withdraw', 'gift_refund') order by t.id desc limit $2",
       [userId, limit],
     );
-    return rows.map((r) => ({ kind: r.kind as string, amount: Number(r.amount), balance: Number(r.balance_after), at: r.created_at as Date, status: (r.order_status as string | null) ?? undefined }));
+    return rows.map((r) => ({ kind: r.kind as string, amount: Number(r.amount), balance: Number(r.balance_after), at: r.created_at as Date, status: ((r.order_status ?? r.wd_status) as string | null) ?? undefined }));
   }
 
   async requestWithdraw(userId: number, amount: number) {
