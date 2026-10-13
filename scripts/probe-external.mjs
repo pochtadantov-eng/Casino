@@ -23,5 +23,10 @@ const res = await Promise.all([
 for (const [n, u] of [['stars-buy.html', 'https://fragment.com/stars/buy'], ['gifts.html', 'https://fragment.com/gifts'], ['gifts-hexpot.html', 'https://fragment.com/gifts/hexpot'], ['stars-sell.html', 'https://fragment.com/stars']]) {
   try { const r = await fetch(u, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(20000) }); writeFileSync(out.replace('probe.json', n), await r.text()); } catch (e) { writeFileSync(out.replace('probe.json', n), 'ERR ' + e); }
 }
+try {
+  const js = await (await fetch('https://fragment.com/js/auction.js?111', { headers: { 'user-agent': 'Mozilla/5.0' } })).text();
+  const lines = js.split(/\n/).map((l, i) => [i, l]).filter(([, l]) => /Stars|stars/.test(l) && /(method|query|price|api)/i.test(l)).slice(0, 80);
+  writeFileSync(out.replace('probe.json', 'auction-stars.txt'), lines.map(([i, l]) => i + ': ' + l.trim().slice(0, 300)).join('\n'));
+} catch (e) { writeFileSync(out.replace('probe.json', 'auction-stars.txt'), 'ERR ' + e); }
 writeFileSync(out, JSON.stringify({ at: new Date().toISOString(), results: res }, null, 1));
 console.log(res.map((r) => `${r.name}: ${r.status ?? r.error} ${r.bytes ?? ''}`).join('\n'));
