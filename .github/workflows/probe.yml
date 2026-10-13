@@ -1,0 +1,28 @@
+name: Probe external data
+
+# Fetches rates / gift assets with full internet access and publishes probe.json to the probe-data branch.
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['scripts/probe-external.mjs', '.github/workflows/probe.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: mkdir -p _probe && node scripts/probe-external.mjs _probe/probe.json
+      - name: Publish to probe-data
+        run: |
+          cd _probe
+          git init -q -b probe-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -q -m "probe ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" probe-data
