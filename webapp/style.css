@@ -522,3 +522,36 @@ button.small{border-radius:10px;font-weight:600}
 .fieldhint{border-radius:12px}
 .icard::after{display:none}.invico{border-radius:10px}
 .panel.bonus .gift .halo,.panel.bonus .gift .rays{opacity:.25}
+
+/* top-up page: a full screen with the amount, methods and a summary (replaces the bottom sheet) */
+body.nopay{overflow:hidden}
+.paypage{position:fixed;inset:0;z-index:75;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .26s cubic-bezier(.2,.8,.3,1)}
+.paypage.on{transform:none}
+.pp-head{display:flex;align-items:center;gap:10px;padding:max(12px,env(safe-area-inset-top,0px)) 14px 10px;border-bottom:1px solid var(--line)}
+.pp-head h2{flex:1;font:700 18px/1 system-ui,-apple-system,sans-serif}
+.pp-back{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:#fff;font-size:26px;line-height:1;padding:0 0 3px}
+.pp-bal{padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:14px;color:var(--hint)}.pp-bal b{color:#fff;font-weight:700}
+.pp-body{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:18px 14px 14px}
+.pp-amount label{display:block;font-size:12.5px;color:var(--hint);text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px 2px}
+.pp-row{display:flex;gap:10px;align-items:stretch}
+.pp-step{flex:0 0 54px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:#fff;font-size:24px;font-weight:600}
+.pp-field{flex:1;position:relative;display:flex;align-items:center;justify-content:center;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:6px 36px 6px 12px}
+.pp-field input{width:100%;padding:12px 0;border:0;background:none;color:#fff;text-align:center;font:700 34px/1 system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums;-moz-appearance:textfield;outline:none}
+.pp-field input::-webkit-outer-spin-button,.pp-field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.pp-field span{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:20px}
+.pp-range{margin:8px 2px 0;font-size:12.5px;color:var(--hint)}.pp-range.bad{color:#ff7a7a}
+.pp-chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0 18px}
+.pp-chip{padding:12px 0;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:#dfe5f7;font:600 15px/1 system-ui,-apple-system,sans-serif}
+.pp-chip.on{border-color:var(--accent);background:rgba(46,230,200,.1);color:#fff}
+.pp-method{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:1px solid var(--accent);background:rgba(46,230,200,.06)}
+.pp-mico{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font-size:22px;background:rgba(245,179,1,.14);border:1px solid rgba(245,179,1,.35)}
+.pp-mt{flex:1;min-width:0}.pp-mt b{display:block;font:700 15px/1.2 system-ui,-apple-system,sans-serif}.pp-mt span{display:block;margin-top:3px;font-size:12.5px;color:var(--hint)}
+.pp-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--accent);position:relative}.pp-radio::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--accent)}
+.pp-sum{margin:16px 0 0;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.pp-sum>div{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;font-size:14px}.pp-sum>div+div{border-top:1px solid var(--line)}
+.pp-sum span{color:var(--hint)}.pp-sum b{font:700 15px/1 system-ui,-apple-system,sans-serif;font-variant-numeric:tabular-nums}
+.pp-notes{margin:16px 2px 0;padding:0 0 0 18px;color:var(--hint);font-size:12.5px;line-height:1.5}
+.pp-err{min-height:18px;margin:10px 2px 0;color:#ff7a7a;font-size:13px}
+.pp-foot{padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:rgba(9,12,22,.98)}
+.pp-go{width:100%;padding:16px;border-radius:12px;border:0;background:linear-gradient(180deg,#2fe0c4,#22bfa8);color:#03141a;font:700 16px/1 system-ui,-apple-system,sans-serif}
+.pp-go:disabled{opacity:.4}

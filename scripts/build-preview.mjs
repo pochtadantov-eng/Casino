@@ -8,7 +8,7 @@ const body = r('index.html').match(/<body>([\s\S]*)<\/body>/)[1].replace(/<scrip
   .replace(/src="img\/([\w.]+)"/g, (_, n) => `src="data:${mime[n.split('.').pop()]};base64,${readFileSync(f('img/' + n)).toString('base64')}"`);
 const svg = readFileSync(f('rocket.svg')).toString('base64');
 const css = r('style.css').replace(/url\(fonts\/([\w.-]+)\)/g, (_, n) => `url(data:font/woff2;base64,${readFileSync(f('fonts/' + n)).toString('base64')})`);
-const out = `<title>TonUp</title>
+const out = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TonUp</title>
 <style>${css}\nhtml,body{height:auto}body{max-width:520px;margin-inline:auto}</style>
 ${body}
 <script>window.ROCKET_SRC='data:image/svg+xml;base64,${svg}'</script>

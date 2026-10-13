@@ -316,26 +316,39 @@ setBet(100);
 // ---------- deposit: a bottom sheet with presets and a custom amount, pays through a Telegram Stars invoice ----------
 const PAY_PRESETS = [50, 100, 250, 500, 1000, 2500];
 function openDeposit() {
-  if (document.querySelector('.paysheet')) return;
+  if (document.querySelector('.paypage')) return;
   const lim = state.limits, min = lim.minDeposit || 50, max = lim.maxDeposit || 10000;
-  const d = document.createElement('div'); d.className = 'paysheet';
-  d.innerHTML = `<div class="pbox"><i class="grab"></i><h3>Пополнить баланс</h3><p class="psub">Оплата в Telegram Stars ⭐. Зачисление сразу после оплаты.</p>
-    <div class="pgrid">${PAY_PRESETS.filter((a) => a >= min && a <= max).map((a) => `<button class="pchip" data-a="${a}"><b>${a}</b><span>⭐</span></button>`).join('')}</div>
-    <label class="pcustom"><span>Своя сумма</span><span class="pin"><span class="bstar">⭐</span><input id="pamt" type="number" inputmode="numeric" min="${min}" max="${max}" placeholder="${min}–${max}"></span></label>
-    <p class="perr" id="perr"></p>
-    <button class="primary pay" id="pgo" disabled>Выберите сумму</button>
-    <button class="plink" id="pno">Отмена</button></div>`;
-  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
-  const inp = d.querySelector('#pamt'), go = d.querySelector('#pgo'), err = d.querySelector('#perr');
+  const presets = [50, 100, 250, 500, 1000, 2500, 5000].filter((a) => a >= min && a <= max);
+  const d = document.createElement('div'); d.className = 'paypage';
+  d.innerHTML = `<header class="pp-head"><button class="pp-back" id="pp-back" aria-label="Назад">‹</button><h2>Пополнение</h2><div class="pp-bal"><b>${state.balance}</b> ⭐</div></header>
+    <div class="pp-body">
+      <div class="pp-amount"><label for="pp-in">Сумма пополнения</label>
+        <div class="pp-row"><button class="pp-step" id="pp-minus" aria-label="Меньше">−</button><div class="pp-field"><input id="pp-in" type="number" inputmode="numeric" min="${min}" max="${max}" value="500"><span>⭐</span></div><button class="pp-step" id="pp-plus" aria-label="Больше">+</button></div>
+        <p class="pp-range" id="pp-range">от ${min} до ${max} ⭐</p></div>
+      <div class="pp-chips">${presets.map((a) => `<button class="pp-chip" data-a="${a}">${a}</button>`).join('')}</div>
+      <div class="pp-method"><div class="pp-mico">⭐</div><div class="pp-mt"><b>Telegram Stars</b><span>Оплата внутри Telegram · без комиссии</span></div><i class="pp-radio"></i></div>
+      <div class="pp-sum"><div><span>Вы платите</span><b id="pp-pay">500 ⭐</b></div><div><span>Зачислится на баланс</span><b id="pp-get">500 ⭐</b></div><div><span>Баланс после пополнения</span><b id="pp-after">${state.balance + 500} ⭐</b></div></div>
+      <ul class="pp-notes"><li>Звёзды зачисляются автоматически, обычно за несколько секунд.</li><li>Платёж защищён Telegram, мы не видим данные вашего аккаунта оплаты.</li><li>Вопросы по оплате: команда /paysupport в чате с ботом.</li></ul>
+      <p class="pp-err" id="pp-err"></p>
+    </div>
+    <footer class="pp-foot"><button class="pp-go" id="pp-go" disabled>Выберите сумму</button></footer>`;
+  document.body.append(d); document.body.classList.add('nopay'); requestAnimationFrame(() => d.classList.add('on'));
+  const inp = d.querySelector('#pp-in'), go = d.querySelector('#pp-go'), err = d.querySelector('#pp-err');
   const amount = () => Math.floor(Number(inp.value) || 0), valid = (a) => a >= min && a <= max;
+  const step = (a) => (a < 500 ? 50 : a < 2000 ? 250 : a < 10000 ? 1000 : 5000);
   const refresh = () => {
-    const a = amount(); d.querySelectorAll('.pchip').forEach((c) => c.classList.toggle('on', Number(c.dataset.a) === a));
-    err.textContent = a && !valid(a) ? `Сумма от ${min} до ${max} ⭐` : ''; go.disabled = !valid(a); go.textContent = valid(a) ? `Оплатить ${a} ⭐` : 'Выберите сумму';
+    const a = amount(), ok = valid(a);
+    d.querySelectorAll('.pp-chip').forEach((c) => c.classList.toggle('on', Number(c.dataset.a) === a));
+    d.querySelector('#pp-pay').textContent = ok ? a + ' ⭐' : '—'; d.querySelector('#pp-get').textContent = ok ? a + ' ⭐' : '—'; d.querySelector('#pp-after').textContent = ok ? (state.balance + a) + ' ⭐' : '—';
+    d.querySelector('#pp-range').classList.toggle('bad', !!a && !ok); err.textContent = '';
+    go.disabled = !ok; go.textContent = ok ? `Пополнить на ${a} ⭐` : 'Введите сумму от ' + min + ' до ' + max;
   };
-  d.querySelectorAll('.pchip').forEach((c) => c.onclick = () => { inp.value = c.dataset.a; refresh(); });
+  d.querySelectorAll('.pp-chip').forEach((c) => c.onclick = () => { inp.value = c.dataset.a; refresh(); });
+  d.querySelector('#pp-minus').onclick = () => { inp.value = Math.max(min, amount() - step(amount() - 1)); refresh(); };
+  d.querySelector('#pp-plus').onclick = () => { inp.value = Math.min(max, amount() + step(amount())); refresh(); };
   inp.oninput = refresh; refresh();
-  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
-  d.onclick = (e) => { if (e.target === d) close(); }; d.querySelector('#pno').onclick = close;
+  const close = () => { d.classList.remove('on'); document.body.classList.remove('nopay'); setTimeout(() => d.remove(), 260); };
+  d.querySelector('#pp-back').onclick = close;
   go.onclick = async () => {
     const a = amount(); if (!valid(a)) return; go.disabled = true; go.textContent = 'Создаём счёт…';
     try {
@@ -344,10 +357,9 @@ function openDeposit() {
       if (!tg?.openInvoice) throw new Error('Оплата доступна только внутри Telegram');
       tg.openInvoice(link, async (status) => {
         if (status === 'paid') { close(); await waitCredit(a); }
-        else if (status === 'cancelled') { go.disabled = false; refresh(); err.textContent = 'Оплата отменена'; }
-        else { go.disabled = false; refresh(); err.textContent = status === 'failed' ? 'Оплата не прошла, попробуйте ещё раз' : 'Статус платежа: ' + status; }
+        else { refresh(); err.textContent = status === 'cancelled' ? 'Оплата отменена' : status === 'failed' ? 'Оплата не прошла, попробуйте ещё раз' : 'Статус платежа: ' + status; }
       });
-    } catch (e) { go.disabled = false; refresh(); err.textContent = e.message; }
+    } catch (e) { refresh(); err.textContent = e.message; }
   };
 }
 // the bot credits the payment when Telegram confirms it; poll the balance for a few seconds
