@@ -206,3 +206,19 @@ describe('daily chest', () => {
     expect(chestEv()).toBeGreaterThan(20); expect(chestEv()).toBeLessThan(60);
   });
 });
+
+import { PLINKO_TABLES, SLOT_SYMBOLS, slotPay, LUCK_TABLES } from '../src/games/engines/extra';
+describe('instant games RTP', () => {
+  const C = [1, 12, 66, 220, 495, 792, 924, 792, 495, 220, 66, 12, 1].map((x) => x / 4096);
+  for (const [risk, t] of Object.entries(PLINKO_TABLES)) it('plinko ' + risk, () => {
+    const rtp = t.reduce((a, m, k) => a + m * C[k], 0); expect(rtp).toBeGreaterThan(0.88); expect(rtp).toBeLessThanOrEqual(0.93);
+  });
+  it('slot', () => {
+    const W = SLOT_SYMBOLS.reduce((a, s) => a + s.w, 0); let rtp = 0;
+    for (let a = 0; a < 7; a++) for (let b = 0; b < 7; b++) for (let c = 0; c < 7; c++) rtp += slotPay([a, b, c]) * (SLOT_SYMBOLS[a].w * SLOT_SYMBOLS[b].w * SLOT_SYMBOLS[c].w) / W ** 3;
+    expect(rtp).toBeGreaterThan(0.88); expect(rtp).toBeLessThanOrEqual(0.93);
+  });
+  for (const [k, t] of Object.entries(LUCK_TABLES)) it('luck ' + k, () => {
+    expect(t.reduce((a, [, p]) => a + p, 0)).toBeCloseTo(1, 6); expect(t.reduce((a, [m, p]) => a + m * p, 0)).toBeCloseTo(0.92, 3);
+  });
+});

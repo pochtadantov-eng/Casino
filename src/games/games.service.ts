@@ -95,6 +95,7 @@ export class GamesService {
          values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning *`,
         [userId, game, bet, multiplier, state, serverSeed, hashSeed(serverSeed), clientSeed, nonce],
       );
+      if (engine.instant) return this.present(await this.advance(c, ins.rows[0], (e, st, t) => e.act(st, {}, t)));
       return this.present(ins.rows[0], now);
     });
   }

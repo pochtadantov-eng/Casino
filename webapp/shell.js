@@ -1,6 +1,6 @@
 // App shell: lobby navigation, liquid-glass dock, bonus and profile tabs.
-const TITLES = { rocket: 'Ракета', mines: 'Мины', tower: 'Башня', seagull: 'Чайка' };
-const GICON = { rocket: '🚀', mines: '💣', tower: '🏗', seagull: '🕊' };
+const TITLES = { rocket: 'Ракета', mines: 'Мины', tower: 'Башня', seagull: 'Чайка', plinko: 'Плинко', slot: 'Слот 777', luck: 'Кейсы', dig: 'Шахта' };
+const GICON = { rocket: '🚀', mines: '💣', tower: '🏗', seagull: '🕊', plinko: '🔴', slot: '🎰', luck: '🍀', dig: '⛏' };
 const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
 const fmtTime = (ms) => { const m = Math.max(0, Math.ceil(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)} ч ${m % 60} мин` : `${m} мин`; };
 
@@ -19,7 +19,7 @@ function show(name) {
   if (name === 'profile') loadProfile();
 }
 function openGame(g) {
-  RC.stop(); $('#go').textContent = 'Играть'; $('#go').disabled = false; $('#go').hidden = false; $('#cash').hidden = true;
+  window.fxGamesLeave?.(); RC.stop(); $('#go').textContent = 'Играть'; $('#go').disabled = false; $('#go').hidden = false; $('#cash').hidden = true;
   state.game = g; state.round = null; unlockPlay(); state.tscene = null; state.tpending = false; Music.stop(); $('#stage').className = '';
   { const rp = $('#rfeed-panel'); if (rp) { rp.hidden = g !== 'rocket'; if (g !== 'rocket') $('#rfeed').innerHTML = ''; } state.rfeed = null; }
   $('#gtitle').textContent = TITLES[g]; document.querySelector('.ctrl').dataset.game = g;

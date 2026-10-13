@@ -9,6 +9,7 @@
     "dev": "tsc -p tsconfig.json && node dist/main.js",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build:demo": "node scripts/build-demo-engines.mjs",
     "setup:bot": "node --env-file=.env scripts/setup-bot.mjs"
   },
   "engines": {

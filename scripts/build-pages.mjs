@@ -4,7 +4,7 @@ import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } fro
 const out = process.argv[2] || 'pages';
 const src = (f) => new URL('../webapp/' + f, import.meta.url);
 mkdirSync(out, { recursive: true });
-for (const f of ['style.css', 'app.js', 'shell.js', 'mock-api.js', 'fx-rocket.js', 'fx-rocket-feed.js', 'fx-cards.js', 'fx-tower.js', 'fx-props.js', 'rocket.svg']) copyFileSync(src(f), `${out}/${f}`);
+for (const f of ['style.css', 'app.js', 'shell.js', 'mock-api.js', 'demo-engines.js', 'fx-rocket.js', 'fx-rocket-feed.js', 'fx-cards.js', 'fx-tower.js', 'fx-games.js', 'fx-props.js', 'rocket.svg']) copyFileSync(src(f), `${out}/${f}`);
 mkdirSync(`${out}/img`, { recursive: true });  mkdirSync(`${out}/fonts`, { recursive: true });
 for (const f of readdirSync(new URL('../webapp/fonts/', import.meta.url))) copyFileSync(src('fonts/' + f), `${out}/fonts/${f}`);
 for (const f of readdirSync(new URL('../webapp/img/', import.meta.url), { withFileTypes: true })) if (f.isFile()) copyFileSync(src('img/' + f.name), `${out}/img/${f.name}`);
@@ -17,7 +17,7 @@ mkdirSync(`${out}/audio`, { recursive: true }); for (const n of ['tower', 'tower
 mkdirSync(`${out}/img/props`, { recursive: true }); mkdirSync(`${out}/img/avatars`, { recursive: true }); try { for (const f of readdirSync(new URL('../webapp/img/avatars/', import.meta.url))) { if (/\.(webp|png|jpe?g|svg)$/i.test(f)) copyFileSync(src('img/avatars/' + f), `${out}/img/avatars/${f}`); } } catch {}
 try { for (const f of readdirSync(new URL('../webapp/img/props/', import.meta.url))) copyFileSync(src('img/props/' + f), `${out}/img/props/${f}`); } catch {}
 const html = readFileSync(src('index.html'), 'utf8')
-  .replace('<script src="app.js"></script>', '<script src="mock-api.js"></script>\n<script src="app.js"></script>')
+  .replace('<script src="app.js"></script>', '<script src="demo-engines.js"></script>\n<script src="mock-api.js"></script>\n<script src="app.js"></script>')
   .replace(/(src|href)="((?:img\/)?[\w.-]+\.(?:js|css|webp|svg|png))"/g, `$1="$2?v=${BUILD}"`)
   .replace('<head>', `<head>\n${loader}`);
 writeFileSync(`${out}/index.html`, html);

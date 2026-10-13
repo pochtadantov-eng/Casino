@@ -1,0 +1,115 @@
+import { Rng } from '../../fair/fair';
+import { Engine, GameError, floor2 } from './types';
+import { crashPoint } from './rocket';
+
+/* Plinko / Slot / Luck cases are one-shot games (instant engines); Dig is a crash-style descent. Pure maths, no node imports: the same file is bundled into the demo. */
+
+// ---------------- Plinko: 12 rows, 13 slots, the slot is the number of right bounces ----------------
+export const PLINKO_ROWS = 12;
+const half = (t: number[]) => [...t, ...t.slice(0, 6).reverse()];
+export const PLINKO_TABLES: Record<string, number[]> = {
+  low: half([13, 4, 1.8, 1.3, 1.1, 0.8, 0.5]),
+  med: half([120, 14, 3.5, 1.6, 0.95, 0.5, 0.3]),
+  high: half([300, 30, 5.5, 1.6, 0.5, 0.2, 0.2]),
+};
+interface PlinkoState { risk: string; path: number[]; slot: number; mult: number }
+export const plinko: Engine<PlinkoState> = {
+  id: 'plinko',
+  instant: true,
+  init(params, rng) {
+    const risk = String(params?.risk ?? 'med'); const table = PLINKO_TABLES[risk];
+    if (!table) throw new GameError('Unknown variant');
+    const path = Array.from({ length: PLINKO_ROWS }, () => rng.int(2));
+    const slot = path.reduce((a, b) => a + b, 0);
+    return { state: { risk, path, slot, mult: table[slot] }, multiplier: 1 };
+  },
+  act(state) { return { status: 'won', multiplier: state.mult, state }; },
+  cashout() { throw new GameError('No active round'); },
+  view(state, status) {
+    const base = { risk: state.risk, rows: PLINKO_ROWS, table: PLINKO_TABLES[state.risk] };
+    return status === 'active' ? base : { ...base, path: state.path, slot: state.slot };
+  },
+};
+
+// ---------------- Slot 777: three reels, three of a kind pays, two cherries pay a little ----------------
+export const SLOT_SYMBOLS = [
+  { id: 'cherry', w: 30, pay: 5 }, { id: 'grape', w: 24, pay: 11 }, { id: 'bell', w: 18, pay: 22 }, { id: 'star', w: 14, pay: 44 },
+  { id: 'diamond', w: 9, pay: 125 }, { id: 'bar', w: 5, pay: 380 }, { id: 'seven', w: 3, pay: 1400 },
+];
+export const SLOT_TWO_CHERRIES = 1.5;
+const SLOT_W = SLOT_SYMBOLS.reduce((a, s) => a + s.w, 0);
+export const slotPay = (reels: number[]) => {
+  if (reels[0] === reels[1] && reels[1] === reels[2]) return SLOT_SYMBOLS[reels[0]].pay;
+  return reels.filter((r) => r === 0).length === 2 ? SLOT_TWO_CHERRIES : 0;
+};
+const spin = (rng: Rng) => { let x = rng.int(SLOT_W); for (let i = 0; i < SLOT_SYMBOLS.length; i++) { if (x < SLOT_SYMBOLS[i].w) return i; x -= SLOT_SYMBOLS[i].w; } return 0; };
+interface SlotState { reels: number[]; mult: number }
+export const slot: Engine<SlotState> = {
+  id: 'slot',
+  instant: true,
+  init(_p, rng) { const reels = [spin(rng), spin(rng), spin(rng)]; return { state: { reels, mult: slotPay(reels) }, multiplier: 1 }; },
+  act(state) { return state.mult > 0 ? { status: 'won', multiplier: state.mult, state } : { status: 'lost', multiplier: 0, state }; },
+  cashout() { throw new GameError('No active round'); },
+  view(state, status) {
+    const base = { symbols: SLOT_SYMBOLS.map((s) => s.id), pays: SLOT_SYMBOLS.map((s) => s.pay), twoCherries: SLOT_TWO_CHERRIES };
+    return status === 'active' ? base : { ...base, reels: state.reels };
+  },
+};
+
+// ---------------- Luck cases: the higher the luck tier, the bigger (and rarer) the prize. The empty share is solved so every tier returns 92% ----------------
+export const LUCK_EDGE = 0.08;
+const LUCK_RAW: Record<number, [number, number][]> = {
+  1: [[0.5, 40], [1, 30], [1.5, 18], [2, 8], [5, 3], [10, 1]],
+  10: [[1, 25], [2, 25], [5, 20], [10, 15], [25, 10], [50, 5]],
+  25: [[2, 25], [5, 25], [10, 20], [25, 15], [50, 10], [100, 5]],
+  50: [[5, 25], [10, 25], [25, 20], [50, 15], [100, 10], [250, 5]],
+  100: [[10, 25], [25, 25], [50, 20], [100, 15], [250, 10], [500, 5]],
+};
+/** [multiplier, probability] pairs incl. the empty outcome (0x) */
+export const LUCK_TABLES: Record<number, [number, number][]> = Object.fromEntries(Object.entries(LUCK_RAW).map(([k, raw]) => {
+  const W = raw.reduce((a, [, w]) => a + w, 0), ev = raw.reduce((a, [m, w]) => a + m * w / W, 0), p0 = 1 - (1 - LUCK_EDGE) / ev;
+  return [Number(k), [[0, p0], ...raw.map(([m, w]): [number, number] => [m, (1 - p0) * w / W])] as [number, number][]];
+}));
+interface LuckState { luck: number; idx: number; mult: number }
+export const luck: Engine<LuckState> = {
+  id: 'luck',
+  instant: true,
+  init(params, rng) {
+    const luckN = Number(params?.luck ?? 1); const t = LUCK_TABLES[luckN];
+    if (!t) throw new GameError('Unknown variant');
+    let x = rng.float(), idx = t.length - 1;
+    for (let i = 0; i < t.length; i++) { if (x < t[i][1]) { idx = i; break; } x -= t[i][1]; }
+    return { state: { luck: luckN, idx, mult: t[idx][0] }, multiplier: 1 };
+  },
+  act(state) { return state.mult > 0 ? { status: 'won', multiplier: state.mult, state } : { status: 'lost', multiplier: 0, state }; },
+  cashout() { throw new GameError('No active round'); },
+  view(state, status) {
+    const base = { luck: state.luck, prizes: LUCK_TABLES[state.luck].map(([m, p]) => ({ mult: m, p: Math.round(p * 10000) / 10000 })) };
+    return status === 'active' ? base : { ...base, idx: state.idx, mult: state.mult };
+  },
+};
+
+// ---------------- Dig: the pickaxe drops from the sky and digs down on its own; every layer raises the multiplier. Cash out before it hits lava ----------------
+export const DIG_GROWTH = 0.00035;      // x2 after 2 s, x10 after 6.6 s
+export const DIG_INTRO = 1800;          // ms: the fall from the sky before the first block breaks
+export const digMultiplier = (ms: number) => floor2(Math.exp(DIG_GROWTH * Math.max(0, ms)));
+interface DigState { crash: number; startedAt: number; cashedAt?: number }
+function digSettle(s: DigState, now: number): { status: 'active' | 'lost' | 'won'; multiplier: number; state: DigState } {
+  const m = digMultiplier(now - s.startedAt);
+  return m >= s.crash ? { status: 'lost', multiplier: s.crash, state: s } : { status: 'active', multiplier: m, state: s };
+}
+export const dig: Engine<DigState> = {
+  id: 'dig',
+  init(_p, rng, now) { return { state: { crash: crashPoint(rng), startedAt: now + DIG_INTRO }, multiplier: 1 }; },
+  act(state, _i, now) { return digSettle(state, now); },
+  cashout(state, now) {
+    if (now < state.startedAt) throw new GameError('Wait for the launch');
+    const r = digSettle(state, now);
+    return r.status !== 'active' ? r : { status: 'won', multiplier: r.multiplier, state: { ...state, cashedAt: r.multiplier } };
+  },
+  view(state, status, now) {
+    const base = { growth: DIG_GROWTH, startedAt: state.startedAt, serverNow: now };
+    return status === 'active' ? base : { ...base, crash: state.crash, cashedAt: state.cashedAt ?? null };
+  },
+  debug(state, now) { return { crash: state.crash, msToCrash: Math.max(0, Math.round(Math.log(state.crash) / DIG_GROWTH) - (now - state.startedAt)) }; },
+};

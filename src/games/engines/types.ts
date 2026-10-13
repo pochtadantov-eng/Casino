@@ -15,6 +15,8 @@ export interface StepResult<S = any> {
 
 export interface Engine<S = any> {
   id: string;
+  /** One-shot game: the outcome is settled the moment the bet is placed (start() calls act() itself). */
+  instant?: boolean;
   init(params: any, rng: Rng, now: number): { state: S; multiplier: number };
   /** Player action (reveal / pick / poll). */
   act(state: S, input: any, now: number): StepResult<S>;

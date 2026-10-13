@@ -62,7 +62,7 @@ const OPTS = {
   towerOld: () => `<label>Сложность</label><div class="row"><select id="variant"><option value="easy">Лёгкая (1 из 4 плохой)</option><option value="medium" selected>Средняя (1 из 3)</option><option value="hard">Сложная (1 из 2)</option><option value="expert">Эксперт (2 из 3)</option></select></div>`,
   seagull: () => '',
 };
-const startParams = () => ({
+const startParams = () => window.XP?.[state.game]?.() ?? ({
   rocket: () => ({ autoCashout: $('#auto')?.value ? Number($('#auto').value) : undefined }),
   mines: () => ({ mines: Number($('#mines').value) }),
   tower: () => ({}),

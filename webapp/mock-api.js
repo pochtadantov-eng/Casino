@@ -45,8 +45,10 @@
   const rkAt = (now) => { let r = rkBuild(rkc.k, rkc.start); while (r.nextStart <= now) { r = rkBuild(r.k + 1, r.nextStart); rkc = { k: r.k, start: r.betStart }; } return r; };
   const rkPublic = (now) => { const r = rkAt(now), crashed = now >= r.crashAt; return { k: r.k, serverNow: now, betStart: r.betStart, flightStart: r.flightStart, nextStart: r.nextStart, growth: GROWTH, phase: now < r.flightStart ? 'bet' : crashed ? 'crash' : 'fly', ...(crashed ? { crash: r.crash, crashAt: r.crashAt } : {}), history: Array.from({ length: Math.min(14, r.k + (crashed ? 1 : 0)) }, (_, i) => rkCrash(r.k + (crashed ? 0 : -1) - i)) }; };
 
+  const XG = ['plinko', 'slot', 'luck', 'dig'], X = () => window.__extra, xrng = { float: rnd, int };      // one-shot games run the real server engines (webapp/demo-engines.js)
   const view = (r, now) => {
     const s = r.state, done = r.status !== 'active';
+    if (XG.includes(r.game)) return X()[r.game].view(s, r.status, now);
     if (r.game === 'rocket') return { growth: GROWTH, startedAt: s.startedAt, serverNow: now, auto: s.auto, k: s.k ?? null, ...(done ? { crash: s.crash, cashedAt: s.cashedAt ?? null } : {}) };
     if (r.game === 'tower') return { picks: s.picks, maxSteps: TW.maxSteps, last: s.last, serverNow: now, multipliers: Array.from({ length: TW.maxSteps }, (_, i) => twMult(i + 1)), offsets: s.offsets || [], hw: TW_HW, stress: 0, range: [twTop(s) - twTol(s.picks), twTop(s) + twTol(s.picks)], swing: { start: s.swingStart, period: twPeriod(s.picks), amp: TW.amp, tol: twTol(s.picks) } };
     if (r.game === 'mines') return { count: s.count, revealed: s.revealed, size: SIZE, ...(done ? { mines: s.mines } : {}) };
@@ -106,10 +108,31 @@
   const handle = async (path, body) => {
     if (handlers[path]) return handlers[path](body || {});
     const g = path.split('/')[1], o = path.split('/')[2];
-    if (!['rocket', 'mines', 'tower', 'seagull'].includes(g)) fail('Unknown game');
+    if (!['rocket', 'mines', 'tower', 'seagull', ...XG].includes(g)) fail('Unknown game');
     let r = active(g);
     const now = Date.now();
     if (g === 'rocket' && o === 'round') return rkPublic(now);
+    if (XG.includes(g)) {
+      const eng = X()[g], step = (res) => { r.state = res.state; if (res.status === 'active') r.multiplier = res.multiplier; else finish(r, res.status, res.multiplier); };
+      if (!o) { if (r && !eng.instant) step(eng.act(r.state, {}, now)); return reply(r || null); }
+      if (o === 'start') {
+        const bet = Number(body.bet);
+        if (!Number.isInteger(bet) || bet < LIMITS.minBet || bet > LIMITS.maxBet) fail(`Bet must be ${LIMITS.minBet}..${LIMITS.maxBet} Stars`);
+        if (r) fail('Finish your current round first');
+        if (bet > db.balance) fail('Insufficient balance');
+        let init; try { init = eng.init(body, xrng, now); } catch (e) { fail(e.message); }
+        db.balance -= bet; db.nonce++; db.id++;
+        r = { id: db.id, game: g, bet, status: 'active', multiplier: 1, payout: 0, state: init.state, clientSeed: body.clientSeed || hex(), nonce: db.nonce };
+        db.rounds[r.id] = r;
+        if (eng.instant) step(eng.act(r.state, {}, now));
+        return reply(r);
+      }
+      if (!r) fail('No active round');
+      try {
+        if (o === 'act') step(eng.act(r.state, body, now)); else if (o === 'cashout') step(eng.cashout(r.state, now)); else fail('Not found');
+      } catch (e) { fail(e.message); }
+      return reply(r);
+    }
     if (!o) { if (r && g === 'rocket') settleRocket(r, now); return reply(r || null); }
     if (o === 'start') {
       const bet = Number(body.bet);

@@ -16,8 +16,10 @@ ${body}
 <script>${process.env.EASY ? 'window.EASY_TOWER=true' : ''}</script>\n<script>${(function(){const r={};try{r.default='data:image/svg+xml;base64,'+readFileSync(f('img/avatars/default.svg')).toString('base64');}catch(e){}return 'window.AV_SRC='+JSON.stringify(r);})()}</script>\n<script>window.WORKER_SRC='data:image/webp;base64,${readFileSync(f('img/worker.webp')).toString('base64')}'</script>\n<script>window.MUSIC_SRC={tower:'data:audio/mpeg;base64,${readFileSync(f('audio/tower.mp3')).toString('base64')}',mines:'data:audio/mpeg;base64,${readFileSync(f('audio/mines.mp3')).toString('base64')}',rocket:'data:audio/mpeg;base64,${readFileSync(f('audio/rocket.mp3')).toString('base64')}'}</script>
 <script>window.BUILDER_SRC={body:'data:image/webp;base64,${readFileSync(f('img/builder_body.webp')).toString('base64')}',arm:'data:image/webp;base64,${readFileSync(f('img/builder_arm.webp')).toString('base64')}'}</script>
 <script>${r('fx-rocket-feed.js')}</script>
+<script>${r('demo-engines.js')}</script>
 <script>${r('mock-api.js')}</script>
 <script>${r('app.js')}</script>
+<script>${r('fx-games.js')}</script>
 <script>${r('shell.js')}</script>`;
 writeFileSync(process.argv[2] || 'preview.html', out);
 console.log('preview built', out.length, 'bytes');
