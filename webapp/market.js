@@ -34,8 +34,6 @@
       let x = s.querySelector('small.mx'); if (!x) { x = document.createElement('small'); x.className = 'mx'; s.append(x); }
       const t = line(stars); if (x.textContent !== t) x.textContent = t;
     });
-    const pg = document.getElementById('pp-get');
-    if (pg) { let x = document.getElementById('ppx'); if (!x) { x = document.createElement('div'); x.id = 'ppx'; x.className = 'mx-line'; pg.closest('.pp-sum')?.append(x); } const t = line(num(pg)); if (x.textContent !== t) x.textContent = t; }
   }
   let raf = 0;
   new MutationObserver(() => { if (!loaded || raf) return; raf = requestAnimationFrame(() => { raf = 0; refresh(); }); })

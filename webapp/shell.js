@@ -183,17 +183,18 @@ async function loadInventory() {
     const j = await api('inventory'); invItems = j.items || []; invSellPct = j.sellPct || 85;
     box.hidden = false;
     const total = invItems.reduce((a, g) => a + g.stars, 0), n = invItems.length;
-    $('#inv-sub').textContent = n ? `${n} ${n === 1 ? 'подарок' : n < 5 ? 'подарка' : 'подарков'} · ${total} ⭐` : 'Пока пусто — открывай сундук';
+    $('#inv-sub').textContent = n ? `${n} ${n === 1 ? 'подарок' : n < 5 ? 'подарка' : 'подарков'} · ${total} ⭐` : 'Подарков: 0';
     $('#inv-all').style.visibility = n ? 'visible' : 'hidden';
-    $('#inv-row').innerHTML = n ? invItems.slice(0, 3).map(giftCardHtml).join('') : '<div class="invempty">Подарки из сундука появятся здесь</div>';
+    $('#inv-row').innerHTML = n ? invItems.slice(0, 3).map(giftCardHtml).join('') : '<div class="invempty"><b>Пока пусто</b><span>Выигранные подарки появятся здесь</span><button class="invgo" id="inv-go">Открыть сундук</button></div>';
+    const go = $('#inv-go'); if (go) go.onclick = () => selectTab('bonus');
     $('#inv-row').querySelectorAll('.icard').forEach((c) => c.onclick = () => openItem(invItems.find((g) => g.id === Number(c.dataset.id))));
   } catch (e) { box.hidden = true; }
 }
-const giftCardHtml = (g) => `<button class="icard" data-id="${g.id}"><span class="iem">${gimg(g.giftId, g.emoji)}</span><b>${g.stars} ⭐</b></button>`;
+const giftCardHtml = (g) => `<button class="icard" data-id="${g.id}"><span class="iem">${gimg(g.giftId, g.emoji)}</span><b>${g.stars} ⭐</b><small>${window.Market ? '$' + window.Market.conv(g.stars).usd.toFixed(2) : ''}</small></button>`;
 function openItem(g) {
   if (!g || document.querySelector('.itemsheet')) return;
   const d = document.createElement('div'); d.className = 'paysheet itemsheet';
-  d.innerHTML = `<div class="pbox"><i class="grab"></i><div class="ibig">${gimg(g.giftId, g.emoji)}</div><h3 style="text-align:center">Подарок · ${g.stars} ⭐</h3><p class="psub" style="text-align:center">Продай за звёзды или выведи подарок в чат с ботом.</p>
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><div class="ibig">${gimg(g.giftId, g.emoji)}</div><h3 style="text-align:center">Подарок · ${g.stars} ⭐</h3><p class="psub" style="text-align:center">Продай за звёзды или выведи подарок в чат с ботом.</p><p class="mx-line" style="text-align:center">${window.Market ? window.Market.line(g.stars) : ''}</p>
     <p class="perr" id="i-err" style="text-align:center"></p>
     <button class="primary" id="i-sell">Продать за ${g.sell} ⭐</button><button class="primary alt" id="i-wd">Вывести в чат</button><button class="plink" id="i-no">Закрыть</button></div>`;
   document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));

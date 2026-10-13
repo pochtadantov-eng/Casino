@@ -23,7 +23,7 @@ body::after{background:#D81F68}
 /* ---------- шапка ---------- */
 #topbar{background:none;border:0;backdrop-filter:none}
 #topbar .user span{font-weight:800;color:var(--fg)}
-#topbar .ava{border-radius:14px;box-shadow:none;background:linear-gradient(135deg,#B66DFF,#FF3D81);color:#fff}
+#topbar .ava{border-radius:14px;box-shadow:none;background-color:#B66DFF;color:#fff}
 .sndbtn{color:#B9B4DD;background:var(--glass);border:1px solid var(--line);border-radius:14px}
 .sndbtn:hover{color:var(--lime)}
 .balchip{background:var(--lime);color:#0A1204;border:0;font-weight:800;border-radius:999px;box-shadow:0 0 26px rgba(198,255,61,.35)}
@@ -215,3 +215,77 @@ button.small.ghost,.small.ghost{background:var(--glass);color:var(--fg)}
 .nftc-info em{font-style:normal;font-weight:800;font-size:13px;color:var(--lime);margin-top:4px}
 .nftc-info small{font-size:11px;color:var(--hint)}
 .nftc-demo{position:fixed;left:14px;right:14px;top:50%;transform:translateY(-50%);z-index:99}
+
+/* ---------- аватарка: фото целиком по центру (сокращённый background сбрасывал cover) ---------- */
+.ava,#topbar .ava,.ava.big{background-size:cover;background-position:center;background-repeat:no-repeat}
+.ava{background-color:#7B3FE4}
+.ava.big{border-radius:22px;width:68px;height:68px}
+
+/* ---------- пополнение и вывод ---------- */
+.pp-head{padding-bottom:12px}
+.pp-head h2{font:800 17px/1 var(--disp)}
+.pp-bal{border-radius:999px;background:var(--glass);border:1px solid var(--line);padding:9px 14px;color:var(--hint)}
+.pp-bal b{color:var(--lime);font-family:var(--disp);font-size:13px}
+.pp-body{padding:14px 16px}
+.pp-hero{padding:20px 14px 16px;border-radius:28px;border:1.5px solid rgba(182,109,255,.45);background:linear-gradient(160deg,rgba(182,109,255,.26),rgba(10,8,22,.96) 70%);box-shadow:0 0 34px rgba(182,109,255,.14);text-align:center}
+.pp-hero label{display:block;margin:0 0 12px;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--hint)}
+.pp-hero .pp-row{align-items:center}
+.pp-step{flex:0 0 48px;height:48px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid var(--line);color:var(--fg);font-size:24px;font-weight:600;padding:0}
+.pp-field{flex:1;border:0;background:none;padding:0 28px 0 0}
+.pp-field input{font:800 46px/1.1 var(--disp);color:var(--fg);padding:4px 0;letter-spacing:-.5px}
+.pp-field span{right:2px;color:var(--lime);font-size:0;display:flex}
+.pp-eq{margin:6px 0 0;font-size:13px;font-weight:700;color:var(--lime);min-height:18px}
+.pp-range{margin:6px 0 0;font-size:12px;color:var(--hint)}
+.pp-range.bad{color:var(--pink)}
+.pp-chips{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.pp-chip{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0 10px;border-radius:18px;border:1px solid var(--line);background:var(--glass);color:var(--fg)}
+.pp-chip b{font:800 16px/1 var(--disp)}
+.pp-chip small{font-size:11px;font-weight:700;color:var(--hint)}
+.pp-chip.on{background:rgba(198,255,61,.12);border-color:var(--lime);box-shadow:0 0 18px rgba(198,255,61,.2)}
+.pp-chip.on small{color:var(--lime)}
+.pp-method{padding:14px;border-radius:20px;border:1px solid var(--line);background:var(--glass)}
+.pp-mico{width:44px;height:44px;border-radius:14px;background:var(--lime);color:#0A1204;display:grid;place-items:center;font-size:0}
+.pp-mt b{font:800 14px/1.2 var(--disp)}
+.pp-radio{border-color:var(--lime)}
+.pp-radio::after{background:var(--lime)}
+.pp-sum{margin:14px 0 0;border-radius:20px;background:var(--glass);border:1px solid var(--line)}
+.pp-sum>div{padding:14px 16px}
+.pp-sum b{font-family:var(--disp);font-size:13px}
+.pp-notes{margin:14px 4px 0;font-size:12px}
+.pp-foot{padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(10,8,26,0),#0A081A 40%);border-top:0}
+.pp-go{padding:18px;border-radius:22px;font:800 14px/1 var(--disp);letter-spacing:.3px}
+
+/* ---------- инвентарь ---------- */
+.inv{padding:16px}
+.invhead{margin-bottom:14px}
+.invt b{font:800 16px/1.1 var(--disp);color:var(--fg)}
+.invt span{margin-top:5px;font-size:12px;color:var(--hint)}
+.invall{padding:8px 14px;border-radius:999px;background:var(--glass);border:1px solid var(--line);color:var(--fg);font:700 12px/1 system-ui,sans-serif}
+.invrow{gap:10px}
+.icard{flex:0 0 calc((100% - 20px) / 3);aspect-ratio:auto;padding:12px 4px 12px;gap:4px;border-radius:20px;border:1px solid rgba(182,109,255,.4);background:linear-gradient(160deg,rgba(182,109,255,.22),rgba(10,8,22,.95));color:var(--fg)}
+.icard::after{display:none}
+.icard .iem{font-size:0}
+.icard b{font:800 13px/1 var(--disp);margin-top:4px}
+.icard small{font-size:11px;font-weight:700;color:var(--hint)}
+.invsheet .ggrid .icard{flex:initial}
+.invempty{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;padding:18px;border-radius:20px;border:1.5px dashed rgba(255,255,255,.18);background:rgba(255,255,255,.03)}
+.invempty b{font:800 14px/1.2 var(--disp);color:var(--fg)}
+.invempty span{font-size:12.5px;color:var(--hint)}
+.invgo{margin-top:10px;padding:10px 16px;border-radius:999px;border:0;background:var(--lime);color:#0A1204;font:800 12px/1 system-ui,sans-serif}
+
+/* ---------- шиты: подарки, продажа, вывод подарком ---------- */
+.paysheet.on{background:rgba(5,4,14,.7)}
+.paysheet .pbox{background:#0F0C24;border-top:1px solid var(--line);border-radius:28px 28px 0 0}
+.pbox .grab{background:rgba(255,255,255,.18)}
+.pbox h3{font:800 17px/1.2 var(--disp);color:var(--fg)}
+.pbox .psub{color:var(--hint)}
+.ggrid{gap:10px}
+.gcard{padding:14px 4px 12px;border-radius:20px;border:1px solid var(--line);background:var(--glass);color:var(--fg)}
+.gcard b{font:800 12px/1 var(--disp);color:var(--fg)}
+.gcard.on{background:rgba(198,255,61,.12);border-color:var(--lime);box-shadow:0 0 18px rgba(198,255,61,.22)}
+.gcard i{background:rgba(255,61,129,.18);color:#FF7FAE;border-radius:999px;padding:2px 6px}
+.ibig{margin:6px 0 12px}
+.pbox .primary,.pbox .pay{border-radius:20px;padding:16px}
+.pbox .primary.alt{background:var(--glass);color:var(--fg);border:1px solid var(--line);box-shadow:none}
+.plink{color:var(--hint)}
+.pp-chip.on,.pp-chip.on b{color:var(--fg)}
