@@ -21,7 +21,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     const play = () => new InlineKeyboard().webApp('🎰 Играть', config.webappUrl);
 
     bot.command('start', (ctx) =>
-      ctx.reply('Добро пожаловать в Stars Casino! Ракета 🚀, Мины 💣, Башня 🏗 и Чайка 🕊. Пополняйте баланс в Telegram Stars ⭐.', {
+      ctx.reply('Добро пожаловать в TonUp! Ракета 🚀, Мины 💣, Башня 🏗 и Чайка 🕊. Пополняйте баланс в Telegram Stars ⭐.', {
         reply_markup: play(),
       }),
     );
@@ -131,10 +131,10 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     // gift withdrawals: the order stays "processing" for 15-20 s, then the bot really sends the gift (Stars come back if Telegram refuses)
     this.giftTimer = setInterval(() => {
       this.wallet.processGiftOrders(
-        (o) => this.sendGift(o.userId, o.giftId, 'Подарок из Nova Casino 🎁'),
+        (o) => this.sendGift(o.userId, o.giftId, 'Подарок из TonUp 🎁'),
         async (o, e) => {
           await this.notifyAdmins(`⚠️ Подарок ${o.giftId} для user ${o.userId} не отправился: ${e?.message ?? e}. Stars возвращены. Проверьте баланс Stars бота.`);
-          await bot.api.sendMessage(o.userId, '❌ Подарок не удалось отправить, Stars вернулись на баланс. Откройте чат с ботом (/start) и попробуйте ещё раз.').catch(() => {});
+          await bot.api.sendMessage(o.userId, '❌ Подарок не удалось отправить: Stars вернулись на баланс (или подарок в инвентарь). Откройте чат с ботом (/start) и попробуйте ещё раз.').catch(() => {});
         },
       ).catch((e) => this.log.error(`gift worker: ${e.message}`));
     }, 3000);

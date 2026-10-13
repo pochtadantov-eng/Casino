@@ -86,3 +86,18 @@ create table if not exists gift_orders (
   done_at    timestamptz
 );
 create index if not exists gift_orders_due on gift_orders(due_at) where status = 'pending';
+
+-- inventory: gifts won in the chest; the player sells them for Stars or withdraws them into the chat with the bot
+create table if not exists inventory (
+  id         bigserial primary key,
+  user_id    bigint not null references users(id),
+  gift_id    text,                                  -- Telegram gift id (null = pick the closest one when withdrawing)
+  emoji      text   not null default '🎁',
+  stars      int    not null,                       -- face value in Stars
+  status     text   not null default 'held',        -- held | withdrawing | withdrawn | sold
+  source     text,
+  created_at timestamptz not null default now(),
+  done_at    timestamptz
+);
+create index if not exists inventory_user on inventory(user_id, id desc);
+alter table gift_orders add column if not exists inventory_id bigint;

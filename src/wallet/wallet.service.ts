@@ -92,7 +92,7 @@ export class WalletService {
   /** Deposits, withdrawals and bonuses of one user (not bets), newest first. */
   async cashHistory(userId: number, limit = 20) {
     const { rows } = await this.db.pool.query(
-      "select t.kind, t.amount, t.balance_after, t.created_at, o.status as order_status, w.status as wd_status from transactions t left join gift_orders o on t.kind = 'gift_withdraw' and o.ref = t.ref left join withdrawals w on t.kind = 'withdraw' and w.id::text = t.ref where t.user_id = $1 and t.kind in ('deposit', 'deposit_refund', 'withdraw', 'withdraw_refund', 'bonus', 'gift_withdraw', 'gift_refund') order by t.id desc limit $2",
+      "select t.kind, t.amount, t.balance_after, t.created_at, o.status as order_status, w.status as wd_status from transactions t left join gift_orders o on t.kind = 'gift_withdraw' and o.ref = t.ref left join withdrawals w on t.kind = 'withdraw' and w.id::text = t.ref where t.user_id = $1 and t.kind in ('deposit', 'deposit_refund', 'withdraw', 'withdraw_refund', 'bonus', 'gift_withdraw', 'gift_refund', 'inventory_sell') order by t.id desc limit $2",
       [userId, limit],
     );
     return rows.map((r) => ({ kind: r.kind as string, amount: Number(r.amount), balance: Number(r.balance_after), at: r.created_at as Date, status: ((r.order_status ?? r.wd_status) as string | null) ?? undefined }));
@@ -179,7 +179,7 @@ export class WalletService {
   async processGiftOrders(send: (o: { userId: number; giftId: string }) => Promise<void>, onFail: (o: { userId: number; giftId: string; price: number }, err: any) => Promise<void>) {
     for (let i = 0; i < 10; i++) {
       const o = await this.db.tx(async (c) => {
-        const { rows } = await c.query("select id, user_id, gift_id, price, ref from gift_orders where status = 'pending' and due_at <= now() order by id limit 1 for update skip locked");
+        const { rows } = await c.query("select id, user_id, gift_id, price, ref, inventory_id from gift_orders where status = 'pending' and due_at <= now() order by id limit 1 for update skip locked");
         if (!rows[0]) return null;
         await c.query("update gift_orders set status = 'sending' where id = $1", [rows[0].id]);
         return rows[0];
@@ -189,8 +189,13 @@ export class WalletService {
       try {
         await send(info);
         await this.db.pool.query("update gift_orders set status = 'sent', done_at = now() where id = $1", [o.id]);
+        if (o.inventory_id) await this.db.pool.query("update inventory set status = 'withdrawn', done_at = now() where id = $1", [o.inventory_id]);
       } catch (e) {
-        await this.db.tx(async (c) => { await this.apply(c, info.userId, info.price, 'gift_refund', o.ref); await c.query("update gift_orders set status = 'failed', done_at = now() where id = $1", [o.id]); });
+        await this.db.tx(async (c) => {
+          if (o.inventory_id) await c.query("update inventory set status = 'held' where id = $1", [o.inventory_id]);      // the gift goes back to the inventory
+          else await this.apply(c, info.userId, info.price, 'gift_refund', o.ref);
+          await c.query("update gift_orders set status = 'failed', done_at = now() where id = $1", [o.id]);
+        });
         await onFail(info, e);
       }
     }
@@ -213,6 +218,43 @@ export class WalletService {
   /** The client drew these gifts: never hand them out again. */
   async ackVisualGifts(userId: number, ids: number[]) {
     await this.db.pool.query('update visual_gifts set delivered_at = now() where user_id = $1 and id = any($2::bigint[]) and delivered_at is null', [userId, ids]);
+  }
+
+  // ---------------------------------------------------------------- inventory
+  async addInventory(userId: number, giftId: string | null, emoji: string, stars: number, source: string) {
+    await this.db.pool.query('insert into inventory (user_id, gift_id, emoji, stars, source) values ($1, $2, $3, $4, $5)', [userId, giftId, emoji, stars, source]);
+  }
+
+  async listInventory(userId: number) {
+    const { rows } = await this.db.pool.query("select id, gift_id, emoji, stars from inventory where user_id = $1 and status in ('held', 'withdrawing') order by id desc limit 100", [userId]);
+    return rows.map((r: any) => ({ id: Number(r.id), emoji: r.emoji as string, stars: Number(r.stars), sell: Math.floor(Number(r.stars) * config.giftSellPct / 100) }));
+  }
+
+  /** Sell for Stars: the item is claimed by the UPDATE, so a double tap pays once. */
+  async sellInventory(userId: number, id: number): Promise<number> {
+    return this.db.tx(async (c) => {
+      const r = await c.query("update inventory set status = 'sold', done_at = now() where id = $1 and user_id = $2 and status = 'held' returning stars", [id, userId]);
+      if (!r.rows[0]) throw new GameError('Подарок уже продан или выведен');
+      const pay = Math.floor(Number(r.rows[0].stars) * config.giftSellPct / 100);
+      await this.apply(c, userId, pay, 'inventory_sell', `inv:${id}`);
+      return pay;
+    });
+  }
+
+  /** Withdraw into the chat: the item is locked and a gift order (no Stars charged) is queued; the bot sends it in 15-20 s. */
+  async withdrawInventory(userId: number, id: number, giftId: (stars: number, current: string | null) => Promise<string>): Promise<{ etaSec: number }> {
+    const lo = Math.max(0, config.giftDelayMinSec), hi = Math.max(lo, config.giftDelayMaxSec), etaSec = lo + Math.round(Math.random() * (hi - lo));
+    const item = await this.db.pool.query("select gift_id, stars from inventory where id = $1 and user_id = $2 and status = 'held'", [id, userId]);
+    if (!item.rows[0]) throw new GameError('Подарок уже продан или выведен');
+    const gid = await giftId(Number(item.rows[0].stars), item.rows[0].gift_id);
+    return this.db.tx(async (c) => {
+      const n = await c.query("select count(*)::int as n from gift_orders where user_id = $1 and created_at > now() - interval '24 hours'", [userId]);
+      if (n.rows[0].n >= config.giftsPerDay) throw new GameError(`Не больше ${config.giftsPerDay} подарков в сутки`);
+      const r = await c.query("update inventory set status = 'withdrawing', gift_id = $3 where id = $1 and user_id = $2 and status = 'held' returning id", [id, userId, gid]);
+      if (!r.rows[0]) throw new GameError('Подарок уже продан или выведен');
+      await c.query("insert into gift_orders (user_id, gift_id, price, ref, inventory_id, due_at) values ($1, $2, 0, $3, $4, now() + ($5 || ' seconds')::interval)", [userId, gid, `inv-order:${id}:${Date.now()}`, id, String(etaSec)]);
+      return { etaSec };
+    });
   }
 
   async pendingGifts() {

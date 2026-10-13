@@ -139,7 +139,7 @@ function openChestRoulette() {
     let last = -1; const tick = setInterval(() => { const cur = new DOMMatrix(getComputedStyle(strip).transform).m41, idx = Math.floor((view / 2 - cur) / (W + G)); if (idx !== last) { last = idx; hap('s'); } }, 60);
     await wait(5600); clearInterval(tick);
     strip.children[T].classList.add('win'); m.classList.add('done'); setBalance(out.balance); hap('success');
-    m.querySelector('#cm-res').innerHTML = prize.gift ? `<b>${prize.gift.emoji} Вам выпал подарок!</b><span>${prize.gift.delivered ? 'Он уже прилетел вам в чат с ботом 🎁' : 'Мы отправим его вам в чат с ботом в ближайшее время.'}</span>` : `<b>Вы выиграли ${prize.stars} ⭐</b><span>Уже на вашем балансе</span>`;
+    m.querySelector('#cm-res').innerHTML = prize.gift ? `<b>${prize.gift.emoji} Вам выпал подарок!</b><span>Он в вашем Инвентаре (Профиль): продай за звёзды или выведи в чат 🎁</span>` : `<b>Вы выиграли ${prize.stars} ⭐</b><span>Уже на вашем балансе</span>`;
     for (let i = 0; i < 26; i++) { const s = document.createElement('i'); s.className = 'cm-conf'; const a = Math.random() * 6.283, d = 90 + Math.random() * 150; s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d - 40 + 'px'); s.style.background = ['#ffd84a', '#ff8a4a', '#6fd6a5', '#6aa8ff', '#e879f9'][i % 5]; s.style.animationDelay = Math.random() * 0.2 + 's'; m.querySelector('.cm-box').append(s); setTimeout(() => s.remove(), 1700); }
     const ok = m.querySelector('#cm-ok'); ok.hidden = false;
   })();
@@ -147,7 +147,7 @@ function openChestRoulette() {
 $('#bonus-claim').onclick = () => { if (!$('#bonus-claim').disabled) openChestRoulette(); };
 
 // ---------- profile ----------
-const CASH_LABEL = { deposit: ['⭐ Пополнение', 'w'], deposit_refund: ['↩️ Возврат пополнения', 'l'], withdraw: ['📤 Вывод (заявка)', 'l'], withdraw_refund: ['↩️ Вывод отклонён', 'w'], bonus: ['🎁 Бонус', 'w'], gift_withdraw: ['🎁 Подарок в чат', 'l'], gift_refund: ['↩️ Подарок не доставлен', 'w'] };
+const CASH_LABEL = { inventory_sell: ['💰 Продажа подарка', 'w'], deposit: ['⭐ Пополнение', 'w'], deposit_refund: ['↩️ Возврат пополнения', 'l'], withdraw: ['📤 Вывод (заявка)', 'l'], withdraw_refund: ['↩️ Вывод отклонён', 'w'], bonus: ['🎁 Бонус', 'w'], gift_withdraw: ['🎁 Подарок в чат', 'l'], gift_refund: ['↩️ Подарок не доставлен', 'w'] };
 async function loadCash() {
   const box = $('#cashlog'); if (!box) return;
   try {
@@ -157,7 +157,7 @@ async function loadCash() {
   } catch (e) { box.innerHTML = `<p class="hint">${e.message}</p>`; }
 }
 async function loadProfile() {
-  paintUser(); loadCash();
+  paintUser(); loadCash(); loadInventory();
   const box = $('#history');
   try {
     const rows = await api('history');
@@ -173,3 +173,42 @@ boot().then(() => { selectTab('play', true); });
 // keep the bottom padding of the game screen equal to the real height of the pinned control panel
 const ctrl = document.querySelector('.ctrl');
 if (ctrl) new ResizeObserver(() => document.documentElement.style.setProperty('--ctrl-h', ctrl.offsetHeight + 16 + 'px')).observe(ctrl);
+
+
+// ---------- inventory: gifts won in the chest; sell for Stars or withdraw into the chat with the bot ----------
+let invItems = [], invSellPct = 85;
+async function loadInventory() {
+  const box = $('#inv'); if (!box) return;
+  try {
+    const j = await api('inventory'); invItems = j.items || []; invSellPct = j.sellPct || 85;
+    box.hidden = false;
+    const total = invItems.reduce((a, g) => a + g.stars, 0), n = invItems.length;
+    $('#inv-sub').textContent = n ? `${n} ${n === 1 ? 'подарок' : n < 5 ? 'подарка' : 'подарков'} · ${total} ⭐` : 'Пока пусто — открывай сундук';
+    $('#inv-all').style.visibility = n ? 'visible' : 'hidden';
+    $('#inv-row').innerHTML = n ? invItems.slice(0, 3).map(giftCardHtml).join('') : '<div class="invempty">Подарки из сундука появятся здесь</div>';
+    $('#inv-row').querySelectorAll('.icard').forEach((c) => c.onclick = () => openItem(invItems.find((g) => g.id === Number(c.dataset.id))));
+  } catch (e) { box.hidden = true; }
+}
+const giftCardHtml = (g) => `<button class="icard" data-id="${g.id}"><span class="iem">${g.emoji}</span><b>${g.stars} ⭐</b></button>`;
+function openItem(g) {
+  if (!g || document.querySelector('.itemsheet')) return;
+  const d = document.createElement('div'); d.className = 'paysheet itemsheet';
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><div class="ibig">${g.emoji}</div><h3 style="text-align:center">Подарок · ${g.stars} ⭐</h3><p class="psub" style="text-align:center">Продай за звёзды или выведи подарок в чат с ботом.</p>
+    <p class="perr" id="i-err" style="text-align:center"></p>
+    <button class="primary" id="i-sell">Продать за ${g.sell} ⭐</button><button class="primary alt" id="i-wd">Вывести в чат</button><button class="plink" id="i-no">Закрыть</button></div>`;
+  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
+  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
+  d.querySelector('#i-no').onclick = close; d.onclick = (e) => { if (e.target === d) close(); };
+  const err = d.querySelector('#i-err'), lock = (v) => d.querySelectorAll('button').forEach((b) => b.disabled = v);
+  d.querySelector('#i-sell').onclick = async () => { lock(true); try { const r = await api('inventory/sell', { id: g.id }); setBalance(r.balance); close(); toast(`Продано: +${r.pay} ⭐`, 'ok'); loadInventory(); loadCash(); } catch (e) { err.textContent = e.message; lock(false); } };
+  d.querySelector('#i-wd').onclick = async () => { lock(true); try { const r = await api('inventory/withdraw', { id: g.id }); close(); toast(`Подарок ${g.emoji} в обработке: придёт в чат с ботом через ~${r.etaSec} с`, 'wait', 5200); loadInventory(); } catch (e) { err.textContent = e.message; lock(false); } };
+}
+$('#inv-all').onclick = () => {
+  if (document.querySelector('.invsheet')) return;
+  const d = document.createElement('div'); d.className = 'paysheet invsheet';
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><h3>Инвентарь</h3><p class="psub">Нажми на подарок, чтобы продать или вывести его.</p><div class="ggrid" id="inv-grid">${invItems.map(giftCardHtml).join('')}</div><button class="plink" id="inv-no">Закрыть</button></div>`;
+  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
+  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
+  d.querySelector('#inv-no').onclick = close; d.onclick = (e) => { if (e.target === d) close(); };
+  d.querySelectorAll('.icard').forEach((c) => c.onclick = () => { close(); setTimeout(() => openItem(invItems.find((g) => g.id === Number(c.dataset.id))), 260); });
+};

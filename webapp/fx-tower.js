@@ -433,7 +433,7 @@
         g.save(); g.globalAlpha = ta; this.drawHeli(g, hx, hy, hs, t); g.restore();
         if (!this.tcv || this.tcv.width !== g.canvas.width || this.tcv.height !== g.canvas.height) { this.tcv = document.createElement('canvas'); this.tcv.width = g.canvas.width; this.tcv.height = g.canvas.height; }
         const oc = this.tcv.getContext('2d'); oc.setTransform(1, 0, 0, 1, 0, 0); oc.clearRect(0, 0, oc.canvas.width, oc.canvas.height); oc.setTransform(DP);
-        const lines = [['NOVA', y1, fs1, ['#fff6b0', '#ffc233', '#ff8a14']], ['БАШНИ', y2, fs2, ['#ffd1c2', '#ff5a4a', '#c8202a']]];
+        const lines = [['TONUP', y1, fs1, ['#fff6b0', '#ffc233', '#ff8a14']], ['БАШНИ', y2, fs2, ['#ffd1c2', '#ff5a4a', '#c8202a']]];
         const letters = [];                                    // every letter has its own phase, so they bob, tilt and breathe out of sync
         lines.forEach(([txt, y, fs, cols], li) => {
           g.font = `800 ${fs}px 'Unbounded',system-ui,sans-serif`; const ws = [...txt].map((ch) => g.measureText(ch).width), tot = ws.reduce((q, v) => q + v, 0); let x = cx - tot / 2;
@@ -465,8 +465,8 @@
         g.strokeStyle = '#d5d8de'; g.lineWidth = 2; g.beginPath(); g.arc(ringX, ringY, 4.5, 0, 6.283); g.stroke(); g.strokeStyle = 'rgba(30,30,34,.7)'; g.lineWidth = 0.8; g.beginPath(); g.arc(ringX, ringY, 5.6, 0, 6.283); g.stroke();
         // the lashings are tied to the OUTER EDGES of the title (the outside of the first and last letters), never to the letters themselves
         const E = 0.56;                                                              // outside of the letter outline, as a share of the font size from the letter centre
-        const N = letters[0], A = letters[3], B = letters[4], I = letters[8];
-        const tl = xf(N.x - E * N.fs, N.y - 0.36 * N.fs), tr = xf(A.x + E * A.fs, A.y - 0.36 * A.fs);          // top-left / top-right edge of NOVA
+        const nTop = lines[0][0].length, N = letters[0], A = letters[nTop - 1], B = letters[nTop], I = letters[letters.length - 1];
+        const tl = xf(N.x - E * N.fs, N.y - 0.36 * N.fs), tr = xf(A.x + E * A.fs, A.y - 0.36 * A.fs);          // top-left / top-right edge of the top word
         rope(ringX, ringY + 4, tl[0], tl[1], 3, 2.3, 1); rope(ringX, ringY + 4, tr[0], tr[1], 3, 2.3, 2); knot(tl[0], tl[1], 3); knot(tr[0], tr[1], 3);
         // NOVA -> БАШНИ: down the left edge and down the right edge
         for (const [U, D, ux, dx2, ph] of [[N, B, -E, -E, 3], [A, I, E, E, 4]]) {
@@ -657,7 +657,7 @@
       // windshield and nose
       g.fillStyle = '#8fc4dc'; g.beginPath(); g.moveTo(3.45, -1.6); g.quadraticCurveTo(4.5, -1.1, 5.1, 0.0); g.lineTo(3.55, 0.05); g.closePath(); g.fill();
       g.fillStyle = 'rgba(255,255,255,.45)'; g.beginPath(); g.moveTo(3.7, -1.3); g.lineTo(4.3, -0.9); g.lineTo(3.8, -0.1); g.closePath(); g.fill();
-      g.save(); g.fillStyle = '#f1ece6'; g.font = 'italic 800 0.78px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.transform(1, 0, -0.18, 1, 0, 0); g.fillText('Nova', -0.55, 0.66); g.restore();      // livery on the side under the windows
+      g.save(); g.fillStyle = '#f1ece6'; g.font = 'italic 800 0.78px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.transform(1, 0, -0.18, 1, 0, 0); g.fillText('TonUp', -0.55, 0.66); g.restore();      // livery on the side under the windows
       // main rotor: blur disc + blade streaks whose apparent length flickers as they spin
       g.fillStyle = 'rgba(160,170,180,.5)'; g.fillRect(0.12, -3.05, 0.16, 0.7); g.fillStyle = '#9aa0a8'; g.fillRect(-0.15, -3.3, 0.7, 0.28);
       g.fillStyle = 'rgba(30,34,40,.16)'; g.beginPath(); g.ellipse(0.2, -3.2, 7.8, 0.3, 0, 0, 6.283); g.fill();

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Stars Casino</title>
+<title>TonUp</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -16,6 +16,11 @@
 
 <!-- ============ ИГРАТЬ ============ -->
 <section id="view-play" class="view on">
+  <div class="brandrow">
+    <svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="tuG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2ee6c8"/><stop offset="1" stop-color="#5b8cff"/></linearGradient></defs>
+      <path d="M24 3 42 13.5v21L24 45 6 34.5v-21z" fill="url(#tuG)"/><path d="M24 12.5 33.5 22h-6.2v13h-6.6V22h-6.2z" fill="#071423"/><path d="M14 38.4h20" stroke="#071423" stroke-width="3" stroke-linecap="round" opacity=".55"/></svg>
+    <div><b>Ton<i>Up</i></b><small>играй · поднимайся</small></div>
+  </div>
   <div class="card c-daily wide" data-go="bonus" style="--c:251,191,36">
     <div class="txt"><h3>Ежедневный сундук</h3><p>Крути рулетку каждый день!</p></div>
     <div class="chestbox"><img class="chest" src="img/chest.webp" alt=""><i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i></div>
@@ -65,6 +70,10 @@
     <div class="row between"><span class="hint">Баланс</span><b class="gold"><span id="pbal">0</span> ⭐</b></div>
     <div class="row"><button class="small" id="p-deposit">Пополнить</button><button class="small ghost" id="btn-withdraw">Вывод</button><button class="small ghost" id="btn-gift">🎁 Подарком</button></div>
   </div>
+  <section class="inv" id="inv" hidden>
+    <div class="invhead"><div class="invico">🎁</div><div class="invt"><b>Инвентарь</b><span id="inv-sub">0 подарков</span></div><button class="invall" id="inv-all">Все ›</button></div>
+    <div class="invrow" id="inv-row"></div>
+  </section>
   <h3 class="sub">Пополнения и выводы</h3>
   <div id="cashlog" class="panel list"><p class="hint">Пока пусто</p></div>
   <h3 class="sub">Последние игры</h3>

@@ -34,19 +34,16 @@ export class ApiController {
   @Post('bonus/daily')
   async claimBonus(@Req() req: any) {
     const { prize } = await this.wallet.openChest(req.user.id);
-    let gift: { emoji: string; stars: number; delivered: boolean } | null = null;
+    let gift: { emoji: string; stars: number; inventory: boolean } | null = null;
     if (prize.giftStars) {
-      // a real Telegram gift lands in the player's chat with the bot; if the bot cannot send it (empty bot balance, user never started the bot) an admin gets it in the queue
+      // a gift prize goes to the player's inventory (sell it for Stars or withdraw it into the chat from there)
+      let pick: { id: string; emoji: string; stars: number } | null = null;
       try {
         const all = await this.bot.availableGifts(), best = Math.min(...all.map((g) => Math.abs(g.stars - prize.giftStars!)));
-        const pool = all.filter((g) => Math.abs(g.stars - prize.giftStars!) === best), pick = pool[Math.floor(Math.random() * pool.length)];
-        await this.bot.sendGift(req.user.id, pick.id, 'Подарок из ежедневного сундука Nova Casino 🎁');
-        gift = { emoji: pick.emoji, stars: pick.stars, delivered: true };
-      } catch (e: any) {
-        const id = await this.wallet.queueGift(req.user.id, prize.id);
-        await this.bot.notifyAdmins(`🎁 Подарок «${prize.label}» (#${id}) для user ${req.user.id} не отправился сам (${e?.message ?? e}). Отправьте вручную и отметьте: /sent ${id}   (список: /gifts)`);
-        gift = { emoji: '🎁', stars: prize.giftStars, delivered: false };
-      }
+        const pool = all.filter((g) => Math.abs(g.stars - prize.giftStars!) === best); pick = pool[Math.floor(Math.random() * pool.length)];
+      } catch { /* bot offline: store a generic gift, the closest real one is picked when it is withdrawn */ }
+      await this.wallet.addInventory(req.user.id, pick?.id ?? null, pick?.emoji ?? '🎁', pick?.stars ?? prize.giftStars, 'chest');
+      gift = { emoji: pick?.emoji ?? '🎁', stars: pick?.stars ?? prize.giftStars, inventory: true };
     }
     return { prize: { id: prize.id, stars: prize.stars, giftStars: prize.giftStars, label: prize.label, gift }, balance: await this.wallet.balance(req.user.id) };
   }
@@ -125,6 +122,30 @@ export class ApiController {
     const price = this.giftPrice(g.stars);
     const order = await this.wallet.createGiftOrder(req.user.id, price, g.id);      // Stars are taken now, the bot really sends the gift when the order is due (15-20 s)
     return { price, etaSec: order.etaSec, balance: await this.wallet.balance(req.user.id) };
+  }
+
+  /** Inventory: gifts the player has won. */
+  @Get('inventory')
+  async inventory(@Req() req: any) {
+    return { sellPct: config.giftSellPct, items: await this.wallet.listInventory(req.user.id) };
+  }
+
+  @Post('inventory/sell')
+  async sellItem(@Req() req: any, @Body() body: any) {
+    const pay = await this.wallet.sellInventory(req.user.id, Number(body?.id));
+    return { pay, balance: await this.wallet.balance(req.user.id) };
+  }
+
+  @Post('inventory/withdraw')
+  async withdrawItem(@Req() req: any, @Body() body: any) {
+    const r = await this.wallet.withdrawInventory(req.user.id, Number(body?.id), async (stars, current) => {
+      if (current) return current;
+      const all = await this.bot.availableGifts(), best = Math.min(...all.map((g) => Math.abs(g.stars - stars)));
+      const pool = all.filter((g) => Math.abs(g.stars - stars) === best);
+      if (!pool.length) throw new GameError('Подарки сейчас недоступны');
+      return pool[Math.floor(Math.random() * pool.length)].id;
+    });
+    return r;
   }
 
   private giftPrice(stars: number) { return Math.ceil(stars * (1 + config.giftFeePct / 100)); }
