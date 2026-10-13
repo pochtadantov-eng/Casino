@@ -6,9 +6,7 @@
 <title>TonUp</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="theme-gold.css">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:wght@700;800&family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme-neon.css">
 </head>
 <body>
 <header id="topbar">
@@ -24,43 +22,43 @@
       <path d="M24 3 42 13.5v21L24 45 6 34.5v-21z" fill="url(#tuG)"/><path d="M24 12.5 33.5 22h-6.2v13h-6.6V22h-6.2z" fill="#071423"/><path d="M14 38.4h20" stroke="#071423" stroke-width="3" stroke-linecap="round" opacity=".55"/></svg>
     <div><b>Ton<i>Up</i></b><small>играй · поднимайся</small></div>
   </div>
-  <div class="card c-daily wide" data-go="bonus" style="--c:251,191,36">
+  <div class="card c-daily wide" data-go="bonus" data-media="bonus" style="--c:198,255,61">
     <div class="txt"><h3>Ежедневный сундук</h3><p>Крути рулетку каждый день!</p></div>
     <div class="chestbox"><img class="chest" src="img/chest.webp" alt=""><i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i></div>
   </div>
 
   <div class="cards">
-    <div class="card c-mines" data-game="mines" style="--c:52,235,170">
+    <div class="card c-mines" data-game="mines" style="--c:61,245,176">
       <canvas class="cv" id="cv-mines"></canvas>
       <div class="txt"><h3>Мины</h3><p>Разминируй поле</p></div>
     </div>
-    <div class="card c-rocket" data-game="rocket" style="--c:96,165,250">
+    <div class="card c-rocket" data-game="rocket" style="--c:77,163,255">
       <canvas class="cv" id="cv-rocket"></canvas>
       <div class="xval" id="x-rocket">x1.00</div>
       
       <div class="txt"><h3>Ракета</h3><p>Поставил — забрал</p></div>
     </div>
-    <div class="card c-tower wide" data-game="tower" style="--c:253,186,116">
+    <div class="card c-tower wide" data-game="tower" style="--c:255,158,61">
       <canvas class="cv" id="cv-tower"></canvas>
       <div class="txt"><h3>Башня</h3><p>Чем выше, тем больше икс</p></div>
     </div>
-    <div class="card c-dig wide" data-game="dig" style="--c:120,200,120">
+    <div class="card c-dig wide" data-game="dig" style="--c:163,230,53">
       <div class="txt"><h3>Шахта</h3><p>Кирка копает вниз — забери до лавы</p></div>
       <div class="dgart"><i></i><i></i><i></i><i></i><u></u></div>
     </div>
-    <div class="card c-plinko" data-game="plinko" style="--c:74,222,128">
+    <div class="card c-plinko" data-game="plinko" style="--c:255,61,129">
       <div class="txt"><h3>Плинко</h3><p>Шарик падает — x растёт</p></div>
       <div class="plart"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b></b></div>
     </div>
-    <div class="card c-slot" data-game="slot" style="--c:250,204,21">
+    <div class="card c-slot" data-game="slot" style="--c:255,214,10">
       <div class="txt"><h3>Слот 777</h3><p>Три в ряд</p></div>
       <div class="slart"><span>7</span><span>7</span><span>7</span></div>
     </div>
-    <div class="card c-luck wide" data-game="luck" style="--c:167,139,250">
+    <div class="card c-luck wide" data-game="luck" style="--c:182,109,255">
       <div class="txt"><h3>Кейсы · Удача</h3><p>1X · 10X · 25X · 50X · 100X</p></div>
       <div class="lkart"><span>x1</span><span>x10</span><span>x100</span></div>
     </div>
-    <div class="card c-gull wide" data-game="seagull" style="--c:186,230,253">
+    <div class="card c-gull wide" data-game="seagull" style="--c:61,224,255">
       <div class="txt"><h3>Чайка</h3><p>Угадай, кого она не схватит</p></div>
       <img class="bird" src="img/gull.webp" alt="">
       <div class="mist"></div>
@@ -146,5 +144,6 @@
 <script src="fx-games.js"></script>
 <script src="fx-snow.js"></script>
 <script src="shell.js"></script>
+<script src="card-media.js"></script>
 </body>
 </html>

@@ -1,0 +1,204 @@
+/* TonUp — Neon Arcade theme.
+   Подключается одной строкой после style.css (вместо theme-gold.css):
+     <link rel="stylesheet" href="theme-neon.css">
+   Разметку игр и логику (app.js) не трогает. Откат: убрать эту строку.
+   Шрифт Unbounded уже лежит в webapp/fonts и объявлен в style.css. */
+
+:root{
+  color-scheme:dark;
+  --bg:#07060F; --fg:#F4F2FF; --card:#12102A; --hint:#8F8AB5;
+  --accent:#C6FF3D; --accent2:#4DA3FF; --gold:#FFD60A;
+  --ok:#3DF5B0; --bad:#FF3D81; --line:rgba(255,255,255,.1);
+  --lime:#C6FF3D; --pink:#FF3D81; --violet:#B66DFF; --cyan:#3DE0FF;
+  --lime-grad:linear-gradient(135deg,#C6FF3D,#3DF5B0);
+  --glass:rgba(255,255,255,.06);
+  --disp:'Unbounded',system-ui,sans-serif;
+}
+
+body{background:var(--bg);color:var(--fg)}
+body::before,body::after{opacity:.28;animation:none}
+body::before{background:#7B3FE4}
+body::after{background:#D81F68}
+
+/* ---------- шапка ---------- */
+#topbar{background:none;border:0;backdrop-filter:none}
+#topbar .user span{font-weight:800;color:var(--fg)}
+#topbar .ava{border-radius:14px;box-shadow:none;background:linear-gradient(135deg,#B66DFF,#FF3D81);color:#fff}
+.sndbtn{color:#B9B4DD;background:var(--glass);border:1px solid var(--line);border-radius:14px}
+.sndbtn:hover{color:var(--lime)}
+.balchip{background:var(--lime);color:#0A1204;border:0;font-weight:800;border-radius:999px;box-shadow:0 0 26px rgba(198,255,61,.35)}
+.balchip #balance{font-family:var(--disp);font-weight:800;font-size:15px}
+.balchip i{background:#0A1204;color:var(--lime);font-style:normal;border-radius:50%}
+
+/* ---------- лобби ---------- */
+.brandrow b{font-family:var(--disp);font-weight:800;color:var(--fg)}
+.brandrow b i{background:none;color:var(--lime);-webkit-text-fill-color:var(--lime);font-style:normal}
+.brandrow small{color:var(--hint)}
+
+.cards .card{
+  min-height:146px;border-radius:24px;
+  border:1.5px solid rgba(var(--c),.5);
+  background:linear-gradient(155deg,rgba(var(--c),.26),rgba(10,8,22,.95));
+  box-shadow:0 0 26px rgba(var(--c),.14);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+}
+.card::before,.card::after{display:none!important}
+.card .txt{position:relative;z-index:2;align-self:flex-end}
+.card h3{font:800 16px/1.15 var(--disp);letter-spacing:0;color:var(--fg);text-shadow:0 2px 10px rgba(0,0,0,.6)}
+.card p{margin-top:3px;font-size:12px;font-weight:600;color:rgba(244,242,255,.64);text-shadow:none}
+.cards .card:not(.wide){display:flex;padding:14px 16px}
+.cards .card.wide{min-height:104px}
+.card:active{transform:scale(.97);box-shadow:0 0 34px rgba(var(--c),.4)}
+
+.card.c-daily{
+  min-height:116px;border:0;border-radius:26px;
+  background:linear-gradient(120deg,#C6FF3D,#3DF5B0);
+  box-shadow:0 10px 30px rgba(61,245,176,.22);
+}
+.card.c-daily h3{color:#08130A;text-shadow:none}
+.card.c-daily p{color:rgba(8,19,10,.72)}
+.card.c-daily::before{display:none}
+
+.card .xval{
+  background:rgba(7,6,15,.7);border:1px solid rgba(var(--c),.55);border-radius:999px;
+  padding:5px 10px;font:800 12px/1 var(--disp);color:var(--lime);text-shadow:none;
+}
+.card .xval.bust{color:var(--pink)}
+
+/* слот для готовых картинок/анимаций: webapp/img/cards/<ключ>.webm|webp|gif|png */
+.card .media{position:absolute;z-index:1;right:6px;top:4px;width:108px;height:108px;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.card.wide .media{top:50%;right:10px;transform:translateY(-50%);width:96px;height:96px}
+.card.c-daily .media{width:112px;height:112px;right:8px;top:50%;transform:translateY(-50%)}
+.card .media img,.card .media video{width:100%;height:100%;object-fit:contain;display:block;background:none}
+.card.has-media > :not(.txt):not(.media):not(.xval){display:none!important}
+
+.slart span{color:var(--lime);text-shadow:0 0 18px rgba(198,255,61,.5)}
+.lkart span{border:1px solid rgba(var(--c),.5);background:rgba(7,6,15,.5);color:#E4CFFF;box-shadow:none}
+
+/* ---------- панели, заголовки ---------- */
+.title,.sub{font-family:var(--disp);font-weight:800;color:var(--fg);letter-spacing:0}
+.panel{background:var(--glass);border:1px solid var(--line);border-radius:22px}
+.panel.soft{background:rgba(255,255,255,.04)}
+.panel h3{font-family:var(--disp);color:var(--fg)}
+.panel .hint,.hint,.panel p{color:var(--hint)}
+.gold,b.gold{color:var(--lime)}
+.panel.bonus{background:linear-gradient(135deg,rgba(182,109,255,.28),rgba(10,8,22,.95));border-color:rgba(182,109,255,.45)}
+.panel.bonus .gift .halo{background:radial-gradient(circle,rgba(198,255,61,.4),transparent 70%)}
+
+.invhead .invico{background:var(--lime-grad)}
+.invhead .invt b{color:var(--fg)}
+.invall{color:var(--lime)}
+
+/* ---------- кнопки ---------- */
+.primary,#go,#place{
+  background:var(--lime);color:#0A1204;border:0;font-weight:800;letter-spacing:.6px;
+  border-radius:20px;box-shadow:0 0 30px rgba(198,255,61,.35);text-shadow:none;animation:none;
+}
+.primary:disabled,#go:disabled{filter:grayscale(.6) brightness(.7);box-shadow:none}
+#cash,.ctrl[data-game] button.cash:not(.dim){
+  background:linear-gradient(135deg,#FF3D81,#B66DFF);color:#fff;border:0;font-weight:800;letter-spacing:.6px;
+  border-radius:20px;box-shadow:0 0 30px rgba(255,61,129,.35);text-shadow:none;
+}
+#cash.dim{filter:grayscale(.6) brightness(.7);box-shadow:none}
+.ctrl[data-game] #go{background:var(--lime);color:#0A1204;border:0}
+.small{background:var(--lime);color:#0A1204;border:0;font-weight:800;border-radius:14px}
+.small.ghost,.ghost{background:var(--glass);color:var(--fg);border:1px solid var(--line)}
+.luckbtn{background:rgba(182,109,255,.18);border:1px solid rgba(182,109,255,.5);color:#E4CFFF}
+
+/* ---------- ставка ---------- */
+.ctrl{background:linear-gradient(180deg,rgba(7,6,15,.9),#07060F 18%);border-top:0;-webkit-backdrop-filter:none;backdrop-filter:none}
+.betbox{background:none;border:0}
+.bstep{background:var(--glass);color:var(--fg);border:1px solid var(--line);border-radius:16px;font-weight:800}
+.bval input{font-family:var(--disp);font-weight:800;color:var(--fg);background:rgba(255,255,255,.04);border:1.5px solid var(--accent2);border-radius:16px}
+.bval input:focus{border-color:var(--lime);box-shadow:0 0 18px rgba(198,255,61,.3)}
+.chip{background:var(--glass);color:var(--fg);border:0;border-radius:999px;font-weight:800}
+.chip.alt{background:rgba(255,61,129,.16);color:#FF7FAE}
+.chip.on{background:var(--lime);color:#0A1204;box-shadow:0 0 14px rgba(198,255,61,.4)}
+#opts label{color:var(--hint);font-weight:600}
+#opts input,#opts select{background:rgba(255,255,255,.05);color:var(--fg);border:1px solid var(--line);border-radius:14px}
+
+/* ---------- экран игры ---------- */
+.gamehead h2{font-family:var(--disp);color:var(--fg)}
+#back{background:var(--glass);border:1px solid var(--line);color:var(--fg);border-radius:14px}
+#stage{border-radius:26px;border:1.5px solid rgba(77,163,255,.45);background:linear-gradient(170deg,#0E1230,#080714);box-shadow:0 0 34px rgba(77,163,255,.16)}
+.big.mult-over{font-family:var(--disp);color:var(--fg)}
+.big.mult-over.waiting{color:var(--hint)}
+.big.mult-over.t2,.big.mult-over.t3{color:var(--lime)}
+.big.mult-over.t4{color:#E8FF9A;text-shadow:0 0 28px rgba(198,255,61,.55)}
+.big.mult-over.crashed{color:var(--pink)}
+.rfh{font-family:var(--disp);color:var(--fg)}
+.rhist span,.rhist b{border-radius:999px;font-weight:800}
+#rfeed > *{background:rgba(255,255,255,.05);border-radius:16px}
+
+.tile .face.front{background:linear-gradient(150deg,#1B1740,#0E0B24);border:1px solid rgba(182,109,255,.3)}
+.tile .face.back.safe{background:linear-gradient(150deg,#12332A,#0A1A16)}
+.floor .x{color:var(--lime)}
+.floor.cur{box-shadow:0 0 0 1.5px rgba(198,255,61,.6)}
+.taphint{color:var(--lime)}
+
+.resban{background:rgba(12,10,30,.86);border:1px solid rgba(255,255,255,.14);border-radius:20px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.resban.win b{color:var(--lime)}
+.resban.loss b{color:var(--pink)}
+
+/* ---------- док ---------- */
+#dock button{color:var(--hint);font-weight:800}
+#dock button.on,#dock button.on span{color:#0A1204}
+#dock button.on svg{stroke:#0A1204}
+
+/* ---------- пополнение / шиты ---------- */
+.paypage,.paysheet .pbox{background:#0A081A;color:var(--fg)}
+.pp-head{background:#0A081A;border-bottom:1px solid var(--line)}
+.pp-head h2{font-family:var(--disp);color:var(--fg)}
+.pp-back{background:var(--glass);border:1px solid var(--line);color:var(--fg)}
+.pp-bal b{color:var(--lime)}
+.pp-field{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:16px}
+.pp-field input{font-family:var(--disp);font-weight:800;color:var(--fg)}
+.pp-step{background:var(--glass);color:var(--fg);border:1px solid var(--line)}
+.pp-chip{background:var(--glass);color:var(--fg);border:0;border-radius:999px;font-weight:800}
+.pp-chip.on{background:var(--lime);color:#0A1204}
+.pp-method{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:18px}
+.pp-mico{background:var(--lime);color:#0A1204;border-radius:12px}
+.pp-method .pp-radio{border-color:var(--lime);background:var(--lime)}
+.pp-sum{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:18px}
+.pp-sum b{color:var(--lime)}
+.pp-notes li{color:var(--hint)}
+.pp-range.bad,.pp-err,.perr{color:var(--pink)}
+.pp-foot{background:linear-gradient(180deg,rgba(10,8,26,0),#0A081A 40%);border-top:0}
+.pp-go{background:var(--lime);color:#0A1204;border:0;font-weight:800;letter-spacing:.6px;border-radius:20px;box-shadow:0 0 30px rgba(198,255,61,.35)}
+.pp-go:disabled{filter:grayscale(.6) brightness(.7);box-shadow:none}
+.gcard{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:18px}
+.gcard.on{border-color:var(--lime);background:rgba(198,255,61,.1)}
+.gcard b{color:var(--lime)}
+.ptoast{background:#1A1640;border:1px solid var(--line);color:var(--fg);border-radius:16px}
+.ptoast.ok{border-color:rgba(61,245,176,.55)}
+.modal .box{background:#12102A;border:1px solid var(--line);border-radius:22px}
+
+/* ---------- гасим зимнюю тему из style.css (снежный фон, сосульки, голубое стекло) ---------- */
+.snowbg,.ice{display:none!important}
+.panel,.inv,.panel.list,.panel.prof{padding-top:18px}
+.balchip::after{display:none}
+#topbar .balchip{background:var(--lime);border:0;-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:999px;padding:6px 6px 6px 14px;box-shadow:0 0 26px rgba(198,255,61,.35)}
+#topbar .balchip i{background:#0A1204;color:var(--lime);border-radius:50%}
+#topbar .user,.sndbtn{background:var(--glass);border:1px solid var(--line);-webkit-backdrop-filter:none;backdrop-filter:none}
+#topbar .user{border-radius:18px}
+.sndbtn{border-radius:14px}
+.panel,.inv,.paypage .pp-card,
+#stage:not(.towerstage):not(.plinkostage):not(.slotstage):not(.luckstage):not(.digstage){background:var(--glass);border:1px solid var(--line);-webkit-backdrop-filter:none;backdrop-filter:none}
+#stage:not(.towerstage):not(.plinkostage):not(.slotstage):not(.luckstage):not(.digstage){background:linear-gradient(170deg,#0E1230,#080714);border:1.5px solid rgba(77,163,255,.45)}
+.panel.bonus{background:linear-gradient(135deg,rgba(182,109,255,.28),rgba(10,8,22,.95));border-color:rgba(182,109,255,.45)}
+button.primary,button.small,.primary{background:var(--lime);color:#0A1204}
+button.small.ghost,.small.ghost{background:var(--glass);color:var(--fg)}
+.chip.on,.xchip.on{background:var(--lime);color:#0A1204}
+.bonus .btxt h3,.title,.sub{color:var(--fg)}
+.brandrow b{color:var(--fg)}
+.brandrow svg{filter:none}
+#tuG stop:first-child{stop-color:#C6FF3D}#tuG stop:last-child{stop-color:#3DF5B0}
+.c-mines .txt,.c-rocket .txt{position:relative;left:auto;right:auto;bottom:auto}
+.c-mines .txt::before,.c-rocket .txt::before{display:none}
+.card.wide .txt{max-width:48%}
+.lkart span{padding:9px 9px;font-size:15px}
+.cards .card{text-align:left}
+
+#dock{background:rgba(20,16,40,.92);border:1px solid rgba(255,255,255,.12);border-radius:999px;height:64px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 16px 40px rgba(0,0,0,.6)}
+#dock #glass{background:none;border:0;box-shadow:none;border-radius:999px}
+#dock #glass .blob{display:block;background:var(--lime);border:0;border-radius:999px;box-shadow:0 0 22px rgba(198,255,61,.4);-webkit-backdrop-filter:none;backdrop-filter:none}
