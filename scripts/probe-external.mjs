@@ -26,6 +26,7 @@ for (const [n, u] of [['stars-buy.html', 'https://fragment.com/stars/buy'], ['gi
 try {
   const js = await (await fetch('https://fragment.com/js/auction.js?111', { headers: { 'user-agent': 'Mozilla/5.0' } })).text();
   const lines = js.split(/\n/).map((l, i) => [i, l]).filter(([, l]) => /Stars|stars/.test(l) && /(method|query|price|api)/i.test(l)).slice(0, 80);
+  writeFileSync(out.replace('probe.json', 'auction-prices.txt'), js.split(/\n/).slice(3655, 3700).join('\n'));
   writeFileSync(out.replace('probe.json', 'auction-stars.txt'), lines.map(([i, l]) => i + ': ' + l.trim().slice(0, 300)).join('\n'));
 } catch (e) { writeFileSync(out.replace('probe.json', 'auction-stars.txt'), 'ERR ' + e); }
 writeFileSync(out, JSON.stringify({ at: new Date().toISOString(), results: res }, null, 1));
