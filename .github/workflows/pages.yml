@@ -4,7 +4,9 @@ name: Deploy Mini App preview
 on:
   push:
     branches: [main, master, 'claude/**']
-    paths: ['webapp/**', 'scripts/build-pages.mjs', '.github/workflows/pages.yml']
+    paths: ['webapp/**', 'scripts/build-pages.mjs', 'scripts/market-snapshot.ts', 'src/market/**', '.github/workflows/pages.yml']
+  schedule:
+    - cron: '7,27,47 * * * *'      # refresh rates and showcase gifts every 20 min
   workflow_dispatch:
 
 permissions:
@@ -22,6 +24,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: node scripts/build-pages.mjs _site
+      - run: npm ci
+      - name: Live market data (rates, showcase gifts)
+        run: npx tsx scripts/market-snapshot.ts _site
+        continue-on-error: true
       - name: Publish to gh-pages
         run: |
           cd _site

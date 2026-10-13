@@ -8,7 +8,7 @@
 
   async function load() {
     try {
-      const r = await fetch('/market/rates', { cache: 'no-store' });
+      const r = await fetch('market/rates', { cache: 'no-store' });
       if (!r.ok) throw 0;
       const j = await r.json(); if (!(j.tonUsd > 0)) throw 0;
       rates = j;
@@ -52,7 +52,7 @@
     host.innerHTML = '<div class="nftc"><div class="nftc-anim"></div><div class="nftc-info"><b>Загрузка…</b></div></div>';
     const box = host.querySelector('.nftc-anim'), info = host.querySelector('.nftc-info');
     try {
-      const g = await (await fetch('/market/gift/' + encodeURIComponent(slug))).json();
+      const g = await (await fetch('market/gift/' + encodeURIComponent(slug))).json();
       if (!g.slug) throw 0;
       const price = g.floor || g.lastSold;
       info.innerHTML = `<b>${g.name}</b><span>${[g.model, g.backdrop, g.symbol].filter(Boolean).join(' · ')}</span>`
