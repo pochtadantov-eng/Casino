@@ -222,3 +222,16 @@ describe('instant games RTP', () => {
     expect(t.reduce((a, [, p]) => a + p, 0)).toBeCloseTo(1, 6); expect(t.reduce((a, [m, p]) => a + m * p, 0)).toBeCloseTo(0.92, 3);
   });
 });
+
+import { luckyInit, slot, luck as luckEngine } from '../src/games/engines/extra';
+describe('owner test luck', () => {
+  const run = (level: number, n = 200) => { let wins = 0; for (let i = 0; i < n; i++) { const r = luckyInit(slot, {}, new Rng('seed' + level, 'c', i), 0, level); if (r.state.mult > 0) wins++; } return wins / n; };
+  it('luck 100 always wins, -100 never, 0 is the fair game', () => {
+    expect(run(100)).toBe(1); expect(run(-100)).toBe(0);
+    const fair = run(0, 2000); expect(fair).toBeGreaterThan(0.12); expect(fair).toBeLessThan(0.3);
+  });
+  it('luck 100 reaches the top prize of a 100X case', () => {
+    let top = 0; for (let i = 0; i < 50; i++) if (luckyInit(luckEngine, { luck: 100 }, new Rng('s', 'c', i), 0, 100).state.mult >= 100) top++;
+    expect(top).toBeGreaterThan(40);
+  });
+});

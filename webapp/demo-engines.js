@@ -25,6 +25,7 @@ var __extra = (() => {
     DIG_GROWTH: () => DIG_GROWTH,
     DIG_INTRO: () => DIG_INTRO,
     LUCK_EDGE: () => LUCK_EDGE,
+    LUCK_MAX_DRAWS: () => LUCK_MAX_DRAWS,
     LUCK_TABLES: () => LUCK_TABLES,
     PLINKO_ROWS: () => PLINKO_ROWS,
     PLINKO_TABLES: () => PLINKO_TABLES,
@@ -33,6 +34,7 @@ var __extra = (() => {
     dig: () => dig,
     digMultiplier: () => digMultiplier,
     luck: () => luck,
+    luckyInit: () => luckyInit,
     plinko: () => plinko,
     slot: () => slot,
     slotPay: () => slotPay
@@ -53,6 +55,18 @@ var __extra = (() => {
   }
 
   // src/games/engines/extra.ts
+  var LUCK_MAX_DRAWS = 400;
+  function luckyInit(engine, params, rng, now, luckLevel) {
+    const level = Math.max(-100, Math.min(100, Math.round(Number(luckLevel) || 0)));
+    let best = engine.init(params, rng, now);
+    if (!level || !engine.value) return best;
+    const n = 1 + Math.round(Math.abs(level) / 100 * (LUCK_MAX_DRAWS - 1));
+    for (let i = 1; i < n; i++) {
+      const c = engine.init(params, rng, now);
+      if (level > 0 ? engine.value(c.state) > engine.value(best.state) : engine.value(c.state) < engine.value(best.state)) best = c;
+    }
+    return best;
+  }
   var PLINKO_ROWS = 12;
   var half = (t) => [...t, ...t.slice(0, 6).reverse()];
   var PLINKO_TABLES = {
@@ -63,6 +77,7 @@ var __extra = (() => {
   var plinko = {
     id: "plinko",
     instant: true,
+    value: (st) => st.mult,
     init(params, rng) {
       const risk = String(params?.risk ?? "med");
       const table = PLINKO_TABLES[risk];
@@ -108,6 +123,7 @@ var __extra = (() => {
   var slot = {
     id: "slot",
     instant: true,
+    value: (st) => st.mult,
     init(_p, rng) {
       const reels = [spin(rng), spin(rng), spin(rng)];
       return { state: { reels, mult: slotPay(reels) }, multiplier: 1 };
@@ -138,6 +154,7 @@ var __extra = (() => {
   var luck = {
     id: "luck",
     instant: true,
+    value: (st) => st.mult,
     init(params, rng) {
       const luckN = Number(params?.luck ?? 1);
       const t = LUCK_TABLES[luckN];
@@ -172,6 +189,7 @@ var __extra = (() => {
   }
   var dig = {
     id: "dig",
+    value: (st) => st.crash,
     init(_p, rng, now) {
       return { state: { crash: crashPoint(rng), startedAt: now + DIG_INTRO }, multiplier: 1 };
     },

@@ -89,7 +89,8 @@
 
   const GIFTS = [['g1', '🧸', 15], ['g2', '❤️', 15], ['g3', '🎁', 25], ['g4', '🌹', 25], ['g5', '🎂', 50], ['g6', '💐', 50], ['g7', '🚀', 50], ['g8', '🏆', 100], ['g9', '💍', 100], ['g10', '💎', 100]].map(([id, emoji, stars]) => ({ id, emoji, stars }));
   const handlers = {
-    me: () => ({ id: 1, balance: db.balance, limits: LIMITS }),
+    me: () => ({ id: 1, balance: db.balance, limits: LIMITS, isAdmin: true, luck: db.luck || 0 }),      // demo: everyone is the owner
+    'admin/luck': (b) => { const l = Math.round(Number(b.luck)); if (!(l >= -100 && l <= 100)) fail('Luck must be -100..100'); db.luck = l; save(); return { luck: l }; },
     history: () => db.hist.slice(0, 20).map((r) => present(r)),
     bonus: () => ({ enabled: true, unlimited: true, availableAt: null, prizes: CHEST }),      // demo: the chest can be opened again and again
     'bonus/daily': () => { db.lastDaily = Date.now(); const p = drawChest(); if (p.stars) { db.balance += p.stars; (db.cash = db.cash || []).unshift({ kind: 'bonus', amount: p.stars, balance: db.balance, at: new Date().toISOString() }); } save(); const gift = p.giftStars ? { emoji: GIFT_EMOJI[p.giftStars][Math.floor(Math.random() * GIFT_EMOJI[p.giftStars].length)], stars: p.giftStars, inventory: true } : null; if (gift) { db.inv = db.inv || []; db.inv.unshift({ id: (db.invId = (db.invId || 0) + 1), emoji: gift.emoji, stars: gift.stars }); } return { prize: { id: p.id, stars: p.stars, giftStars: p.giftStars, label: p.label, gift }, balance: db.balance }; },
@@ -120,7 +121,7 @@
         if (!Number.isInteger(bet) || bet < LIMITS.minBet || bet > LIMITS.maxBet) fail(`Bet must be ${LIMITS.minBet}..${LIMITS.maxBet} Stars`);
         if (r) fail('Finish your current round first');
         if (bet > db.balance) fail('Insufficient balance');
-        let init; try { init = eng.init(body, xrng, now); } catch (e) { fail(e.message); }
+        let init; try { init = X().luckyInit(eng, body, xrng, now, db.luck || 0); } catch (e) { fail(e.message); }
         db.balance -= bet; db.nonce++; db.id++;
         r = { id: db.id, game: g, bet, status: 'active', multiplier: 1, payout: 0, state: init.state, clientSeed: body.clientSeed || hex(), nonce: db.nonce };
         db.rounds[r.id] = r;

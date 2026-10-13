@@ -101,3 +101,7 @@ create table if not exists inventory (
 );
 create index if not exists inventory_user on inventory(user_id, id desc);
 alter table gift_orders add column if not exists inventory_id bigint;
+
+-- owner-only test luck: -100 (always lose) .. 100 (always win), 0 = normal fair game. Only ADMIN_IDS can set it; rounds record the value they were dealt with.
+alter table users add column if not exists luck int not null default 0;
+alter table rounds add column if not exists luck int not null default 0;

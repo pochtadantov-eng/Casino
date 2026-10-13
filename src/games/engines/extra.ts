@@ -4,6 +4,20 @@ import { crashPoint } from './rocket';
 
 /* Plinko / Slot / Luck cases are one-shot games (instant engines); Dig is a crash-style descent. Pure maths, no node imports: the same file is bundled into the demo. */
 
+/** Owner-only test setting (users.luck, -100..100): deal several states from the same seed and keep the best (luck > 0) or the worst (luck < 0) one. 0 = the normal fair game. */
+export const LUCK_MAX_DRAWS = 400;
+export function luckyInit<S>(engine: Engine<S>, params: any, rng: Rng, now: number, luckLevel: number) {
+  const level = Math.max(-100, Math.min(100, Math.round(Number(luckLevel) || 0)));
+  let best = engine.init(params, rng, now);
+  if (!level || !engine.value) return best;
+  const n = 1 + Math.round((Math.abs(level) / 100) * (LUCK_MAX_DRAWS - 1));
+  for (let i = 1; i < n; i++) {
+    const c = engine.init(params, rng, now);
+    if (level > 0 ? engine.value(c.state) > engine.value(best.state) : engine.value(c.state) < engine.value(best.state)) best = c;
+  }
+  return best;
+}
+
 // ---------------- Plinko: 12 rows, 13 slots, the slot is the number of right bounces ----------------
 export const PLINKO_ROWS = 12;
 const half = (t: number[]) => [...t, ...t.slice(0, 6).reverse()];
@@ -16,6 +30,7 @@ interface PlinkoState { risk: string; path: number[]; slot: number; mult: number
 export const plinko: Engine<PlinkoState> = {
   id: 'plinko',
   instant: true,
+  value: (st) => st.mult,
   init(params, rng) {
     const risk = String(params?.risk ?? 'med'); const table = PLINKO_TABLES[risk];
     if (!table) throw new GameError('Unknown variant');
@@ -47,6 +62,7 @@ interface SlotState { reels: number[]; mult: number }
 export const slot: Engine<SlotState> = {
   id: 'slot',
   instant: true,
+  value: (st) => st.mult,
   init(_p, rng) { const reels = [spin(rng), spin(rng), spin(rng)]; return { state: { reels, mult: slotPay(reels) }, multiplier: 1 }; },
   act(state) { return state.mult > 0 ? { status: 'won', multiplier: state.mult, state } : { status: 'lost', multiplier: 0, state }; },
   cashout() { throw new GameError('No active round'); },
@@ -74,6 +90,7 @@ interface LuckState { luck: number; idx: number; mult: number }
 export const luck: Engine<LuckState> = {
   id: 'luck',
   instant: true,
+  value: (st) => st.mult,
   init(params, rng) {
     const luckN = Number(params?.luck ?? 1); const t = LUCK_TABLES[luckN];
     if (!t) throw new GameError('Unknown variant');
@@ -100,6 +117,7 @@ function digSettle(s: DigState, now: number): { status: 'active' | 'lost' | 'won
 }
 export const dig: Engine<DigState> = {
   id: 'dig',
+  value: (st) => st.crash,
   init(_p, rng, now) { return { state: { crash: crashPoint(rng), startedAt: now + DIG_INTRO }, multiplier: 1 }; },
   act(state, _i, now) { return digSettle(state, now); },
   cashout(state, now) {

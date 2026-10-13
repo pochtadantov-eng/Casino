@@ -17,6 +17,8 @@ export interface Engine<S = any> {
   id: string;
   /** One-shot game: the outcome is settled the moment the bet is placed (start() calls act() itself). */
   instant?: boolean;
+  /** How good a freshly dealt state is for the player (higher = better). Only engines with this can take part in the owner's test-luck setting. */
+  value?(state: S): number;
   init(params: any, rng: Rng, now: number): { state: S; multiplier: number };
   /** Player action (reveal / pick / poll). */
   act(state: S, input: any, now: number): StepResult<S>;

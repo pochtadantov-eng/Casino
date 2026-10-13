@@ -19,8 +19,11 @@ export class ApiController {
 
   @Get('me')
   async me(@Req() req: any) {
+    const isAdmin = config.adminIds.includes(req.user.id);
     return {
       id: req.user.id,
+      isAdmin,
+      luck: isAdmin ? await this.games.getLuck(req.user.id) : 0,
       balance: await this.wallet.balance(req.user.id),
       limits: { minBet: config.minBet, maxBet: config.maxBet, maxPayout: config.maxPayout, minWithdraw: config.minWithdraw, minDeposit: config.minDeposit, maxDeposit: config.maxDeposit },
     };
@@ -87,6 +90,13 @@ export class ApiController {
   async cashout(@Req() req: any, @Param('game') game: string) {
     const round = await this.games.cashout(req.user.id, game);
     return { round, balance: await this.wallet.balance(req.user.id) };
+  }
+
+  /** Owner-only test luck (-100 always lose .. 100 always win). Players cannot set it, and it is ignored for them even if the column is edited. */
+  @Post('admin/luck')
+  async adminLuck(@Req() req: any, @Body() body: any) {
+    if (!config.adminIds.includes(req.user.id)) throw new GameError('Admin only');
+    return { luck: await this.games.setLuck(req.user.id, Math.round(Number(body?.luck))) };
   }
 
   /** Admin-only peek at the hidden state of the caller's current round (crash point, mine positions, etc). */

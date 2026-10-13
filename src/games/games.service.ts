@@ -6,6 +6,7 @@ import { DbService } from '../db/db.service';
 import { Rng, hashSeed, newServerSeed } from '../fair/fair';
 import { WalletService } from '../wallet/wallet.service';
 import { engines } from './engines';
+import { luckyInit } from './engines/extra';
 import { Engine, GameError, RoundStatus, StepResult } from './engines/types';
 import { publicRound, roundAt } from './engines/rocket-schedule';
 
@@ -62,6 +63,17 @@ export class GamesService {
     });
   }
 
+  async getLuck(userId: number) {
+    const { rows } = await this.db.pool.query('select luck from users where id = $1', [userId]);
+    return Number(rows[0]?.luck) || 0;
+  }
+
+  async setLuck(userId: number, luck: number) {
+    if (!Number.isInteger(luck) || luck < -100 || luck > 100) throw new GameError('Luck must be -100..100');
+    await this.db.pool.query('update users set luck = $2 where id = $1', [userId, luck]);
+    return luck;
+  }
+
   /** Public timeline of the shared Rocket rounds (no secrets: the crash point appears only after the crash). */
   rocketRound() { return publicRound(Date.now(), config.rocketSecret); }
 
@@ -74,7 +86,7 @@ export class GamesService {
     const clientSeed = String(params?.clientSeed ?? randomBytes(8).toString('hex')).slice(0, 64);
 
     return this.db.tx(async (c) => {
-      const u = await c.query('update users set round_count = round_count + 1 where id = $1 and not banned returning round_count', [userId]);
+      const u = await c.query('update users set round_count = round_count + 1 where id = $1 and not banned returning round_count, luck', [userId]);
       if (!u.rows[0]) throw new GameError('User not available');
       if (await this.lockActive(c, userId, game)) throw new GameError('Finish your current round first');
 
@@ -87,13 +99,14 @@ export class GamesService {
         if (now >= rr.flightStart) throw new GameError('Betting is closed, wait for the next round');
         initParams = { ...params, _round: { k: rr.k, crash: rr.crash, flightStart: rr.flightStart } };
       }
-      const { state, multiplier } = engine.init(initParams, new Rng(serverSeed, clientSeed, nonce), now);
+      const luckLevel = config.adminIds.includes(userId) ? Number(u.rows[0].luck) || 0 : 0;       // the test luck works for owners only, never for players
+      const { state, multiplier } = luckLevel && engine.value ? luckyInit(engine, initParams, new Rng(serverSeed, clientSeed, nonce), now, luckLevel) : engine.init(initParams, new Rng(serverSeed, clientSeed, nonce), now);
 
       await this.wallet.apply(c, userId, -bet, 'bet');
       const ins = await c.query(
-        `insert into rounds (user_id, game, bet, multiplier, state, server_seed, server_seed_hash, client_seed, nonce)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9) returning *`,
-        [userId, game, bet, multiplier, state, serverSeed, hashSeed(serverSeed), clientSeed, nonce],
+        `insert into rounds (user_id, game, bet, multiplier, state, server_seed, server_seed_hash, client_seed, nonce, luck)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning *`,
+        [userId, game, bet, multiplier, state, serverSeed, hashSeed(serverSeed), clientSeed, nonce, luckLevel && engine.value ? luckLevel : 0],
       );
       if (engine.instant) return this.present(await this.advance(c, ins.rows[0], (e, st, t) => e.act(st, {}, t)));
       return this.present(ins.rows[0], now);

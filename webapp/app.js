@@ -387,7 +387,7 @@ $('#btn-withdraw').onclick = async () => {
   try { const j = await api('withdraw', { amount: a }); setBalance(j.balance); say(`Заявка #${j.id} создана, ожидает проверки`, 'win'); } catch (e) { say(e.message, 'lose'); }
 };
 
-async function boot() { try { const me = await api('me'); setBalance(me.balance); state.limits = me.limits; } catch (e) { console.warn(e.message); } }
+async function boot() { try { const me = await api('me'); setBalance(me.balance); state.limits = me.limits; state.isAdmin = !!me.isAdmin; state.luck = me.luck || 0; syncLuckBtn(); } catch (e) { console.warn(e.message); } }
 
 // --- admin / demo debug overlay (opt-in): shows the round's hidden state while developing.
 // Enable with ?debug=1 in the URL, or in the console: localStorage.setItem('nova.debug','1')
@@ -437,6 +437,30 @@ function openVolume() {
   paint();
 }
 $('#btn-sound').onclick = openVolume;
+
+// ---------- owner-only test luck: -100 (always lose) .. 100 (always win) in Plinko, Slot, Cases and the Shaft ----------
+const LUCK_NAMES = [[-100, 'Полное невезение'], [-60, 'Жёсткое невезение'], [-20, 'Не везёт'], [0, 'Обычная игра'], [20, 'Везёт'], [60, 'Очень везёт'], [100, 'Сплошное везение']];
+const luckName = (v) => { let n = LUCK_NAMES[0][1]; for (const [t, name] of LUCK_NAMES) if (v >= t) n = name; return v === 100 ? 'Удача 100%' : v === -100 ? 'Полное невезение' : n; };
+function syncLuckBtn() { const b = $('#btn-luck'); if (!b) return; b.hidden = !state.isAdmin; const v = state.luck || 0; b.textContent = '🍀 Удача: ' + (v === 0 ? 'обычная' : (v > 0 ? '+' : '') + v); b.classList.toggle('on', v !== 0); }
+function openLuck() {
+  if (document.querySelector('.lucksheet')) return;
+  const d = document.createElement('div'); d.className = 'paysheet lucksheet';
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><h3>Моя удача 🍀</h3><p class="psub">Тестовая настройка владельца. Работает в Плинко, Слоте, Кейсах и Шахте. В Ракете и Башне исход не подкрутить: Ракета общая для всех игроков, а Башня зависит от вашего тапа.</p>
+    <div class="luckval"><b id="l-val">0</b><span id="l-name"></span></div>
+    <input type="range" id="l-range" class="luckrange" min="-100" max="100" step="1" value="${state.luck || 0}">
+    <div class="luckends"><span>Невезение −100</span><span>0</span><span>Удача +100</span></div>
+    <div class="row luckchips">${[-100, -50, 0, 50, 100].map((v) => `<button class="small ghost" data-v="${v}">${v > 0 ? '+' + v : v}</button>`).join('')}</div>
+    <p class="perr" id="l-err"></p><button class="primary pay" id="l-save">Сохранить</button><button class="plink" id="l-no">Закрыть</button></div>`;
+  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
+  const r = d.querySelector('#l-range'), val = d.querySelector('#l-val'), nm = d.querySelector('#l-name'), save = d.querySelector('#l-save');
+  const paint = () => { const v = Number(r.value); val.textContent = (v > 0 ? '+' : '') + v; val.style.color = v > 0 ? '#6dffb0' : v < 0 ? '#ff7a8a' : '#fff'; nm.textContent = luckName(v); const p = (v + 100) / 2; r.style.setProperty('--p', p + '%'); save.disabled = v === (state.luck || 0); };
+  r.oninput = paint; d.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => { r.value = b.dataset.v; paint(); });
+  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
+  d.querySelector('#l-no').onclick = close; d.onclick = (e) => { if (e.target === d) close(); };
+  save.onclick = async () => { save.disabled = true; try { const j = await api('admin/luck', { luck: Number(r.value) }); state.luck = j.luck; syncLuckBtn(); toast('Удача сохранена: ' + luckName(j.luck), 'ok'); close(); } catch (e) { d.querySelector('#l-err').textContent = e.message; save.disabled = false; } };
+  paint();
+}
+$('#btn-luck').onclick = openLuck;
 
 
 // ---------- withdraw as a Telegram gift: pick a gift, the bot drops it into the chat with the bot ----------
