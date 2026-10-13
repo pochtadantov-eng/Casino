@@ -1,5 +1,5 @@
 // App shell: lobby navigation, liquid-glass dock, bonus and profile tabs.
-const TITLES = { rocket: '🚀 Ракета', mines: '💣 Мины', tower: '🏗 Башня', seagull: '🕊 Чайка' };
+const TITLES = { rocket: 'Ракета', mines: 'Мины', tower: 'Башня', seagull: 'Чайка' };
 const GICON = { rocket: '🚀', mines: '💣', tower: '🏗', seagull: '🕊' };
 const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
 const fmtTime = (ms) => { const m = Math.max(0, Math.ceil(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)} ч ${m % 60} мин` : `${m} мин`; };
@@ -161,7 +161,7 @@ async function loadProfile() {
   const box = $('#history');
   try {
     const rows = await api('history');
-    box.innerHTML = rows.length ? rows.map((r) => `<div class="hrow"><span>${GICON[r.game] || '🎲'} ${TITLES[r.game]?.slice(2) || r.game} · ${r.bet} ⭐</span><span class="${r.status === 'won' ? 'w' : 'l'}">${r.status === 'won' ? '+' + r.payout : '−' + r.bet} ⭐</span></div>`).join('') : '<p class="hint">Пока пусто</p>';
+    box.innerHTML = rows.length ? rows.map((r) => `<div class="hrow"><span>${GICON[r.game] || '🎲'} ${TITLES[r.game] || r.game} · ${r.bet} ⭐</span><span class="${r.status === 'won' ? 'w' : 'l'}">${r.status === 'won' ? '+' + r.payout : '−' + r.bet} ⭐</span></div>`).join('') : '<p class="hint">Пока пусто</p>';
   } catch (e) { box.innerHTML = `<p class="hint">${e.message}</p>`; }
 }
 $('#p-deposit').onclick = () => $('#btn-deposit').click();
