@@ -14,3 +14,12 @@ for (const q of [50, 1000, 10000]) {
 }
 writeFileSync(process.argv[2] || 'stars.json', JSON.stringify(out, null, 1));
 console.log(JSON.stringify(out).slice(0, 600));
+
+const sub = [];
+for (const u of ['https://fragment.com/gifts/hexpot?sort=price_asc&filter=sale', 'https://fragment.com/gifts/hexpot?sort=listed&filter=sale', 'https://fragment.com/gift/hexpot-10348']) {
+  const t = await (await fetch(u, { headers: { ...UA, cookie } })).text();
+  const items = [...t.matchAll(/href="\/gift\/([a-z0-9-]+)" class="tm-grid-item"[\s\S]*?icon-ton">([\d.,]+)<\/div>\s*<div class="tm-grid-item-status[^"]*">([^<]*)</g)].slice(0, 6).map((m) => [m[1], m[2], m[3]]);
+  const single = [...t.matchAll(/(tm-section-header-status|tm-section-header-text|icon-ton[^>]*>)([^<]{1,60})</g)].slice(0, 12).map((m) => m[2].trim());
+  sub.push({ u, len: t.length, items, single });
+}
+writeFileSync((process.argv[2] || 'stars.json').replace('stars.json', 'floor.json'), JSON.stringify(sub, null, 1));
