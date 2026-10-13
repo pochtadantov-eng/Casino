@@ -1,0 +1,45 @@
+    }
+    Aj.state.curQuantity = 0;
+    $('.js-quantity-field-error').html('');
+    $('.js-cur-price').html('');
+    Stars.updateButton();
+    Stars.updateUrl();
+  },
+  eQuantityChanged: function() {
+    var $form = Aj.state.$starsSearchForm;
+    var stars = +$form.field('stars').value();
+    var quantity = +$form.field('quantity').value();
+    $('.js-cur-price').html('');
+    Aj.state.$starsQuantityField.addClass('loading').removeClass('play').redraw().addClass('play');
+    Aj.apiRequest('updateStarsPrices', {
+      stars: stars,
+      quantity: quantity
+    }, function(result) {
+      if (result.error) {
+        $('.js-quantity-field-error').html(result.error);
+        quantity = 0;
+      } else {
+        $('.js-quantity-field-error').html('');
+      }
+      $('.js-cur-price').html(result.cur_price);
+      if (result.options_html) {
+        Stars.updateOptions(result.options_html);
+      }
+      if (result.dh) {
+        Aj.state.lastDh = result.dh;
+      }
+      Aj.state.curQuantity = quantity;
+      Aj.state.$starsQuantityField.removeClass('loading');
+      Aj.state.curStars = 0;
+      $('.js-stars-options input.radio:checked').prop('checked', false);
+      Stars.updateButton();
+      Stars.updateUrl();
+    });
+  },
+  eBuyForMyself: function(e) {
+    e.preventDefault();
+    Stars.updateResult(Aj.state.myselfResult);
+  },
+  eShowMoreOptions: function(e) {
+    e.preventDefault();
+    Stars.toggleOptions(true);

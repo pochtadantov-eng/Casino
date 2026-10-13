@@ -1,0 +1,21 @@
+{
+ "cookie": 47,
+ "hash": "b46a04…",
+ "calls": [
+  {
+   "q": 50,
+   "status": 200,
+   "text": "{\"ok\":true,\"cur_price\":\"        <div class=\\\"tm-value icon-before icon-usd\\\">0.75<\\/div>\\n        <div class=\\\"tm-radio-desc wide-only icon-before icon-ton\\\">0<span class=\\\"mini-frac\\\">.5460<\\/span><\\/div>\",\"options_html\":\"  <div class=\\\"tm-stars-options js-stars-options\\\">\\n    <label class=\\\"tm-main-form-label\\\">\\n      Or select a package\\n    <\\/label>\\n    <div class=\\\"tm-form-radio-items\\\">\\n        <div class=\\\"tm-form-radio-item-wrap\\\">\\n    <label class=\\\"tm-form-radio-item\\\">\\n      <input type=\\\"radio\\\" class=\\\"radio\\\" name=\\\"stars\\\" value=\\\"50\\\">\\n      <div class=\\\"tm-form-radio-label\\\">\\n        <div class=\\\"tm-radio-label\\\">\\n          <svg class=\\\"icon\\\" width=\\\"23\\\" height=\\\"20\\\"><use xlink:href=\\\"#icon-multi-star\\\" transform=\\\"translate(3,0)\\\"><\\/use><use xlink:href=\\\"#icon-multi-star\\\"><\\/use><\\/svg>\\n          50 Stars\\n        <\\/div>\\n        <div class=\\\"tm-value icon-before icon-usd\\\">0.75<\\/div>\\n        <div class=\\\"tm-radio-desc wide-only icon-before icon-ton\\\">0<span class=\\\"mini-frac\\\">.5460<\\/span><\\/div>\\n      <\\/div>\\n    <\\/label>\\n  <\\/div>  <div class=\\\"tm-form-radio-item-wrap tm-second-option\\\">\\n    <label class=\\\"tm-form-radio-item\\\">\\n      <"
+  },
+  {
+   "q": 1000,
+   "status": 200,
+   "text": "{\"ok\":true,\"cur_price\":\"        <div class=\\\"tm-value icon-before icon-usd\\\">15<\\/div>\\n        <div class=\\\"tm-radio-desc wide-only icon-before icon-ton\\\">10<span class=\\\"mini-frac\\\">.92<\\/span><\\/div>\",\"options_html\":\"  <div class=\\\"tm-stars-options js-stars-options\\\">\\n    <label class=\\\"tm-main-form-label\\\">\\n      Or select a package\\n    <\\/label>\\n    <div class=\\\"tm-form-radio-items\\\">\\n        <div class=\\\"tm-form-radio-item-wrap\\\">\\n    <label class=\\\"tm-form-radio-item\\\">\\n      <input type=\\\"radio\\\" class=\\\"radio\\\" name=\\\"stars\\\" value=\\\"50\\\">\\n      <div class=\\\"tm-form-radio-label\\\">\\n        <div class=\\\"tm-radio-label\\\">\\n          <svg class=\\\"icon\\\" width=\\\"23\\\" height=\\\"20\\\"><use xlink:href=\\\"#icon-multi-star\\\" transform=\\\"translate(3,0)\\\"><\\/use><use xlink:href=\\\"#icon-multi-star\\\"><\\/use><\\/svg>\\n          50 Stars\\n        <\\/div>\\n        <div class=\\\"tm-value icon-before icon-usd\\\">0.75<\\/div>\\n        <div class=\\\"tm-radio-desc wide-only icon-before icon-ton\\\">0<span class=\\\"mini-frac\\\">.5460<\\/span><\\/div>\\n      <\\/div>\\n    <\\/label>\\n  <\\/div>  <div class=\\\"tm-form-radio-item-wrap tm-second-option\\\">\\n    <label class=\\\"tm-form-radio-item\\\">\\n      <inp"
+  },
+  {
+   "q": 10000,
+   "status": 200,
+   "text": "{\"ok\":true,\"cur_price\":\"        <div class=\\\"tm-value icon-before icon-usd\\\">150<\\/div>\\n        <div class=\\\"tm-radio-desc wide-only icon-before icon-ton\\\">109<span class=\\\"mini-frac\\\">.21<\\/span><\\/div>\",\"options_html\":\"  <div class=\\\"tm-stars-options js-stars-options\\\">\\n    <label class=\\\"tm-main-form-label\\\">\\n      Or select a package\\n    <\\/label>\\n    <div class=\\\"tm-form-radio-items\\\">\\n        <div class=\\\"tm-form-radio-item-wrap\\\">\\n    <label class=\\\"tm-form-radio-item\\\">\\n      <input type=\\\"radio\\\" class=\\\"radio\\\" name=\\\"stars\\\" value=\\\"50\\\">\\n      <div class=\\\"tm-form-radio-label\\\">\\n        <div class=\\\"tm-radio-label\\\">\\n          <svg class=\\\"icon\\\" width=\\\"23\\\" height=\\\"20\\\"><use xlink:href=\\\"#icon-multi-star\\\" transform=\\\"translate(3,0)\\\"><\\/use><use xlink:href=\\\"#icon-multi-star\\\"><\\/use><\\/svg>\\n          50 Stars\\n        <\\/div>\\n        <div class=\\\"tm-value icon-before icon-usd\\\">0.75<\\/div>\\n        <div class=\\\"tm-radio-desc wide-only icon-before icon-ton\\\">0<span class=\\\"mini-frac\\\">.5460<\\/span><\\/div>\\n      <\\/div>\\n    <\\/label>\\n  <\\/div>  <div class=\\\"tm-form-radio-item-wrap tm-second-option\\\">\\n    <label class=\\\"tm-form-radio-item\\\">\\n      <i"
+  }
+ ]
+}

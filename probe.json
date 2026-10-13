@@ -1,0 +1,77 @@
+{
+ "at": "2026-10-13T23:39:05.637Z",
+ "results": [
+  {
+   "name": "coingecko-ton",
+   "url": "https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd,rub",
+   "status": 200,
+   "ms": 323,
+   "bytes": 46,
+   "type": "application/json; charset=utf-8",
+   "head": "{\"the-open-network\":{\"usd\":1.37,\"rub\":115.86}}"
+  },
+  {
+   "name": "tonapi-rates",
+   "url": "https://tonapi.io/v2/rates?tokens=ton&currencies=usd,rub",
+   "status": 200,
+   "ms": 346,
+   "bytes": 214,
+   "type": "application/json; charset=utf-8",
+   "head": "{\"rates\":{\"TON\":{\"prices\":{\"USD\":1.3741693729702722,\"RUB\":115.27353769423331},\"diff_24h\":{\"USD\":\"+1.51%\",\"RUB\":\"+0.79%\"},\"diff_7d\":{\"USD\":\"−10.90%\",\"RUB\":\"−13.14%\"},\"diff_30d\":{\"RUB\":\"+2.00%\",\"USD\":\"+2.36%\"}}}}"
+  },
+  {
+   "name": "toncenter-nothing",
+   "url": "https://toncenter.com/api/v2/getMasterchainInfo",
+   "status": 200,
+   "ms": 580,
+   "bytes": 556,
+   "type": "application/json; charset=utf-8",
+   "head": "{\"ok\":true,\"result\":{\"@type\":\"blocks.masterchainInfo\",\"last\":{\"@type\":\"ton.blockIdExt\",\"workchain\":-1,\"shard\":\"-9223372036854775808\",\"seqno\":98860624,\"root_hash\":\"25UD37W+fEh5yFWn5LIeMtIRbE6yeDumNcN236NjvHo=\",\"file_hash\":\"/ktTp/clDlAXKu0EMphEnah6w9CklQFSMnlbzN33kkQ=\"},\"state_root_hash\":\"+opMNowvXiWqHdtmjLk2O9Jy3fQ+zxaFxFZr4ahecTc=\",\"init\":{\"@type\":\"ton.blockIdExt\",\"workchain\":-1,\"shard\":\"0\",\"seqno\":0,\"root_hash\":\"F6OpKZKqvqeFp6CQmFomXNMfMj2EnaUSOXN+Mh+wVWk=\",\"file_hash\":\"XplPz01CXAps5qeSWUtxcyBfdAo5zVb1N979KLSKD24=\"}},\"@extra\":\"1791934744:_:0.001:c\"}"
+  },
+  {
+   "name": "fragment-gift-meta",
+   "url": "https://nft.fragment.com/gift/hexpot-10348.json",
+   "status": 200,
+   "ms": 403,
+   "bytes": 432,
+   "type": "application/json; charset=utf-8",
+   "head": "{\"name\":\"Hex Pot #10348\",\"description\":\"An exclusive Hex Pot with the appearance Violet Veil on a English Violet background with Baphomet icons.\",\"image\":\"https:\\/\\/nft.fragment.com\\/gift\\/hexpot-10348.webp\",\"attributes\":[{\"trait_type\":\"Model\",\"value\":\"Violet Veil\"},{\"trait_type\":\"Backdrop\",\"value\":\"English Violet\"},{\"trait_type\":\"Symbol\",\"value\":\"Baphomet\"}],\"lottie\":\"https:\\/\\/nft.fragment.com\\/gift\\/hexpot-10348.lottie.json\"}"
+  },
+  {
+   "name": "fragment-gift-lottie",
+   "url": "https://nft.fragment.com/gift/hexpot-10348.lottie.json",
+   "status": 200,
+   "ms": 478,
+   "bytes": 344382,
+   "type": "application/json",
+   "head": "{\"v\":\"5.5.2\",\"fr\":60,\"ip\":0,\"op\":150,\"w\":512,\"h\":512,\"nm\":\"Hex Pot #10348\",\"ddd\":0,\"assets\":[{\"id\":\"G\",\"layers\":[{\"ddd\":0,\"ind\":1,\"ty\":4,\"nm\":\"impact 13\",\"sr\":1,\"ks\":{\"o\":{\"a\":1,\"k\":[{\"i\":{\"x\":[0.833],\"y\":[0.833]},\"o\":{\"x\":[0.167],\"y\":[0.167]},\"t\":135,\"s\":[100]},{\"t\":147,\"s\":[0]}]},\"r\":{\"a\":0,\"k\":91.825},\"p\":{\"a\":0,\"k\":[292,461,0]},\"a\":{\"a\":0,\"k\":[154.812,-59.086,0]},\"s\":{\"a\":0,\"k\":[-66.218,70.33,100]}},\"ao\":0,\"shapes\":[{\"ty\":\"gr\",\"it\":[{\"ty\":\"gr\",\"it\":[{\"ind\":0,\"ty\":\"sh\",\"ks\":{\"a\":0,\"k\":{\"i\":[[0,0],[71.332,-245.626]],\"o\":[[0,0],[-68.684,236.51]],\"v\":[[583.401,4.08],[794.748,343.498]],\"c\":false}},\"nm\":\"Path 1\",\"hd\":false},{\"ty\":\"tm\",\"s\":{\"a\":1,\"k\":[{\"i\":{\"x\":[0.32],\"y\":[1]},\"o\":{\"x\":[0.167],\"y\":[0.167]},\"t\":133,\"s\":[0]},{\"t\":147,\"s\":[100]}]},\"e\":{\"a\":1,\"k\":[{\"i\":{\"x\":[0.32],\"y\":[1]},\"o\":{\"x\":[0.167],\"y\":[0.167]},\"t\":130,\"s\":[0]},{\"t\":147,\"s\":[100]}]},\"o\":{\"a\":0,\"k\":0},\"m\":1,\"nm\":\"Trim Paths 1\",\"hd\":false},{\"ty\":\"tr\",\"p\":{\"a\":0,\"k\":[-136,224]},\"a\":{\"a\":0,\"k\":[-136,224]},\"s\":{\"a\":0,\"k\":[100,100]},\"r\":{\"a\":0,\"k\":0},\"o\":{\"a\":0,\"k\":100},\"sk\":{\"a\":0,\"k\":0},\"sa\":{\"a\":0,\"k\":0},\"nm\":\"Transform\"}],\"nm\":\"Group 1\",\"bm\":0,\"hd\":false},{\"ty\":\"gr\",\"it\":[{\"ind\":0,\"ty\":\"sh\",\"ks\":{\"a\":0,\"k\":{\"i\":[[0,0],[112.136,100.387]],\"o\":[[0,0],[-86.322,-77.278]],\"v\":[[609.153,-179.494],[701.725,-301.878]],\"c\":false}},\"nm\":\"Path 3\",\"hd\":false},{\"ty\":\"tm\",\"s\":{\"a\":1,\"k\":[{\"i\":{\"x\":[0.32],\"y\":[1]},\"o\":{\"x\":[0.167],\"y\":[0.167]},\"t\":133.709,\"s\":[0]},{\"t\":147,\"s\":[100]}]},\"e\":{\"a\":1,\"k\":[{\"i\":{\"x\":[0.32],\"y\":[1]"
+  },
+  {
+   "name": "fragment-stars-buy",
+   "url": "https://fragment.com/stars/buy",
+   "status": 200,
+   "ms": 475,
+   "bytes": 36068,
+   "type": "text/html; charset=utf-8",
+   "head": "<!DOCTYPE html>\n<html class=\"header-tabs\">\n  <head>\n    <meta charset=\"utf-8\">\n    <title>Fragment</title>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover\" />\n<meta name=\"format-detection\" content=\"telephone=no\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n<meta name=\"MobileOptimized\" content=\"176\" />\n<meta name=\"HandheldFriendly\" content=\"True\" /><meta property=\"og:site_name\" content=\"Fragment Auctions\">\n\n    <link rel=\"shortcut icon\" href=\"/img/fragment.ico\" type=\"image/x-icon\" />\n<link rel=\"mask-icon\" href=\"/img/fragment_icon.svg\" color=\"#121519\">\n    <script>document.cookie=\"stel_dt=\"+encodeURIComponent((new Date).getTimezoneOffset())+\";path=/;max-age=31536000;samesite=None;secure\"</script>\n    \n    <link href=\"/css/font-roboto.css?1\" rel=\"stylesheet\" type=\"text/css\">\n    <link href=\"/css/bootstrap.min.css?3\" rel=\"stylesheet\">\n    <link href=\"/css/bootstrap-extra.css?2\" rel=\"stylesheet\">\n    <link href=\"/css/auction.css?109\" rel=\"stylesheet\">\n\n  </head>\n  <body class=\"emoji_image no-transition\">\n      <svg xmlns=\"http://www.w3.org/2000/svg\" style=\"position:absolute;width:0;height:0;left:-10000px\">\n    <defs>\n      <path id=\"icon-premium\" d=\"m8.88 13.45 2.89-5.71c.33-.66 1.14-.93 1.8-.6.25.13.46.35.59.61l2.73 5.51c.22.45.66.76 1.16.82l5.7.68c.78.09 1.33.79 1.24 1.57-.04.31-.18.61-.41.84l-4.52 4.42c-.18.18-.27.43-.23.68l.75 5.98c.1.85-.5 1.63-1.36 1.74-.32.04-."
+  },
+  {
+   "name": "fragment-gifts",
+   "url": "https://fragment.com/gifts",
+   "status": 200,
+   "ms": 512,
+   "bytes": 165693,
+   "type": "text/html; charset=utf-8",
+   "head": "<!DOCTYPE html>\n<html class=\"header-tabs\">\n  <head>\n    <meta charset=\"utf-8\">\n    <title>Fragment</title>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover\" />\n<meta name=\"format-detection\" content=\"telephone=no\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n<meta name=\"MobileOptimized\" content=\"176\" />\n<meta name=\"HandheldFriendly\" content=\"True\" /><meta property=\"og:url\" content=\"https://fragment.com/gifts\" />\n<meta property=\"og:site_name\" content=\"Fragment Auctions\">\n<link rel=\"canonical\" href=\"https://fragment.com/gifts\" />\n\n    <link rel=\"shortcut icon\" href=\"/img/fragment.ico\" type=\"image/x-icon\" />\n<link rel=\"mask-icon\" href=\"/img/fragment_icon.svg\" color=\"#121519\">\n    <script>document.cookie=\"stel_dt=\"+encodeURIComponent((new Date).getTimezoneOffset())+\";path=/;max-age=31536000;samesite=None;secure\"</script>\n    \n    <link href=\"/css/font-roboto.css?1\" rel=\"stylesheet\" type=\"text/css\">\n    <link href=\"/css/bootstrap.min.css?3\" rel=\"stylesheet\">\n    <link href=\"/css/bootstrap-extra.css?2\" rel=\"stylesheet\">\n    <link href=\"/css/auction.css?109\" rel=\"stylesheet\">\n\n  </head>\n  <body class=\"emoji_image no-transition\">\n      <svg xmlns=\"http://www.w3.org/2000/svg\" style=\"position:absolute;width:0;height:0;left:-10000px\">\n    <defs>\n      <path id=\"icon-premium\" d=\"m8.88 13.45 2.89-5.71c.33-.66 1.14-.93 1.8-.6.25.13.46.35.59.61l2.73 5.51c.22.45.66.76 1.16.82l5.7."
+  },
+  {
+   "name": "tme-nft-page",
+   "url": "https://t.me/nft/hexpot-10348",
+   "status": 200,
+   "ms": 663,
+   "bytes": 18883,
+   "type": "text/html; charset=utf-8",
+   "head": "<!DOCTYPE html>\n<html>\n  <head>\n    <meta charset=\"utf-8\">\n    <title>Telegram: Collectible Gift</title>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <script>location.hash=''</script>\n    <script>try{if(window.parent!=null&&window!=window.parent){window.parent.postMessage(JSON.stringify({eventType:'web_app_open_tg_link',eventData:{path_full:\"\\/nft\\/hexpot-10348\"}}),'https://web.telegram.org');}}catch(e){}</script>\n    <meta property=\"og:title\" content=\"Hex Pot #10348\">\n<meta property=\"og:image\" content=\"https://cdn4.telesco.pe/file/HeizjtIL4AsU5Ij8Pfkm0AUHfES9kLIjYwgAVyN8sGKtUPObFq1P1dGjRag_s5GEFt8KWPVY4uECHzk9i-AtOEdfcQxEA8Mb1ILXZLaKNG-UDhenJvEdN71RpwI5vE6ADJo0OsPe7WjTvY4BC7-hFuoED1VF4Y9Y0toZpSd5GY2CtArdPcWwagrWPJTGUfdXQP0Y-QXU9GUGSf-nnrh0VqWm9H4TtPjnEQJg5ryRB0cFhwrcKGx36jcWXZMWbmA2pAO-rq0WU4C0QSS5MC7bztc6sHf_GCz3UuVCj3LT1BK5-jshEXNqmCcBzh7yKws00YLMOx70ZEw8Nr1e5WwfGw.jpg\">\n<meta property=\"og:site_name\" content=\"Telegram\">\n<meta property=\"og:description\" content=\"Model: Violet Veil\nBackdrop: English Violet\nSymbol: Baphomet\n\">\n\n<meta property=\"twitter:title\" content=\"Hex Pot #10348\">\n<meta property=\"twitter:image\" content=\"https://cdn4.telesco.pe/file/HeizjtIL4AsU5Ij8Pfkm0AUHfES9kLIjYwgAVyN8sGKtUPObFq1P1dGjRag_s5GEFt8KWPVY4uECHzk9i-AtOEdfcQxEA8Mb1ILXZLaKNG-UDhenJvEdN71RpwI5vE6ADJo0OsPe7WjTvY4BC7-hFuoED1VF4Y9Y0toZpSd5GY2CtArdPcWwagrWPJTGUfdXQP0Y-QXU9GUGSf-nnrh0VqWm9H4TtPjnEQJg5ryRB0cFhwrcKGx36jcWXZMWbmA2pAO-rq0WU4C0QSS5MC7bztc6sHf_GCz3UuVCj3LT1"
+  }
+ ]
+}

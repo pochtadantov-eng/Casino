@@ -1,0 +1,32 @@
+3542: state.$starsSearchForm.field('query').on('input', Stars.eSearchInput);
+3543: state.$starsSearchForm.field('query').on('change', Stars.eSearchChange);
+3550: state.$starsSearchForm.on('change', 'input[name="payment_method"]', Main.ePaymentMethodChanged);
+3574: state.$starsSearchForm.field('query').off('input', Stars.eSearchInput);
+3575: state.$starsSearchForm.field('query').off('change', Stars.eSearchChange);
+3579: state.$starsSearchForm.off('change', 'input[name="payment_method"]', Main.ePaymentMethodChanged);
+3591: Aj.apiRequest('updateStarsBuyState', {
+3668: Aj.apiRequest('updateStarsPrices', {
+3720: Aj.state.$starsBuyBtn.prop('disabled', !quantity || !$form.field('recipient').value() || !$form.field('payment_method').value());
+3737: Aj.apiRequest('searchStarsRecipient', {
+3813: Aj.apiRequest('initBuyStarsRequest', {
+3828: Aj.state.starsPrice = result.amount;
+3853: Aj.apiRequest('getBuyStarsLink', {
+3874: amount: '<span class="icon-before icon-ton-text js-amount_fee">' + Aj.state.starsPrice + '</span>'
+3889: Aj.apiRequest('repeatStars', {}, function(result) {
+3920: Aj.apiRequest('updateStarsRevenueWithdrawalState', {
+3971: Aj.apiRequest('initStarsRevenueWithdrawalRequest', params, onSuccess);
+3981: Aj.apiRequest('initStarsRevenueWithdrawalRequest', params, onSuccess);
+4004: Aj.apiRequest('initStarsRevenueWithdrawalRequest', params, onSuccess);
+4021: state.$starsSearchForm.field('query').on('input', StarsGiveaway.eSearchInput);
+4022: state.$starsSearchForm.field('query').on('change', StarsGiveaway.eSearchChange);
+4028: state.$starsSearchForm.on('change', 'input[name="payment_method"]', Main.ePaymentMethodChanged);
+4050: state.$starsSearchForm.field('query').off('input', StarsGiveaway.eSearchInput);
+4051: state.$starsSearchForm.field('query').off('change', StarsGiveaway.eSearchChange);
+4056: state.$starsSearchForm.off('change', 'input[name="payment_method"]', Main.ePaymentMethodChanged);
+4068: Aj.apiRequest('updateStarsGiveawayState', {
+4134: Aj.apiRequest('updateStarsGiveawayPrices', {
+4184: Aj.state.$giveawayStarsBtn.prop('disabled', !quantity || !stars || !$form.field('recipient').value() || !payment_method);
+4200: Aj.apiRequest('searchStarsGiveawayRecipient', {
+4287: Aj.apiRequest('initGiveawayStarsRequest', {
+4325: Aj.apiRequest('getGiveawayStarsLink', {
+4360: Aj.apiRequest('repeatStarsGiveaway', {}, function(result) {

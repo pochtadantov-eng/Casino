@@ -1,0 +1,99 @@
+ocation: _location,
+    locationWithTransition: locationWithTransition,
+    layerLocation: layerLocation,
+    setLocation: setLocation,
+    setLayerLocation: setLayerLocation,
+    reload: reload,
+    apiRequest: apiRequest,
+    uploadRequest: uploadRequest,
+    needAuth: needAuth,
+    ajContainer: ajContainer,
+    state: options.state || {},
+    layerState: {},
+    globalState: {},
+    layer: false
+  };
+
+  delete options.state;
+
+  if (options.layer) {
+    Aj.layer = $('#layer-popup-container');
+    Aj.layerState = options.layerState || {};
+    if (options.layerTitle) {
+      document.title = options.layerTitle;
+    }
+  }
+
+  function showProgress() {
+    clearTimeout(progressTo);
+    if (!progressVal) {
+      $progress.css({width: 0, transition: 'none'});
+      progressTo = setTimeout(function() {
+        $progress.css({transition: progressTransition});
+        showProgress();
+      }, 50);
+    } else {
+      progressTo = setTimeout(showProgress, 300);
+    }
+    $progress.css({width: progressVal + '%', boxShadow: progressBoxShadow});
+    progressVal = progressVal + (99 - progressVal) / 4;
+  }
+
+  function hideProgress(cancel) {
+    clearTimeout(progressTo);
+    progressTo = false;
+    progressVal = 0;
+    $progress.css({width: cancel ? '0%' : '100%'});
+    setTimeout(function() {
+      $progress.css({boxShadow: progressNoBoxShadow});
+    }, 300);
+  }
+
+  function apiRequest(method, data, onSuccess) {
+    return $.ajax(Aj.apiUrl, {
+      type: 'POST',
+      data: $.extend(data, {method: method}),
+      dataType: 'json',
+      xhrFields: {
+        withCredentials: true
+      },
+      success: function(result) {
+        if (result._dlog) {
+          $('#dlog').append(result._dlog);
+        }
+        onSuccess && onSuccess(result);
+      },
+      error: function(xhr) {
+        if (!xhr.readyState && !xhr.status) {
+          // was aborted
+        } else if (xhr.status == 401) {
+          location.href = '/auth';
+        } else if (xhr.readyState > 0) {
+          location.reload();
+        }
+      }
+    });
+  }
+
+  function uploadRequest(method, file, params, onSuccess, onProgress) {
+    var data = new FormData();
+    data.append('file', file, file.name);
+    data.append('method', method);
+    for (var key in params) {
+      data.append(key, params[key]);
+    }
+    return $.ajax(Aj.apiUrl, {
+      type: 'POST',
+      data: data,
+      cache: false,
+      dataType: 'json',
+      processData: false,
+      contentType: false,
+      xhrFields: {
+        withCredentials: true
+      },
+      xhr: function() {
+        var xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress', function(event) {
+          if (event.lengthComputable) {
+            on
