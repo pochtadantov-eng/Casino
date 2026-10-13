@@ -20,5 +20,8 @@ const res = await Promise.all([
   T('fragment-gifts', 'https://fragment.com/gifts'),
   T('tme-nft-page', 'https://t.me/nft/hexpot-10348'),
 ]);
+for (const [n, u] of [['stars-buy.html', 'https://fragment.com/stars/buy'], ['gifts.html', 'https://fragment.com/gifts'], ['gifts-hexpot.html', 'https://fragment.com/gifts/hexpot'], ['stars-sell.html', 'https://fragment.com/stars']]) {
+  try { const r = await fetch(u, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(20000) }); writeFileSync(out.replace('probe.json', n), await r.text()); } catch (e) { writeFileSync(out.replace('probe.json', n), 'ERR ' + e); }
+}
 writeFileSync(out, JSON.stringify({ at: new Date().toISOString(), results: res }, null, 1));
 console.log(res.map((r) => `${r.name}: ${r.status ?? r.error} ${r.bytes ?? ''}`).join('\n'));
