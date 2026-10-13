@@ -164,18 +164,34 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   }
 
   private giftCache: { at: number; list: { id: string; stars: number; emoji: string; limited: boolean }[] } | null = null;
+  private giftThumbs = new Map<string, string>();      // gift id -> file_id of the real sticker thumbnail
+  private giftImgs = new Map<string, { buf: Buffer; type: string }>();
 
   /** Regular Telegram gifts the bot can send (cached 10 min). Premium-only and sold-out gifts are left out. */
   async availableGifts() {
     if (!this.bot) throw new Error('Bot is not configured');
     if (this.giftCache && Date.now() - this.giftCache.at < 600_000) return this.giftCache.list;
     const { gifts } = await this.bot.api.getAvailableGifts();
+    for (const g of gifts) { const f = g.sticker.thumbnail?.file_id; if (f) this.giftThumbs.set(g.id, f); }
     const list = gifts
       .filter((g) => !g.is_premium && g.remaining_count !== 0)
       .map((g) => ({ id: g.id, stars: g.star_count, emoji: g.sticker.emoji ?? '🎁', limited: g.total_count != null }))
       .sort((a, b) => a.stars - b.stars);
     this.giftCache = { at: Date.now(), list };
     return list;
+  }
+
+  /** The real picture of a Telegram gift (the sticker's thumbnail), downloaded once through the bot and kept in memory. */
+  async giftImage(id: string) {
+    if (!this.bot) return null;
+    const hit = this.giftImgs.get(id); if (hit) return hit;
+    if (!this.giftThumbs.has(id)) await this.availableGifts().catch(() => {});
+    const fid = this.giftThumbs.get(id); if (!fid) return null;
+    const file = await this.bot.api.getFile(fid); if (!file.file_path) return null;
+    const res = await fetch(`https://api.telegram.org/file/bot${config.botToken}/${file.file_path}`); if (!res.ok) return null;
+    const img = { buf: Buffer.from(await res.arrayBuffer()), type: file.file_path.endsWith('.jpg') ? 'image/jpeg' : 'image/webp' };
+    this.giftImgs.set(id, img);
+    return img;
   }
 
   /** Personal mode: this player's gifts are only drawn by their PampGram client, no real gift is sent. */

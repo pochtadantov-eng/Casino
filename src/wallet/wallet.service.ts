@@ -227,7 +227,7 @@ export class WalletService {
 
   async listInventory(userId: number) {
     const { rows } = await this.db.pool.query("select id, gift_id, emoji, stars from inventory where user_id = $1 and status in ('held', 'withdrawing') order by id desc limit 100", [userId]);
-    return rows.map((r: any) => ({ id: Number(r.id), emoji: r.emoji as string, stars: Number(r.stars), sell: Math.floor(Number(r.stars) * config.giftSellPct / 100) }));
+    return rows.map((r: any) => ({ id: Number(r.id), giftId: r.gift_id as string | null, emoji: r.emoji as string, stars: Number(r.stars), sell: Math.floor(Number(r.stars) * config.giftSellPct / 100) }));
   }
 
   /** Sell for Stars: the item is claimed by the UPDATE, so a double tap pays once. */

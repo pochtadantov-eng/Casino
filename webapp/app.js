@@ -16,6 +16,8 @@ function ruError(m) {
   const k = /^mines must be/.exec(m); if (k) return 'Количество мин: от 3 до 24';
   return m;
 }
+/** Real picture of a Telegram gift (falls back to its emoji when the server has none, e.g. in the demo). */
+const gimg = (id, emoji) => id ? `<img class="gimg" src="/gift-img/${id}" alt="" onerror="this.replaceWith(document.createTextNode('${emoji || '🎁'}'))">` : (emoji || '🎁');
 async function api(path, body) {
   const t0 = performance.now();
   try { return await api0(path, body); } finally { const d = performance.now() - t0; state.rtt = state.rtt ? state.rtt * 0.7 + d * 0.3 : d; }
@@ -451,7 +453,7 @@ async function openGifts() {
   const paint = () => { go.disabled = !sel; go.textContent = sel ? (sel.price > state.balance ? `Не хватает ${sel.price - state.balance} ⭐` : `Отправить за ${sel.price} ⭐`) : 'Выберите подарок'; if (sel && sel.price > state.balance) go.disabled = true; grid.querySelectorAll('.gcard').forEach((c) => c.classList.toggle('on', sel && c.dataset.id === sel.id)); };
   try {
     const j = await api('gifts'); list = j.gifts; d.querySelector('#g-sub').textContent = `Подарок прилетит вам в чат с ботом. До ${j.perDay} в сутки, цена = стоимость подарка + комиссия.`;
-    grid.innerHTML = list.length ? list.map((g) => `<button class="gcard" data-id="${g.id}"><span class="gem">${g.emoji}</span><b>${g.price} ⭐</b>${g.limited ? '<i>лимит</i>' : ''}</button>`).join('') : '<p class="hint">Подарков пока нет</p>';
+    grid.innerHTML = list.length ? list.map((g) => `<button class="gcard" data-id="${g.id}"><span class="gem">${gimg(g.id, g.emoji)}</span><b>${g.price} ⭐</b>${g.limited ? '<i>лимит</i>' : ''}</button>`).join('') : '<p class="hint">Подарков пока нет</p>';
     grid.querySelectorAll('.gcard').forEach((c) => c.onclick = () => { sel = list.find((g) => g.id === c.dataset.id); err.textContent = ''; paint(); });
   } catch (e) { grid.innerHTML = ''; err.textContent = e.message; }
   go.onclick = async () => {

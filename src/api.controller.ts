@@ -34,7 +34,7 @@ export class ApiController {
   @Post('bonus/daily')
   async claimBonus(@Req() req: any) {
     const { prize } = await this.wallet.openChest(req.user.id);
-    let gift: { emoji: string; stars: number; inventory: boolean } | null = null;
+    let gift: { emoji: string; stars: number; giftId: string | null; inventory: boolean } | null = null;
     if (prize.giftStars) {
       // a gift prize goes to the player's inventory (sell it for Stars or withdraw it into the chat from there)
       let pick: { id: string; emoji: string; stars: number } | null = null;
@@ -43,7 +43,7 @@ export class ApiController {
         const pool = all.filter((g) => Math.abs(g.stars - prize.giftStars!) === best); pick = pool[Math.floor(Math.random() * pool.length)];
       } catch { /* bot offline: store a generic gift, the closest real one is picked when it is withdrawn */ }
       await this.wallet.addInventory(req.user.id, pick?.id ?? null, pick?.emoji ?? '🎁', pick?.stars ?? prize.giftStars, 'chest');
-      gift = { emoji: pick?.emoji ?? '🎁', stars: pick?.stars ?? prize.giftStars, inventory: true };
+      gift = { emoji: pick?.emoji ?? '🎁', stars: pick?.stars ?? prize.giftStars, giftId: pick?.id ?? null, inventory: true };
     }
     return { prize: { id: prize.id, stars: prize.stars, giftStars: prize.giftStars, label: prize.label, gift }, balance: await this.wallet.balance(req.user.id) };
   }
