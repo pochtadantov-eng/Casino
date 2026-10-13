@@ -149,7 +149,7 @@ $('#bonus-claim').onclick = () => { if (!$('#bonus-claim').disabled) openChestRo
 // ---------- profile ----------
 const CASH_LABEL = { deposit: ['⭐ Пополнение', 'w'], deposit_refund: ['↩️ Возврат пополнения', 'l'], withdraw: ['📤 Вывод (заявка)', 'l'], withdraw_refund: ['↩️ Вывод отклонён', 'w'], bonus: ['🎁 Бонус', 'w'], gift_withdraw: ['🎁 Подарок в чат', 'l'], gift_refund: ['↩️ Подарок не доставлен', 'w'] };
 async function loadCash() {
-  const box = $('#cash'); if (!box) return;
+  const box = $('#cashlog'); if (!box) return;
   try {
     const rows = await api('cash');
     box.innerHTML = rows.length ? rows.map((r) => { let [t, c] = CASH_LABEL[r.kind] || [r.kind, '']; if (r.kind === 'gift_withdraw') { if (r.status === 'pending' || r.status === 'sending') { t = '⏳ Вывод в обработке…'; c = 'l'; } else if (r.status === 'sent') { t = '✅ Выведено · подарок в чате'; c = 'l'; } else if (r.status === 'failed') t = '❌ Подарок не отправлен'; }
