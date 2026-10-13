@@ -20,6 +20,7 @@ ${body}
 <script>${r('mock-api.js')}</script>
 <script>${r('app.js')}</script>
 <script>${r('fx-games.js')}</script>
+<script>${r('fx-snow.js')}</script>
 <script>${r('shell.js')}</script>`;
 writeFileSync(process.argv[2] || 'preview.html', out);
 console.log('preview built', out.length, 'bytes');
