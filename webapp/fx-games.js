@@ -22,7 +22,7 @@
       if (r.payout > 0) { const el = document.querySelector('.resban'); if (el) { el.querySelector('b').textContent = 'ВОЗВРАТ'; el.querySelector('span').textContent = `+${r.payout} ⭐`; } }
     }
   };
-  Object.assign(RES_LOSS, { slot: 'МИМО', luck: 'ПУСТО', dig: 'ЛАВА!', plinko: 'ПРОИГРЫШ' });
+  Object.assign(RES_LOSS, { slot: 'МИМО', luck: 'ПУСТО', dig: 'ВЗРЫВ!', plinko: 'ПРОИГРЫШ' });
   const goText = (t) => { const g = $('#go'); if (g && !g.hidden) g.textContent = t; };
   const optClicks = (attr, key, redo) => document.querySelectorAll(`#opts [data-${attr}]`).forEach((b) => b.onclick = () => { state[key] = b.dataset[attr]; redo(); });
 
@@ -188,8 +188,6 @@
     if (c === 0 || c === DG.COLS - 1) return ['bed', (ly + c) % 3];
     if (ly === 0) return ['grass', c % 3];
     const deep = ly > 26, grp = rh(ly >> 1, c >> 1), one = rh(ly * 7 + c, c * 13 + ly), sd = (ly * 3 + c) % 3;
-    if (one < 0.035 && ly > 3) return ['tnt', 0];
-    if (one > 0.985 && ly > 2) return ['arrow', 0];
     if (ly < 4) return ['dirt', sd];
     if (ly > 12 && grp > 0.93) return ['dia', 0];
     if (ly > 16 && grp > 0.88) return ['em', 0];
@@ -212,7 +210,7 @@
   // ---- diamond pickaxe sprite (12x12) ----
   const PICK = ['....cccc....', '..ccBBBBcc..', '.cBB....BBc.', 'cBB..hh..BBc', 'cB..hhh...Bc', 'c...hh.....c', '....hh......', '....hh......', '...hh.......', '...hh.......', '..hh........', '..hh........'];
   function drawPick(g, x, y, ang, burn) {
-    g.save(); g.translate(x, y); g.rotate(ang); g.imageSmoothingEnabled = false; const u = 3.4, pal = burn ? { c: '#ff9a3c', B: '#ffd08a', h: '#7a4a1e' } : { c: '#27b8c8', B: '#8ff4ff', h: '#7a4a1e' };
+    g.save(); g.translate(x, y); g.rotate(ang); g.imageSmoothingEnabled = false; const u = 6.2, pal = burn ? { c: '#ff9a3c', B: '#ffd08a', h: '#7a4a1e' } : { c: '#27b8c8', B: '#8ff4ff', h: '#7a4a1e' };
     PICK.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '.') return; g.fillStyle = pal[ch]; g.fillRect((i - 6) * u, (j - 4) * u, u + 0.6, u + 0.6); })); g.restore();
   }
   OPTS.dig = () => '';
@@ -222,34 +220,57 @@
     DG.L = L; g.imageSmoothingEnabled = false;
     const ms = sc ? now - sc.startedAt : -1e9, layer = sc ? digLayerAt(ms) : 0, frac = sc ? ((DG.growth * Math.max(0, ms)) / DG.step) % 1 : 0;
     const lost = sc?.status === 'lost', crashLayer = lost ? Math.ceil(Math.log(Math.max(1.01, sc.crash)) / DG.step) : null;
-    const maxLayer = lost ? Math.min(layer, crashLayer) : layer, groundY = H * 0.42, cam = Math.max(0, (maxLayer + frac) * L - H * 0.3);
+    const maxLayer = lost ? Math.min(layer, crashLayer) : layer, boomT = lost ? (Date.now() - sc.lostAt) / 1000 : 0, groundY = H * 0.42, cam = Math.max(0, (maxLayer + frac) * L - H * 0.3);
+    g.save(); if (DG.shake > 0) { g.translate((Math.random() - 0.5) * DG.shake, (Math.random() - 0.5) * DG.shake); DG.shake *= 0.9; if (DG.shake < 0.3) DG.shake = 0; }
     g.drawImage(backdrop(W, H), 0, 0);
     for (let ly = 0; ly < 90; ly++) {
       const y = Math.round(groundY + ly * L - cam); if (y > H || y < -L) continue;
       for (let c = 0; c < DG.COLS; c++) {
         const wall = c === 0 || c === DG.COLS - 1, inShaft = DG.shaft.includes(c);
         const dug = inShaft && ly >= 0 && ly < maxLayer + (ly === maxLayer ? (frac > 0.55 ? 1 : 0) : 0) || (inShaft && ly === 0 && maxLayer >= 0);
-        if (dug && !wall) continue;                                   // open shaft shows the landscape
-        const [t, sd] = tileAt(ly, c);
+        if (lost && ly === crashLayer && inShaft && boomT >= 0.4) continue;
+        if (dug && !wall && !(lost && ly === crashLayer && boomT < 0.4)) continue;   // open shaft shows the landscape
+        const [t, sd] = (lost && ly === crashLayer && inShaft) ? ['tnt', 0] : tileAt(ly, c);
         g.drawImage(getTile(t, sd), Math.round(c * L), y, Math.ceil(L), Math.ceil(L));
-        if (lost && ly === crashLayer && inShaft) { g.fillStyle = 'rgba(255,90,20,.75)'; g.fillRect(Math.round(c * L), y, Math.ceil(L), Math.ceil(L)); }
+        if (lost && ly === crashLayer && inShaft) { const bl = Math.floor((now - sc.lostAt) / 90) % 2; if (bl && boomT < 0.4) { g.fillStyle = 'rgba(255,255,255,.8)'; g.fillRect(Math.round(c * L), y, Math.ceil(L), Math.ceil(L)); } }
       }
     }
     let px = W / 2, py, ang;
     if (!sc) { py = groundY - 40; ang = 0.3; }
     else if (ms < 0) { const f = Math.min(1, 1 - -ms / 1800); py = -60 + (groundY - 20 + 60) * f * f; ang = 0.9 + f * 9; }
     else { const swing = Math.sin(frac * Math.PI); py = groundY + (maxLayer + Math.min(1, frac * 1.3)) * L - cam - 20 - swing * 8; ang = -0.55 + swing * 1.1; if (ms < 260) py -= Math.sin(ms / 260 * Math.PI) * 14; }
-    if (lost && layer >= crashLayer) { py = groundY + crashLayer * L - cam - 6 + (now - sc.lostAt) / 12; ang = 2.4; }
-    drawPick(g, px, py, ang, lost && layer >= crashLayer);
+    if (lost) { py = groundY + crashLayer * L - cam - L * 0.9; ang = -0.3; }
+    if (!(lost && boomT >= 0.4)) drawPick(g, px, py, ang, false);
     const mCur = sc ? (lost ? sc.crash : sc.status === 'won' ? sc.cashedAt : Math.max(1, Math.exp(DG.growth * Math.max(0, ms)))) : 1;
-    if (sc && ms > 0 && layer !== DG.lastLayer) {
-      DG.lastLayer = layer; const [tt] = tileAt(layer, 4), col = { gold: '#f0a53a', red: '#d23a3a', dia: '#46b6ff', em: '#3fd16a', tnt: '#c83030' }[tt.replace('_d', '')] || '#9a9a9a';
-      for (let i = 0; i < 12; i++) DG.parts.push({ x: px + (Math.random() - 0.5) * 50, y: py + 20, vx: (Math.random() - 0.5) * 3.4, vy: -Math.random() * 3 - 1, c: Math.random() < 0.5 ? col : '#8d8d8d', t: 0 });
-      if (state.round) DG.nums.push({ x: px + (Math.random() - 0.5) * L * 3, y: py + 4, txt: (state.round.bet * Math.exp(DG.growth * Math.max(0, ms))).toFixed(2), t: 0 });
+    const broken = sc && ms > 0 ? (lost ? Math.min(crashLayer, maxLayer + (frac > 0.55 ? 1 : 0)) : maxLayer + (frac > 0.55 ? 1 : 0)) : 0;
+    if (sc && ms > 0 && broken > (DG.lastLayer || 0)) {
+      const ORE = { gold: ['#f0a53a', 'ЗОЛОТО'], red: ['#d23a3a', 'РЕДСТОУН'], dia: ['#46b6ff', 'АЛМАЗ'], em: ['#3fd16a', 'ИЗУМРУД'] };
+      for (let ly = (DG.lastLayer || 0); ly < broken; ly++) {
+        const ty = groundY + ly * L - cam + L / 2; let best = null;
+        DG.shaft.forEach((c) => {
+          if (lost && ly === crashLayer) return;
+          const [tt] = tileAt(ly, c), k = tt.replace('_d', ''), o = ORE[k], tx = c * L + L / 2;
+          for (let i = 0; i < (o ? 14 : 5); i++) DG.parts.push({ x: tx, y: ty, vx: (Math.random() - 0.5) * (o ? 6 : 3.4), vy: -Math.random() * (o ? 5 : 3) - 1, c: o && Math.random() < 0.7 ? o[0] : '#8d8d8d', t: 0 });
+          if (o) { best = best || o; for (let i = 0; i < 4; i++) DG.parts.push({ x: tx, y: ty, vx: (Math.random() - 0.5) * 2, vy: -2 - Math.random() * 2, c: '#ffffff', t: 10 }); }
+        });
+        DG.shake = Math.max(DG.shake || 0, best ? 7 : 2.5);
+        if (best) DG.nums.push({ x: W / 2, y: ty - 10, txt: '+ ' + best[1], col: best[0], t: 0 });
+      }
+      if (state.round) DG.nums.push({ x: W / 2 + (Math.random() - 0.5) * 60, y: py + 6, txt: (state.round.bet * Math.exp(DG.growth * Math.max(0, ms))).toFixed(2), t: 0 });
+      DG.lastLayer = broken;
     }
+    if (lost && !DG.boomed) { DG.boomed = false; }
+    if (lost && boomT >= 0.4 && !DG.boomed) {
+      DG.boomed = true; DG.shake = 22; const bx = W / 2, by = groundY + crashLayer * L - cam + L / 2;
+      for (let i = 0; i < 70; i++) { const a = Math.random() * 6.283, v = 2 + Math.random() * 7; DG.parts.push({ x: bx, y: by, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, c: ['#ff9a1f', '#ffd84a', '#c83030', '#555', '#ffffff'][i % 5], t: 0 }); }
+      DG.boom = { x: bx, y: by, t: 0 };
+    }
+    if (DG.boom) { const bm = DG.boom; bm.t++; const r = bm.t * 9, al = Math.max(0, 1 - bm.t / 22);
+      if (al > 0) { const gr = g.createRadialGradient(bm.x, bm.y, 0, bm.x, bm.y, Math.max(1, r)); gr.addColorStop(0, 'rgba(255,255,220,' + al + ')'); gr.addColorStop(0.4, 'rgba(255,170,40,' + al * 0.9 + ')'); gr.addColorStop(1, 'rgba(200,40,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(bm.x, bm.y, r, 0, 7); g.fill(); g.strokeStyle = 'rgba(255,255,255,' + al + ')'; g.lineWidth = 4; g.beginPath(); g.arc(bm.x, bm.y, r * 1.1, 0, 7); g.stroke(); } else DG.boom = null; }
     DG.parts = DG.parts.filter((p) => { p.t++; p.x += p.vx; p.y += p.vy; p.vy += 0.25; g.fillStyle = p.c; g.fillRect(p.x, p.y, 4, 4); return p.t < 40; });
     g.textAlign = 'center'; g.font = '700 11px monospace';
-    DG.nums = DG.nums.filter((n) => { n.t++; const a = 1 - n.t / 50; g.globalAlpha = Math.max(0, a); g.fillStyle = 'rgba(0,0,0,.5)'; g.fillText(n.txt, n.x + 1, n.y - n.t * 0.7 + 1); g.fillStyle = '#d7ecff'; g.fillText(n.txt, n.x, n.y - n.t * 0.7); g.globalAlpha = 1; return n.t < 50; });
+    DG.nums = DG.nums.filter((n) => { n.t++; if (n.col) g.font = '900 15px monospace'; const a = 1 - n.t / 50; g.globalAlpha = Math.max(0, a); g.fillStyle = 'rgba(0,0,0,.5)'; g.fillText(n.txt, n.x + 1, n.y - n.t * 0.7 + 1); g.fillStyle = n.col || '#d7ecff'; g.fillText(n.txt, n.x, n.y - n.t * 0.7); g.globalAlpha = 1; return n.t < 50; });
+    g.restore();
     // mossy plaque with the multiplier (like the win banner in the reference)
     const bw = 170, bx = W / 2 - bw / 2, by = 8;
     g.fillStyle = '#2f4a2c'; g.fillRect(bx - 4, by - 4, bw + 8, 50); g.fillStyle = '#5a8a3a'; g.fillRect(bx - 4, by - 4, bw + 8, 7); g.fillStyle = '#4b3a28'; g.fillRect(bx, by + 3, bw, 38); g.fillStyle = '#6a5238'; g.fillRect(bx, by + 3, bw, 3);
@@ -273,7 +294,7 @@
       DG.growth = v.growth; DG.off = v.serverNow - Date.now() + (state.rtt || 0) / 2;
       const was = DG.sc;
       DG.sc = { startedAt: v.startedAt, status: round.status, crash: v.crash, cashedAt: v.cashedAt, lostAt: was?.lostAt || (round.status === 'lost' ? Date.now() : 0) };
-      if (!was || was.id !== round.id) { DG.lastLayer = 0; DG.sc.id = round.id; } else DG.sc.id = was.id;
+      if (!was || was.id !== round.id) { DG.lastLayer = 0; DG.boomed = false; DG.boom = null; DG.parts = []; DG.sc.id = round.id; } else DG.sc.id = was.id;
     }
     cancelAnimationFrame(DG.raf); digDraw();
     if (round?.status === 'active') digPoll();
