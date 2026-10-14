@@ -182,8 +182,8 @@ var __extra = (() => {
   };
   var DIG_INTRO = 5200;
   var DIG_SEG = 28e3;
-  var DIG_RATE = 2.45 / 1e3;
-  var DIG_TIERS = [["coal", 0.55, 4e-3], ["iron", 0.25, 8e-3], ["gold", 0.12, 0.014], ["red", 0.05, 0.02], ["lapis", 0.02, 0.035], ["dia", 8e-3, 0.07], ["em", 2e-3, 0.14]];
+  var DIG_RATE = 3.05 / 1e3;
+  var DIG_TIERS = [["coal", 0.33, 3e-3], ["iron", 0.26, 45e-4], ["gold", 0.2, 6e-3], ["red", 0.11, 8e-3], ["lapis", 0.06, 0.014], ["dia", 0.03, 0.03], ["em", 0.01, 0.08]];
   var digMultAt = (s, el) => floor2(s.ore.reduce((a, e) => e.t <= el ? a + e.inc : a, 0));
   function digSettle(s, now) {
     const el = now - s.startedAt;

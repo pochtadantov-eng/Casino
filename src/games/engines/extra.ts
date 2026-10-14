@@ -108,8 +108,8 @@ export const luck: Engine<LuckState> = {
 // ---------------- Dig: the pick falls from the sky and bounces around the mine until its health runs out. Every ore it breaks adds money; cash out any time ----------------
 export const DIG_INTRO = 5200;          // ms: the fall from the sky before the first block breaks
 export const DIG_SEG = 28000;           // ms of pick health: 100 -> 0 (an upgrade block refills it)
-const DIG_RATE = 2.45 / 1000;          // ore per ms
-const DIG_TIERS: [string, number, number][] = [['coal', 0.55, 0.004], ['iron', 0.25, 0.008], ['gold', 0.12, 0.014], ['red', 0.05, 0.02], ['lapis', 0.02, 0.035], ['dia', 0.008, 0.07], ['em', 0.002, 0.14]];   // [ore, weight, multiplier it adds]; RTP about 92%
+const DIG_RATE = 3.05 / 1000;          // ore per ms
+const DIG_TIERS: [string, number, number][] = [['coal', 0.33, 0.003], ['iron', 0.26, 0.0045], ['gold', 0.2, 0.006], ['red', 0.11, 0.008], ['lapis', 0.06, 0.014], ['dia', 0.03, 0.03], ['em', 0.01, 0.08]];   // [ore, weight, multiplier it adds]; RTP about 92%
 interface DigEvent { t: number; k: string; inc: number }
 interface DigState { startedAt: number; ups: number[]; ore: DigEvent[]; endAt: number; cashedAt?: number }
 const digMultAt = (s: DigState, el: number) => floor2(s.ore.reduce((a, e) => (e.t <= el ? a + e.inc : a), 0));

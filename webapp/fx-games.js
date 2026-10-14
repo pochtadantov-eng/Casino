@@ -175,25 +175,28 @@
     if (type === 'deep') return noiseTile('#4d4d58', seed, 0.14, true)[0];
     if (type === 'bed') { const [c, g] = noiseTile('#4a4566', seed, 0.1); g.fillStyle = 'rgba(0,0,0,.35)'; for (let y = 0; y < 16; y += 4) g.fillRect(0, y, 16, 1); for (let y = 0; y < 16; y += 8) { g.fillRect(((y / 8) % 2) * 8, y, 1, 4); g.fillRect(((y / 8) % 2) * 8 + 8, y + 4, 1, 4); } return c; }
     const deep = type.endsWith('_d'), t = type.replace('_d', ''), [c, g] = noiseTile(deep ? '#4d4d58' : '#8d8d8d', seed, 0.14, true);
-    const OREC = { coal: ['#23232a', '#4a4a55'], iron: ['#d8a88a', '#f3d4bf'], gold: ['#f0a53a', '#ffe08a'], red: ['#d23a3a', '#ff8a7a'], lapis: ['#2a4fd0', '#6f93ff'], dia: ['#35d6e6', '#d8fbff'], em: ['#22b955', '#9cf5b6'] };
-    if (OREC[t]) { for (let q = 0; q < 3; q++) dots(g, OREC[t][0], seed + 1 + t.length + q * 7, 6, OREC[t][1]); if (t === 'dia' || t === 'em') dots(g, OREC[t][0], seed + 9, 3, OREC[t][1]); }
+    const OREC = { coal: ['#1c1c24', '#4a4a58'], iron: ['#d9954a', '#f6c88e'], gold: ['#f0b429', '#fff0a0'], red: ['#c92b2b', '#ff8a7a'] };
+    if (OREC[t]) { for (let q = 0; q < 5; q++) dots(g, OREC[t][0], seed + 1 + t.length + q * 7, 5, OREC[t][1]); }
+    else if (t === 'lapis') { g.fillStyle = '#22409a'; g.fillRect(0, 0, 16, 16); for (let y = 0; y < 16; y += 4) for (let x = 0; x < 16; x += 4) { g.fillStyle = (x + y) % 8 ? '#3f6bff' : '#9bb8ff'; g.fillRect(x + 1, y + 1, 3, 3); } g.fillStyle = 'rgba(0,0,40,.35)'; g.fillRect(0, 15, 16, 1); g.fillRect(15, 0, 1, 16); }
+    else if (t === 'dia') { g.fillStyle = '#2d86d6'; g.fillRect(0, 0, 16, 16); for (let y = 0; y < 16; y += 5) for (let x = 0; x < 16; x += 5) { g.fillStyle = (x + y) % 10 ? '#46c6ff' : '#b8f2ff'; g.fillRect(x + 1, y + 1, 4, 4); } g.fillStyle = '#ffffff'; g.fillRect(2, 2, 2, 1); g.fillRect(9, 8, 2, 1); g.fillStyle = 'rgba(0,0,40,.35)'; g.fillRect(0, 15, 16, 1); g.fillRect(15, 0, 1, 16); }
+    else if (t === 'em') { g.fillStyle = '#1f8f43'; g.fillRect(0, 0, 16, 16); for (let y = 0; y < 16; y += 4) for (let x = 0; x < 16; x += 4) { g.fillStyle = (x + y) % 8 ? '#3fd16a' : '#9cf5b6'; g.fillRect(x + 1, y + 1, 3, 3); } g.fillStyle = 'rgba(0,30,0,.35)'; g.fillRect(0, 15, 16, 1); g.fillRect(15, 0, 1, 16); }
     else if (t === 'tnt') { g.fillStyle = '#c83030'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#e8e4d8'; g.fillRect(0, 5, 16, 6); g.fillStyle = '#222'; g.font = 'bold 6px monospace'; g.textAlign = 'center'; g.fillText('TNT', 8, 10.4); g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(0, 15, 16, 1); for (let x = 3; x < 16; x += 5) g.fillRect(x, 0, 1, 5); }
-    else if (t === 'up') { g.fillStyle = '#2a2140'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#ffd84a'; g.fillRect(0, 0, 16, 1); g.fillRect(0, 15, 16, 1); g.fillRect(0, 0, 1, 16); g.fillRect(15, 0, 1, 16); g.fillStyle = '#7a4a1e'; g.fillRect(7, 5, 2, 9); g.fillStyle = '#6ae6ff'; g.fillRect(3, 3, 10, 3); g.fillRect(2, 5, 2, 2); g.fillRect(12, 5, 2, 2); g.fillStyle = '#4dff8a'; g.fillRect(12, 9, 1, 4); g.fillRect(11, 10, 3, 1); }
+    else if (t === 'up') { g.fillStyle = '#e8932a'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#ffc25a'; g.fillRect(1, 1, 14, 14); g.fillStyle = '#2fbf4a'; g.fillRect(7, 5, 2, 9); g.fillRect(5, 7, 6, 1); g.fillRect(6, 6, 4, 1); g.fillRect(4, 8, 8, 1); g.fillStyle = '#18892f'; g.fillRect(8, 5, 1, 9); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, 15, 16, 1); g.fillRect(15, 0, 1, 16); }
     else if (t === 'arrow') { g.fillStyle = '#e8932a'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#ffc25a'; g.fillRect(1, 1, 14, 14); g.fillStyle = '#2fbf4a'; g.fillRect(7, 6, 2, 8); g.fillRect(5, 8, 6, 1); g.fillRect(6, 7, 4, 1); g.fillRect(4, 9, 8, 1); g.fillStyle = '#18892f'; g.fillRect(8, 6, 1, 8); }
     return c;
   }
   const getTile = (type, seed) => TILE[type + seed] || (TILE[type + seed] = mkTile(type, seed));
   const ORES = [['em', 0.012, 20], ['dia', 0.022, 16], ['lapis', 0.032, 12], ['red', 0.045, 9], ['gold', 0.06, 6], ['iron', 0.1, 3], ['coal', 0.14, 1]];
   const OREN = { coal: 'УГОЛЬ', iron: 'ЖЕЛЕЗО', gold: 'ЗОЛОТО', red: 'РЕДСТОУН', lapis: 'ЛАПИС', dia: 'АЛМАЗ', em: 'ИЗУМРУД' };
-  const OREK = { coal: '#8a8a96', iron: '#f3d4bf', gold: '#ffd24a', red: '#ff5a5a', lapis: '#6f93ff', dia: '#5ff0ff', em: '#4dff8a' };
+  const OREK = { coal: '#8a8a96', iron: '#f6c88e', gold: '#ffd24a', red: '#ff5a5a', lapis: '#6f93ff', dia: '#5ff0ff', em: '#4dff8a' };
   const tileAt = (ly, c) => {
     if (c === 0 || c === DG.COLS - 1) return ['bed', (ly + c) % 3];
     if (ly === 0) return ['grass', c % 3];
-    const deep = ly > 26, sd = (ly * 3 + c) % 3, sp = rh(ly * 131 + c * 17 + (DG.seed || 0), ly * 7 + c * 29 + 5);
+    const deep = rh(ly >> 1, (c >> 1) + 50 + (DG.seed || 0)) < 0.28, sd = (ly * 3 + c) % 3, sp = rh(ly * 131 + c * 17 + (DG.seed || 0), ly * 7 + c * 29 + 5);
     if (ly >= 3 && sp < 0.004) return ['tnt', 0];
     return [ly < 3 ? 'dirt' : deep ? 'deep' : 'cobble', sd];
   };
-  const isDecoy = (ly, c) => ly >= 4 && c >= 1 && c <= DG.COLS - 2 && rh(ly * 29 + c * 7 + (DG.seed || 0), 17) < 0.014;      // upgrade blocks the pick can see but never gets: pure tease
+  const isDecoy = (ly, c) => ly >= 4 && c >= 1 && c <= DG.COLS - 2 && rh(ly * 29 + c * 7 + (DG.seed || 0), 17) < 0.006;      // upgrade blocks the pick can see but never gets: pure tease
   // where the pick is horizontally while it works at depth t: it drifts left and right through the field
   const pickX = (t, L) => L * (1.6 + (Math.sin(t * 0.9) * 0.5 + 0.5) * (DG.COLS - 3.2) + 0.0);
   let BG = null;
@@ -211,7 +214,7 @@
   const PPAL = { wood: ['#7a5326', '#c99a56'], iron: ['#8c8f96', '#e9ecf0'], gold: ['#b8861b', '#ffd24a'], diamond: ['#1aa7b8', '#6ff3ff'], netherite: ['#3a2f38', '#85707e'] };
   const tierOf = (bet) => (bet <= 500 ? 'wood' : bet <= 1000 ? 'iron' : bet <= 2000 ? 'gold' : bet <= 10000 ? 'diamond' : 'netherite');
   function drawPick(g, x, y, ang, sz, tier) {
-    g.save(); g.translate(x, y); g.rotate(ang); g.imageSmoothingEnabled = false; const u = 3.4 * (sz || 1), pp = PPAL[tier || DG.tier || 'wood'], pal = { c: pp[0], B: pp[1], h: '#6b4420' };
+    g.save(); g.translate(x, y); g.rotate(ang); g.imageSmoothingEnabled = false; const u = 2.7 * (sz || 1), pp = PPAL[tier || DG.tier || 'wood'], pal = { c: pp[0], B: pp[1], h: '#6b4420' };
     PICK.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '.') return; g.fillStyle = pal[ch]; g.fillRect((i - 6) * u, (j - 6) * u, u + 0.6, u + 0.6); })); g.restore();
   }
   const INTRO = 5200;
@@ -250,7 +253,7 @@
     if (sc && ms < -900) DG.pk = null;
     const pk = DG.pk || (DG.pk = { x: W / 2, y: -groundY - 60, vx: 1.2, vy: 0, a: 0.6, va: 0.2, t: Date.now() });
     const tnow = Date.now(), dt = Math.min(3, (tnow - pk.t) / 16.7); pk.t = tnow;
-    const targetY = Math.max(0, ms) / 450 * L, rad = 17 * (DG.psize || 1);
+    const targetY = Math.max(0, ms) / 1000 * L, rad = 12.5 * (DG.psize || 1);
     if (sc && !done && ms >= -900) {
       const steps = Math.max(1, Math.round(dt));
       for (let k = 0; k < steps; k++) {
@@ -278,9 +281,10 @@
     }
     // ---- ore and upgrade blocks arrive exactly when the server says: they appear in front of the pick ----
     const place = (key, info, t) => {
-      let r = Math.max(2, Math.round(t / 450) + 2), c = 1 + Math.floor(rh(key.length * 7 + (+key.slice(1)) * 13 + (DG.seed || 0), 91) * (DG.COLS - 2));
+      let r = Math.max(2, Math.round(t / 1000) + 2), c = 1 + Math.floor(rh(key.length * 7 + (+key.slice(1)) * 13 + (DG.seed || 0), 91) * (DG.COLS - 2));
+      if (DG.lastPl && DG.lastPl.k === info.k && Math.abs(DG.lastPl.r - r) < 4 && Math.random() < 0.55) { r = DG.lastPl.r + (Math.random() < 0.5 ? 0 : 1); c = Math.min(DG.COLS - 2, Math.max(1, DG.lastPl.c + (Math.random() < 0.5 ? -1 : 1))); }
       for (let i = 0; i < 12 && (DG.oreAt[r * 16 + c] || isDecoy(r, c) || tileAt(r, c)[0] === 'tnt'); i++) { c = c % (DG.COLS - 2) + 1; if (i % 3 === 2) r++; }
-      DG.oreAt[r * 16 + c] = { ...info, t, due: t + 2600 }; DG.sp.add(key);
+      DG.oreAt[r * 16 + c] = { ...info, t, due: t + 2600 }; DG.lastPl = { k: info.k, r, c }; DG.sp.add(key);
     };
     if (sc && !(done && !autoEnd)) {
       (sc.ore || []).forEach((e, i) => { if (!DG.sp.has('o' + i)) place('o' + i, { k: e.k, inc: e.inc }, e.t); });
@@ -305,13 +309,12 @@
     const S = !sc ? 0 : done ? (sc.final != null ? sc.final : 0) : (sc.ore || []).reduce((a, e) => (e.t <= ms ? a + e.inc : a), 0);
 
     g.save(); if (DG.shake > 0) { g.translate((Math.random() - 0.5) * DG.shake, (Math.random() - 0.5) * DG.shake); DG.shake *= 0.9; if (DG.shake < 0.3) DG.shake = 0; }
-    g.drawImage(backdrop(W, H), 0, 0);
+    g.drawImage(backdrop(W, H), 0, 0); g.fillStyle = 'rgba(40,170,150,.2)'; g.fillRect(0, 0, W, H);
     for (let ly = Math.max(0, Math.floor((cam - groundY) / L) - 1); ly < 700; ly++) {
       const y = cellY(ly); if (y > H) break; if (y < -L) continue;
       for (let c = 0; c < DG.COLS; c++) {
         if (DG.holes.has(ly * 16 + c)) continue;
         const o = DG.oreAt[ly * 16 + c] || (isDecoy(ly, c) ? { k: 'up' } : null), [t, sd] = o ? [o.k, 0] : tileAt(ly, c); g.drawImage(getTile(t, sd), Math.round(c * L), y, Math.ceil(L), Math.ceil(L));
-        if (o || t === 'tnt') { g.strokeStyle = o ? (o.k === 'up' ? '#6ae6ff' : OREK[o.k]) : '#ff6a4a'; g.globalAlpha = 0.55 + 0.35 * Math.sin(Date.now() / 220 + c); g.lineWidth = 2; g.strokeRect(Math.round(c * L) + 1, y + 1, Math.ceil(L) - 2, Math.ceil(L) - 2); g.globalAlpha = 1; }
       }
     }
     let px = pk.x, py = groundY + pk.y - cam, ang = pk.a;
