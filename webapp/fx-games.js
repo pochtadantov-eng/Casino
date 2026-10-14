@@ -251,7 +251,7 @@
     const ccx = (c) => c * L + L / 2, cellY = (ly) => Math.round(groundY + ly * L - cam);
     // ---- the pick is a falling object: gravity, bounces off what it hits, breaks the blocks it touches ----
     if (sc && ms < -900) DG.pk = null;
-    const pk = DG.pk || (DG.pk = { x: W / 2, y: -groundY - 60, vx: 1.2, vy: 0, a: 0.6, va: 0.2, t: Date.now() });
+    const pk = DG.pk || (DG.pk = { x: W / 2, y: ms > 3000 ? (ms / 1000 - 2) * L : -groundY - 60, vx: 1.2, vy: 0, a: 0.6, va: 0.2, t: Date.now() });
     const tnow = Date.now(), dt = Math.min(3, (tnow - pk.t) / 16.7); pk.t = tnow;
     const targetY = Math.max(0, ms) / 1000 * L, rad = 12.5 * (DG.psize || 1);
     if (sc && !done && ms >= -900) {
@@ -287,8 +287,8 @@
       DG.oreAt[r * 16 + c] = { ...info, t, due: t + 2600 }; DG.lastPl = { k: info.k, r, c }; DG.sp.add(key);
     };
     if (sc && !(done && !autoEnd)) {
-      (sc.ore || []).forEach((e, i) => { if (!DG.sp.has('o' + i)) place('o' + i, { k: e.k, inc: e.inc }, e.t); });
-      (sc.ups || []).forEach((u, i) => { if (!DG.sp.has('u' + i)) place('u' + i, { k: 'up' }, u); });
+      (sc.ore || []).forEach((e, i) => { if (DG.sp.has('o' + i)) return; if (e.t + 2600 < ms) { DG.sp.add('o' + i); return; } place('o' + i, { k: e.k, inc: e.inc }, e.t); });
+      (sc.ups || []).forEach((u, i) => { if (DG.sp.has('u' + i)) return; if (u + 2600 < ms) { DG.sp.add('u' + i); DG.psize = Math.min(1.5, DG.psize + 0.15); return; } place('u' + i, { k: 'up' }, u); });
     }
     if (sc && !done && ms >= 0) {
       // the pick is drawn towards the next valuable block that is just below it, and shoved away from walls and corners
@@ -354,7 +354,7 @@
     g.textAlign = 'left'; g.font = '900 24px monospace'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(mTxt, bx + 42, by + 29); g.fillStyle = done ? '#6dffb0' : '#ffd84a'; g.fillText(mTxt, bx + 40, by + 27);
     g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(bx, by + 44, bw, 12); g.fillStyle = hp > 50 ? '#3fd16a' : hp > 20 ? '#f0a53a' : '#e04a4a'; g.fillRect(bx + 1, by + 45, (bw - 2) * hp / 100, 10); g.fillStyle = '#fff'; g.font = '700 10px monospace'; g.textAlign = 'center'; g.fillText('❤ ' + hp + '/100', W / 2, by + 54);
     g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(W / 2 - 50, H - 22, 100, 16); g.fillStyle = '#fff'; g.font = '700 11px monospace'; g.fillText('глубина ' + (DG.depth || 0) + ' м', W / 2, H - 10);
-    if (sc?.status === 'active' && state.game === 'dig') { const c = $('#cash'); c.disabled = ms < 0; c.textContent = ms < 0 ? 'Ставка принята' : 'Забрать ' + Math.floor(state.round.bet * S) + ' ⭐'; }
+    if (sc?.status === 'active' && state.game === 'dig') { const c = $('#cash'); c.disabled = true; c.textContent = ms < 0 ? 'Ставка принята' : 'Добыча идёт · ' + Math.floor(state.round.bet * S) + ' ⭐'; }
     if (state.game === 'dig' && $('#view-game').classList.contains('on')) DG.raf = requestAnimationFrame(digDraw);
   }
   async function digPoll() {
