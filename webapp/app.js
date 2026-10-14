@@ -380,7 +380,7 @@ async function waitCredit(amount) {
   el.remove(); toast('Платёж обрабатывается, баланс обновится в течение минуты. Если нет — напишите /paysupport боту.', 'wait', 6000);
 }
 function toast(text, kind = 'ok', ms = 3200) {
-  const el = document.createElement('div'); el.className = 'ptoast ' + kind; el.textContent = text; document.body.append(el);
+  const el = document.createElement('div'); el.className = 'ptoast ' + kind; { const [h, sub] = String(text).split('|'); el.innerHTML = `<i class="pt-ico">${kind === 'ok' ? '✓' : kind === 'wait' ? '⏳' : '!'}</i><span><b></b>${sub ? '<small></small>' : ''}</span>`; el.querySelector('b').textContent = h; if (sub) el.querySelector('small').textContent = sub; } document.body.append(el);
   requestAnimationFrame(() => el.classList.add('on')); if (ms) setTimeout(() => { el.classList.remove('on'); setTimeout(() => el.remove(), 300); }, ms);
   return el;
 }
@@ -388,43 +388,47 @@ $('#btn-deposit').onclick = openDeposit;
 $('#p-deposit').onclick = openDeposit;
 
 function openWithdraw() {
-  if (document.querySelector('.paypage')) return;
-  const min = state.limits.minWithdraw || 100, bal = state.balance;
-  const star = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2l3 6.5 7 .9-5.2 4.8 1.4 7L12 17.8 5.8 21.2l1.4-7L2 9.4l7-.9z" fill="currentColor"/></svg>';
-  const d = document.createElement('div'); d.className = 'paypage';
-  d.innerHTML = `<header class="pp-head"><button class="pp-back" id="wd-back" aria-label="Назад">‹</button><h2>Вывод</h2><div class="pp-bal"><b>${bal}</b> ⭐</div></header>
-    <div class="pp-body">
-      <div class="pp-hero"><label for="wd-in">Сколько Stars вывести</label>
-        <div class="pp-row"><button class="pp-step" id="wd-minus" aria-label="Меньше">−</button><div class="pp-field"><input id="wd-in" type="number" inputmode="numeric" min="${min}" max="${bal}" value="${Math.max(min, Math.min(bal, 500))}"><span>${star}</span></div><button class="pp-step" id="wd-plus" aria-label="Больше">+</button></div>
-        <p class="pp-eq" id="wd-eq"></p>
-        <p class="pp-range" id="wd-range">минимум ${min} ⭐, доступно ${bal} ⭐</p></div>
-      <div class="pp-chips pp-chips3"><button class="pp-chip" data-p="25"><b>25%</b></button><button class="pp-chip" data-p="50"><b>50%</b></button><button class="pp-chip" data-p="100"><b>Всё</b></button></div>
-      <div class="pp-method"><div class="pp-mico">${star}</div><div class="pp-mt"><b>Telegram Stars</b><span>Заявка на вывод звёзд с баланса</span></div><i class="pp-radio"></i></div>
-      <div class="pp-sum"><div><span>К выводу</span><b id="wd-get">—</b></div><div><span>Останется на балансе</span><b id="wd-after">—</b></div></div>
-      <ul class="pp-notes"><li>Заявка уходит на проверку, звёзды списываются с баланса сразу.</li><li>Статус заявки виден в профиле, в разделе «Пополнения и выводы».</li></ul>
-      <p class="pp-err" id="wd-err"></p>
+  if (document.querySelector('.gpage')) return;
+  const min = state.limits.minWithdraw || 100, bal = Math.max(0, state.balance);
+  const TIERS = [{ lo: 0, to: 5000, n: 'Стандартный', c: '#2bd96b' }, { lo: 5000, to: 10000, n: 'Средний', c: '#3d9bff' }, { lo: 10000, to: 50000, n: 'Повышенный', c: '#ff4fd8' }, { lo: 50000, to: 100000, n: 'Крупный', c: '#ff3b3b' }, { lo: 100000, to: 1e12, n: 'Богач', c: '#ffc933' }];
+  const tierOf = (x) => TIERS.find((t) => x <= t.to) || TIERS[4];
+  const d = document.createElement('div'); d.className = 'gpage wdpage';
+  d.innerHTML = `<div class="gp-top"><button class="gp-back" id="wd-back">‹</button><h3>Вывод звёзд</h3><span class="gp-bal"><b>${bal}</b> ⭐</span></div>
+    <div class="wd-body">
+      <div class="wd-hero"><span class="gs-tier" id="wd-tier"></span>
+        <div class="wd-amt"><input id="wd-in" type="number" inputmode="numeric" min="${min}" max="${bal}" placeholder="от ${min}"><span>⭐</span></div>
+        <p class="wd-eq" id="wd-eq"></p>
+        <input id="wd-rng" type="range" class="gp-rng" min="${min}" max="${Math.max(min + 1, bal)}" step="1">
+        <div class="wd-presets">${[25, 50, 75, 100].map((p) => `<button class="gs-chip" data-p="${p}">${p === 100 ? 'Всё' : p + '%'}</button>`).join('')}</div>
+      </div>
+      <div class="wd-ticket">
+        <div class="wd-row"><span>К выводу</span><b id="wd-get">—</b></div>
+        <div class="wd-row"><span>Останется на балансе</span><b id="wd-after">—</b></div>
+        <div class="wd-row"><span>Способ</span><b>Telegram Stars</b></div>
+        <div class="wd-row"><span>Проверка заявки</span><b>до 24 ч</b></div>
+      </div>
+      <p class="wd-note">Звёзды списываются сразу. Статус заявки виден в профиле, в разделе «Пополнения и выводы».</p>
     </div>
-    <footer class="pp-foot"><button class="pp-go" id="wd-go" disabled>Выберите сумму</button></footer>`;
-  document.body.append(d); document.body.classList.add('nopay'); requestAnimationFrame(() => d.classList.add('on'));
-  const inp = d.querySelector('#wd-in'), go = d.querySelector('#wd-go'), err = d.querySelector('#wd-err');
+    <div class="gp-bar"><p class="perr" id="wd-err"></p><button class="primary pay" id="wd-go" disabled>Введите сумму</button></div>`;
+  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
+  const inp = d.querySelector('#wd-in'), rng = d.querySelector('#wd-rng'), go = d.querySelector('#wd-go'), err = d.querySelector('#wd-err');
   const amount = () => Math.floor(Number(inp.value) || 0), valid = (x) => x >= min && x <= state.balance;
-  const step = (x) => (x < 500 ? 50 : x < 2000 ? 250 : x < 10000 ? 1000 : 5000);
   const refresh = () => {
-    const x = amount(), ok = valid(x);
+    const x = amount(), ok = valid(x), t = tierOf(x || min);
+    d.style.setProperty('--tc', t.c); d.querySelector('#wd-tier').textContent = t.n + ' вывод'; d.querySelector('#wd-tier').style.setProperty('--tc', t.c);
+    rng.style.setProperty('--p', ((Math.min(Math.max(x, rng.min), rng.max) - rng.min) / (rng.max - rng.min) * 100) + '%'); if (ok) rng.value = x;
     d.querySelector('#wd-get').textContent = ok ? x + ' ⭐' : '—'; d.querySelector('#wd-after').textContent = ok ? (state.balance - x) + ' ⭐' : '—';
-    d.querySelector('#wd-eq').textContent = ok && window.Market ? window.Market.line(x) : '';
-    d.querySelector('#wd-range').classList.toggle('bad', !!x && !ok); err.textContent = '';
-    go.disabled = !ok; go.textContent = ok ? `Вывести ${x} ⭐` : state.balance < min ? `Нужно минимум ${min} ⭐ на балансе` : `Введите сумму от ${min} до ${state.balance}`;
+    d.querySelector('#wd-eq').textContent = ok && window.Market ? window.Market.line(x) : `минимум ${min} ⭐`; err.textContent = '';
+    go.disabled = !ok; go.textContent = ok ? `Вывести ${x} ⭐` : state.balance < min ? `Нужно минимум ${min} ⭐ на балансе` : `Сумма от ${min} до ${state.balance}`;
   };
-  d.querySelectorAll('.pp-chip').forEach((c) => c.onclick = () => { inp.value = Math.max(min, Math.floor(state.balance * Number(c.dataset.p) / 100)); refresh(); });
-  d.querySelector('#wd-minus').onclick = () => { inp.value = Math.max(min, amount() - step(amount() - 1)); refresh(); };
-  d.querySelector('#wd-plus').onclick = () => { inp.value = Math.min(state.balance, amount() + step(amount())); refresh(); };
-  inp.oninput = refresh; refresh();
-  const close = () => { d.classList.remove('on'); document.body.classList.remove('nopay'); setTimeout(() => d.remove(), 260); };
+  rng.oninput = () => { inp.value = rng.value; refresh(); };
+  d.querySelectorAll('.gs-chip').forEach((c) => c.onclick = () => { inp.value = Math.max(min, Math.floor(state.balance * Number(c.dataset.p) / 100)); refresh(); });
+  inp.oninput = refresh; inp.value = Math.min(state.balance, Math.max(min, Math.round(state.balance / 4))) || ''; refresh();
+  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 260); };
   d.querySelector('#wd-back').onclick = close;
   go.onclick = async () => {
     const x = amount(); if (!valid(x)) return; go.disabled = true; go.textContent = 'Отправляем заявку…';
-    try { const j = await api('withdraw', { amount: x }); setBalance(j.balance); close(); toast(`Заявка #${j.id} создана, ожидает проверки`, 'ok', 4200); if (typeof loadCash === 'function') loadCash(); }
+    try { const j = await api('withdraw', { amount: x }); setBalance(j.balance); close(); toast(`Заявка #${j.id} создана|${x} ⭐ ушли на проверку`, 'ok', 4200); if (typeof loadCash === 'function') loadCash(); }
     catch (e) { refresh(); err.textContent = e.message; }
   };
 }
@@ -549,7 +553,7 @@ async function openGifts() {
   else setTier(0);
   go.onclick = async () => {
     if (!sel) return; go.disabled = true; go.textContent = 'Отправляем…';
-    try { const r = await api('gifts/send', { giftId: sel.id }); setBalance(r.balance); close(); toast(`Подарок ${sel.name || sel.emoji} в обработке: придёт в чат с ботом через ~${r.etaSec || 15} с`, 'wait', 5200); if (typeof loadCash === 'function') { loadCash(); let n = 0; const iv = setInterval(() => { loadCash(); if (++n > 12) clearInterval(iv); }, 4000); } window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); }
+    try { const r = await api('gifts/send', { giftId: sel.id }); setBalance(r.balance); close(); toast(`${sel.name || 'Подарок'} в обработке|Придёт в чат с ботом через ~${r.etaSec || 15} с`, 'wait', 5200); if (typeof loadCash === 'function') { loadCash(); let n = 0; const iv = setInterval(() => { loadCash(); if (++n > 12) clearInterval(iv); }, 4000); } window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); }
     catch (e) { err.textContent = e.message; paint(); }
   };
 }
