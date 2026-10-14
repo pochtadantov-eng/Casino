@@ -1,0 +1,20 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.3 [39m[90m/home/runner/work/Casino/Casino[39m
+
+ [32m✓[39m test/engines.spec.ts [2m([22m[2m34 tests[22m[2m)[22m[33m 6016[2mms[22m[39m
+   [32m✓[39m rocket [2m(4)[22m
+     [33m[2m✓[22m[39m RTP of fixed cashout is ~92%[33m 686[2mms[22m[39m
+   [32m✓[39m mines [2m(3)[22m
+     [33m[2m✓[22m[39m RTP of "open 3 tiles then cash out" is ~85% (Mines has a 15% edge)[33m 1941[2mms[22m[39m
+   [32m✓[39m seagull [2m(2)[22m
+     [33m[2m✓[22m[39m RTP of "go 2 steps then cash out" is ~92%[33m 1362[2mms[22m[39m
+   [32m✓[39m rocket shared rounds [2m(3)[22m
+     [33m[2m✓[22m[39m RTP of cashing out at 2x is ~92%[33m 305[2mms[22m[39m
+   [32m✓[39m owner test luck [2m(2)[22m
+     [33m[2m✓[22m[39m luck 100 always wins, -100 never, 0 is the fair game[33m 1439[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m34 passed[39m[22m[90m (34)[39m
+[2m   Start at [22m 18:14:28
+[2m   Duration [22m 6.33s[2m (tests 97%, transform 2%, import 1%)[22m
+

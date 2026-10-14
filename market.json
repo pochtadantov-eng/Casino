@@ -1,0 +1,64 @@
+{
+ "rates": {
+  "tonUsd": 1.36,
+  "tonRub": 113.36,
+  "starTon": 0.01108,
+  "starUsd": 0.015,
+  "updatedAt": 1792001676228,
+  "stale": false
+ },
+ "hexpot-10348": {
+  "slug": "hexpot-10348",
+  "collection": "hexpot",
+  "name": "Hex Pot #10348",
+  "description": "An exclusive Hex Pot with the appearance Violet Veil on a English Violet background with Baphomet icons.",
+  "model": "Violet Veil",
+  "backdrop": "English Violet",
+  "symbol": "Baphomet",
+  "image": "https://nft.fragment.com/gift/hexpot-10348.webp",
+  "lottie": "/market/gift/hexpot-10348/lottie",
+  "floor": {
+   "ton": 5,
+   "usd": 6.800000000000001,
+   "rub": 566.8,
+   "stars": 451
+  },
+  "lastSold": {
+   "ton": 5,
+   "usd": 6.800000000000001,
+   "rub": 566.8,
+   "stars": 451
+  },
+  "approx": true,
+  "stale": false,
+  "updatedAt": 1792001676936
+ },
+ "plushpepe-1": {
+  "slug": "plushpepe-1",
+  "collection": "plushpepe",
+  "name": "Plush Pepe #1",
+  "description": "An exclusive Plush Pepe with the appearance Pumpkin on a Onyx Black background with Illuminati icons.",
+  "model": "Pumpkin",
+  "backdrop": "Onyx Black",
+  "symbol": "Illuminati",
+  "image": "https://nft.fragment.com/gift/plushpepe-1.webp",
+  "lottie": "/market/gift/plushpepe-1/lottie",
+  "floor": {
+   "ton": 6995,
+   "usd": 9513.2,
+   "rub": 792953.2,
+   "stars": 631318
+  },
+  "lastSold": {
+   "ton": 1320,
+   "usd": 1795.2,
+   "rub": 149635.2,
+   "stars": 119134
+  },
+  "approx": true,
+  "stale": false,
+  "updatedAt": 1792001677377
+ },
+ "bad slug!": "ERR Error: bad slug",
+ "lottieBytes": 344382
+}
