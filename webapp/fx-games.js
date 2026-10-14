@@ -189,11 +189,11 @@
   const tileAt = (ly, c) => {
     if (c === 0 || c === DG.COLS - 1) return ['bed', (ly + c) % 3];
     if (ly === 0) return ['grass', c % 3];
-    const deep = ly > 26, sd = (ly * 3 + c) % 3, sp = rh(ly * 11 + c + (DG.seed || 0), c * 5 + ly);
-    if (ly >= 3 && sp < 0.028) return ['tnt', 0];
-    if (ly >= 6 && sp > 0.987) return ['up', 0];
+    const deep = ly > 26, sd = (ly * 3 + c) % 3, sp = rh(ly * 131 + c * 17 + (DG.seed || 0), ly * 7 + c * 29 + 5);
+    if (ly >= 3 && sp < 0.012) return ['tnt', 0];
+    if (ly >= 6 && sp > 0.991) return ['up', 0];
     if (ly < 3) return ['dirt', sd];
-    const one = rh(ly * 7 + c + (DG.seed || 0), c * 13 + ly);
+    const one = rh(ly * 53 + c * 19 + (DG.seed || 0), ly * 3 + c * 41 + 9);
     let acc = 0; for (let i = ORES.length - 1; i >= 0; i--) { const [k, p, from] = ORES[i]; if (ly < from) continue; acc += p; if (one < acc) return [deep ? k + '_d' : k, sd]; }
     return [deep ? 'deep' : 'cobble', sd];
   };
@@ -210,7 +210,7 @@
   // ---- wooden pickaxe sprite (12x12), roughly one block in size ----
   const PICK = ['....cccc....', '..ccBBBBcc..', '.cBB....BBc.', 'cBB..hh..BBc', 'cB..hhh...Bc', 'c...hh.....c', '....hh......', '....hh......', '...hh.......', '...hh.......', '..hh........', '..hh........'];
   function drawPick(g, x, y, ang, sz) {
-    g.save(); g.translate(x, y); g.rotate(ang); g.imageSmoothingEnabled = false; const u = 3.1 * (sz || 1), pal = { c: '#7a5326', B: '#c99a56', h: '#6b4420' };
+    g.save(); g.translate(x, y); g.rotate(ang); g.imageSmoothingEnabled = false; const u = 4.4 * (sz || 1), pal = { c: '#7a5326', B: '#c99a56', h: '#6b4420' };
     PICK.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '.') return; g.fillStyle = pal[ch]; g.fillRect((i - 6) * u, (j - 9) * u, u + 0.6, u + 0.6); })); g.restore();
   }
   OPTS.dig = () => '';
@@ -246,9 +246,8 @@
       for (let ly = (DG.lastLayer || 0); ly < broken; ly++) {
         const pcx = pickX(ly + 0.5, L), cc = Math.min(DG.COLS - 2, Math.max(1, Math.round((pcx - L / 2) / L)));
         const todo = [];
-        for (let dc = -1; dc <= 1; dc++) { if (dc === 0 || Math.random() < 0.85) todo.push([ly, cc + dc]); }
-        if (Math.random() < 0.8) todo.push([ly + 1, cc]);
-        if (Math.random() < 0.4) todo.push([ly + 1, cc + (Math.random() < 0.5 ? -1 : 1)]);
+        for (let dc = -2; dc <= 2; dc++) { if (Math.abs(dc) <= 1 || Math.random() < 0.6) todo.push([ly, cc + dc]); }
+        for (let dc = -1; dc <= 1; dc++) { if (dc === 0 || Math.random() < 0.7) todo.push([ly + 1, cc + dc]); }
         let n = 0;
         todo.forEach(([yy, c2]) => {
           if (c2 < 1 || c2 > DG.COLS - 2 || DG.holes.has(yy * 16 + c2)) return;
@@ -284,7 +283,7 @@
     g.fillStyle = '#f5c518'; g.beginPath(); g.arc(bx + 20, by + 19, 12, 0, 7); g.fill(); g.fillStyle = '#7a4a1e'; g.beginPath(); g.arc(bx + 20, by + 19, 5, 0, 7); g.fill();
     const col = lost ? '#ff6b6b' : sc?.status === 'won' ? '#6dffb0' : '#ffd84a'; g.textAlign = 'left'; g.font = '900 24px monospace'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText('x' + (Math.floor(mCur * 100) / 100).toFixed(2), bx + 42, by + 29); g.fillStyle = col; g.fillText('x' + (Math.floor(mCur * 100) / 100).toFixed(2), bx + 40, by + 27);
     const hp = DG.hp == null ? 100 : DG.hp; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(bx, by + 44, bw, 12); g.fillStyle = hp > 50 ? '#3fd16a' : hp > 20 ? '#f0a53a' : '#e04a4a'; g.fillRect(bx + 1, by + 45, (bw - 2) * hp / 100, 10); g.fillStyle = '#fff'; g.font = '700 10px monospace'; g.textAlign = 'center'; g.fillText('❤ ' + hp + '/100', W / 2, by + 54);
-    g.textAlign = 'center'; g.font = '700 11px monospace'; g.fillStyle = '#fff'; g.fillText('глубина ' + cur + ' м', W / 2, H - 8);
+    g.textAlign = 'center'; g.font = '700 11px monospace'; g.fillStyle = '#fff'; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(W / 2 - 50, H - 22, 100, 16); g.fillStyle = '#fff'; g.fillText('глубина ' + cur + ' м', W / 2, H - 10);
     if (sc?.status === 'active' && state.game === 'dig') { const c = $('#cash'); c.disabled = ms < 0; c.textContent = ms < 0 ? 'Ставка принята' : 'Забрать ' + Math.floor(state.round.bet * mCur) + ' ⭐'; }
     if (state.game === 'dig' && $('#view-game').classList.contains('on')) DG.raf = requestAnimationFrame(digDraw);
   }
