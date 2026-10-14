@@ -432,3 +432,31 @@ tg-star.stz{display:inline-block;margin:0;padding:0;border:0;font-size:inherit;l
 .rcard.gift b{font-size:11px;max-width:94px}
 .rcard.gift span{font:800 13px/1 Onest,sans-serif}
 .rcard.gift span tg-star.stz{width:15px;height:15px}
+
+/* ===== "Вывести подарком" sheet ===== */
+.giftsheet .pbox{padding-bottom:18px}
+.gs-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gs-head h3{margin:0;font:800 20px var(--disp);color:var(--fg)}
+.gs-bal{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font:800 13px Onest,sans-serif;color:var(--lime)}
+.giftsheet .ggrid{grid-template-columns:1fr 1fr;gap:10px;max-height:50vh;padding:2px 2px 6px}
+.giftsheet .gcard{align-items:stretch;gap:3px;padding:8px 8px 10px;border-radius:20px;text-align:left;background:rgba(255,255,255,.045);border:1.5px solid var(--line)}
+.giftsheet .gcard .gem{display:block;line-height:0;font-size:56px;text-align:center;margin-bottom:6px}
+.giftsheet .gcard .gem .fg{width:100%;height:auto;aspect-ratio:1;border-radius:14px}
+.giftsheet .gcard .gname{font:800 13px/1.15 Onest,sans-serif;color:var(--fg)}
+.giftsheet .gcard .gmodel{font:600 11px/1.2 Onest,sans-serif;color:var(--hint)}
+.giftsheet .gcard b{display:flex;align-items:center;gap:5px;margin-top:4px;font:800 15px/1 var(--disp);color:var(--lime)}
+.giftsheet .gcard .gmx{font:600 10.5px/1.2 Onest,sans-serif;color:var(--hint)}
+.giftsheet .gcard.on{border-color:var(--lime);background:rgba(198,255,61,.1);box-shadow:0 0 22px rgba(198,255,61,.25)}
+.giftsheet .pay{height:56px;border-radius:18px;font:800 15px var(--disp);background:var(--lime);color:#0A1204;box-shadow:0 0 28px rgba(198,255,61,.3)}
+.giftsheet .pay:disabled{background:rgba(255,255,255,.1);color:var(--hint);box-shadow:none}
+
+/* ===== Tower screen ===== */
+#view-game:has(.towerstage) .gamehead{align-items:center;gap:12px}
+#view-game:has(.towerstage) .gamehead h2{font:800 22px var(--disp);background:linear-gradient(90deg,#FFB347,#FFD60A);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.towerstage{padding:0!important;border-radius:30px!important;border:1.5px solid rgba(255,158,61,.6);background:#0d0b18;box-shadow:0 0 44px rgba(255,158,61,.22),inset 0 0 0 1px rgba(255,255,255,.04);overflow:hidden}
+.towerstage .cv{border-radius:inherit}
+.ctrl[data-game="tower"]{left:50%;width:calc(100% - 24px);max-width:496px;bottom:10px;border-radius:28px;padding:14px 14px 14px;background:rgba(16,13,30,.94);border:1px solid rgba(255,158,61,.35);box-shadow:0 14px 40px rgba(0,0,0,.55),0 0 30px rgba(255,158,61,.14);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.ctrl[data-game="tower"] .betbox .bval{border-color:#FF9E3D}
+.ctrl[data-game="tower"] .chip.on{background:#FFB347;color:#1A0E00;box-shadow:0 0 18px rgba(255,158,61,.4)}
+.ctrl[data-game="tower"] .chip.alt{background:rgba(255,158,61,.14);color:#FFB347}
+.ctrl[data-game="tower"] #go{background:linear-gradient(135deg,#FFB347,#FFD60A);color:#1A0E00;box-shadow:0 0 30px rgba(255,180,50,.4)}

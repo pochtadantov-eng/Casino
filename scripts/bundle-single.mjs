@@ -10,7 +10,8 @@ const assets = walk(dir).filter(([r]) => MIME[extname(r)] && /^(img|fonts)\//.te
 const inlineAssets = (text) => { text = text.replace(/((?:img|fonts)\/[\w./-]+|rocket\.svg)\?v=\w+/g, '$1'); for (const [r, p] of assets) if (text.includes(r)) text = text.split(r).join(uri(p)); return text; };
 const strip = (u) => u.replace(/\?v=[^"']*$/, '');
 let html = readFileSync(join(dir, 'index.html'), 'utf8');
-html = html.replace('<head>', `<head><script>window.ROCKET_SRC="${uri(join(dir, 'rocket.svg'))}";</script>`);
+const I = (n) => uri(join(dir, 'img', n));
+html = html.replace('<head>', `<head><script>window.ROCKET_SRC="${uri(join(dir, 'rocket.svg'))}";window.WORKER_SRC="${I('worker.webp')}";window.BUILDER_SRC={body:"${I('builder_body.webp')}",arm:"${I('builder_arm.webp')}"};window.CARD_IMG=${JSON.stringify(Object.fromEntries(['house_0.webp', 'house_1.webp', 'house_2.webp', 'house_3.webp', 'house_4.webp', 'hook.webp'].map((n) => [n, I(n)])))};</script>`);
 html = html.replace(/<link rel="stylesheet" href="([^"]+)">/g, (m, h) => { try { return `<style>${inlineAssets(readFileSync(join(dir, strip(h)), 'utf8'))}</style>`; } catch { return m; } });
 html = html.replace(/<script src="([^"]+)"><\/script>/g, (m, s) => { if (/^https?:/.test(s)) return m; try { return `<script>${inlineAssets(readFileSync(join(dir, strip(s)), 'utf8')).replace(/<\/script/gi, '<\\/script')}</script>`; } catch { return m; } });
 html = inlineAssets(html);
