@@ -36,22 +36,37 @@ await pool(colls, async (c) => {
 colls = colls.filter((c) => c.floor);
 console.log('with floor', colls.length, colls.slice(0, 5).map((c) => c.slug + ':' + c.floor).join(' '));
 
-// pass 2: per-model floors (cheapest real listing per model)
+// pass 2: real per-item ask prices (asc + desc + recently listed), then attributes and a thumbnail for a spread of items
+const PER = +process.env.PER || 12;
 const order = colls.sort((a, b) => a.floor - b.floor);
 for (const c of order) {
-  if (left() < 60e3) { console.log('budget reached before', c.slug); break; }
-  const html = c._html || (await get(`https://fragment.com/gifts/${c.slug}`));
-  const models = attrs(html || '', 'model').sort((a, b) => a.count - b.count).slice(0, MAXMODELS);
-  const rec = { slug: c.slug, name: c.plural, floor: c.floor, models: [] };
-  await pool(models, async (m) => {
-    if (left() < 30e3) return;
-    const h = await get(`https://fragment.com/gifts/${c.slug}?attr%5BModel%5D=${encodeURIComponent(m.name)}&sort=price_asc&filter=sale`);
-    const items = grid(h, c.slug).sort((a, b) => a.ton - b.ton).slice(0, 5); if (!items.length) return;
-    let pick = null;
-    for (const it of items) { const j = await get(`https://nft.fragment.com/gift/${c.slug}-${it.n}.json`, 'json'); if (!j) continue; const at = (t) => (j.attributes || []).find((a) => a.trait_type === t)?.value || ''; const info = { n: it.n, ton: it.ton, model: at('Model'), backdrop: at('Backdrop'), symbol: at('Symbol') }; if (info.model && info.model !== m.name) continue; if (!pick) pick = info; if (!DARK.test(info.backdrop)) { pick = info; break; } }
-    if (pick) rec.models.push({ ...pick, model: m.name, count: m.count, minTon: items[0].ton });
+  if (left() < 45e3) { console.log('budget reached before', c.slug); break; }
+  const price = new Map();
+  for (const q of ['?sort=price_asc&filter=sale', '?sort=price_desc&filter=sale', '?sort=listed&filter=sale']) {
+    const h = q.includes('asc') && c._html ? c._html : await get(`https://fragment.com/gifts/${c.slug}${q}`);
+    for (const x of grid(h, c.slug)) if (!price.has(x.n)) price.set(x.n, x.ton);
+  }
+  const all = [...price].map(([n, ton]) => ({ n, ton })).sort((a, b) => a.ton - b.ton);
+  const pickI = new Set(); for (let k = 0; k < Math.min(PER, all.length); k++) pickI.add(Math.round(k * (all.length - 1) / Math.max(1, Math.min(PER, all.length) - 1)));
+  const chosen = [...pickI].map((i) => all[i]);
+  const rec = { slug: c.slug, name: c.plural, floor: c.floor, listed: all.length, max: all.length ? all[all.length - 1].ton : null, items: [] };
+  await pool(chosen, async (it) => {
+    if (left() < 20e3) return;
+    const j = await get(`https://nft.fragment.com/gift/${c.slug}-${it.n}.json`, 'json'); if (!j) return;
+    const at = (t) => (j.attributes || []).find((a) => a.trait_type === t)?.value || '';
+    const o = { n: it.n, ton: it.ton, model: at('Model'), backdrop: at('Backdrop'), symbol: at('Symbol') };
+    try {
+      const buf = await get(`https://nft.fragment.com/gift/${c.slug}-${it.n}.webp`, 'buf'); if (buf && sharp) {
+        const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+        const q = Math.floor(info.width * 0.08), px = (x, y) => { const f = (y * info.width + x) * 4; return [data[f], data[f + 1], data[f + 2]]; };
+        const cs = [px(q, q), px(info.width - 1 - q, q), px(q, info.height - 1 - q), px(info.width - 1 - q, info.height - 1 - q)];
+        o.c = [0, 1, 2].map((i) => Math.round(cs.reduce((s, p) => s + p[i], 0) / 4)); o.lum = Math.round(0.2126 * o.c[0] + 0.7152 * o.c[1] + 0.0722 * o.c[2]);
+        o.img = 'data:image/webp;base64,' + (await sharp(buf).resize(120).webp({ quality: 70 }).toBuffer()).toString('base64');
+      }
+    } catch (e) { o.imgErr = String(e).slice(0, 60); }
+    rec.items.push(o);
   }, 8);
-  console.log(c.slug, 'floor', c.floor, 'models', models.length, 'priced', rec.models.length, Math.round((Date.now() - T0) / 1000) + 's');
+  console.log(c.slug, 'floor', c.floor, 'listed', all.length, 'max', rec.max, 'items', rec.items.length, Math.round((Date.now() - T0) / 1000) + 's');
   result.collections.push(rec);
   writeFileSync(out + '/market.json', JSON.stringify(result));
 }

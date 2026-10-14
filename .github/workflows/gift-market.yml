@@ -15,15 +15,15 @@ permissions:
 jobs:
   market:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - env:
-          COLLS: ${{ github.event.inputs.colls || 'lolpop,hexpot,plushpepe' }}
-          MAXMODELS: 14
-          BUDGET_MIN: 8
+          COLLS: ${{ github.event.inputs.colls || '' }}
+          PER: 12
+          BUDGET_MIN: 14
         run: mkdir -p _gm/out && cd _gm && (npm init -y >/dev/null; npm i sharp 2>&1 | tail -2 > out/npm.log; cp ../scripts/gift-market.mjs . && node gift-market.mjs out 2>&1 | tee out/log.txt)
       - name: Publish to gift-market
         if: always()
