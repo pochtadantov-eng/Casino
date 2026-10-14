@@ -22,7 +22,7 @@
       if (r.payout > 0) { const el = document.querySelector('.resban'); if (el) { el.querySelector('b').textContent = 'ВОЗВРАТ'; el.querySelector('span').textContent = `+${r.payout} ⭐`; } }
     }
   };
-  Object.assign(RES_LOSS, { slot: 'МИМО', luck: 'ПУСТО', dig: 'ВЗРЫВ!', plinko: 'ПРОИГРЫШ' });
+  Object.assign(RES_LOSS, { slot: 'МИМО', luck: 'ПУСТО', dig: 'КИРКА СЛОМАНА', plinko: 'ПРОИГРЫШ' });
   const goText = (t) => { const g = $('#go'); if (g && !g.hidden) g.textContent = t; };
   const optClicks = (attr, key, redo) => document.querySelectorAll(`#opts [data-${attr}]`).forEach((b) => b.onclick = () => { state[key] = b.dataset[attr]; redo(); });
 
@@ -225,7 +225,7 @@
     const sk = g.createLinearGradient(0, 0, 0, groundY - cam + 4); sk.addColorStop(0, '#6fb0f2'); sk.addColorStop(1, '#cfe9ff'); g.fillStyle = sk; g.fillRect(0, 0, W, Math.max(0, groundY - cam + 2));
     g.fillStyle = '#fff'; [[40, 20, 46], [220, 44, 56]].forEach(([x, y, w]) => { const yy = y - cam * 0.3; g.fillRect(x, yy, w, 9); g.fillRect(x + 8, yy - 7, w - 18, 9); });
     const broken = sc && ms > 0 ? (lost ? Math.min(crashLayer, cur + (frac > 0.55 ? 1 : 0)) : cur + (frac > 0.55 ? 1 : 0)) : 0;
-    const tc = lost ? pathCol(crashLayer) : -1;
+    const tc = -1;
     for (let ly = 0; ly < 90; ly++) {
       const y = cellY(ly); if (y > H || y < -L) continue; const pc = pathCol(ly);
       for (let c = 0; c < DG.COLS; c++) {
@@ -233,9 +233,8 @@
         if (lost && boomT >= 0.4 && Math.abs(ly - crashLayer) <= 1 && Math.abs(c - tc) <= 1) { g.fillStyle = '#100f16'; g.fillRect(x, y, w, w); continue; }
         if (c === pc && ly < broken) { g.fillStyle = '#1d1b26'; g.fillRect(x, y, w, w); g.fillStyle = 'rgba(255,255,255,.04)'; g.fillRect(x, y, w, 3); continue; }
         if (DG.holes.has(ly * 16 + c)) { g.fillStyle = '#100f16'; g.fillRect(x, y, w, w); continue; }
-        const [t, sd] = (lost && ly === crashLayer && c === tc) ? ['tnt', 0] : (c === pc ? pathTile(ly) : tileAt(ly, c));
+        const [t, sd] = (c === pc ? pathTile(ly) : tileAt(ly, c));
         g.drawImage(getTile(t, sd), x, y, w, w);
-        if (lost && ly === crashLayer && c === tc && boomT < 0.4 && Math.floor((now - sc.lostAt) / 90) % 2) { g.fillStyle = 'rgba(255,255,255,.8)'; g.fillRect(x, y, w, w); }
         if (sc && ms > 0 && c === pc && ly === cur && !lost) { const k = Math.min(1, frac / 0.55); g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 2; g.beginPath(); const n = Math.ceil(k * 5), seg = [[0.5, 0.5, 0.2, 0.25], [0.5, 0.5, 0.8, 0.3], [0.5, 0.5, 0.3, 0.85], [0.2, 0.25, 0.05, 0.3], [0.8, 0.3, 0.95, 0.15]]; for (let i = 0; i < n; i++) { g.moveTo(x + seg[i][0] * w, y + seg[i][1] * w); g.lineTo(x + seg[i][2] * w, y + seg[i][3] * w); } g.stroke(); }
       }
     }
@@ -248,9 +247,11 @@
       px = ccx(prev) + (ccx(pathCol(cur)) - ccx(prev)) * ex;
       const kk = Math.min(1, frac / 0.55); py = ty(cur) - 2 - (frac < 0.55 ? Math.sin(kk * Math.PI) * 5 * 0 : 0);
       ang = frac < 0.55 ? -0.95 + 1.9 * kk * kk : 0.95 - 1.9 * ((frac - 0.55) / 0.45);
-      if (lost) { px = ccx(pathCol(Math.max(0, crashLayer - 1))) + (tc - pathCol(Math.max(0, crashLayer - 1))) * 0; px = ccx(tc); py = ty(crashLayer) - 2; ang = 0.2; }
+      if (lost) { px = ccx(pathCol(Math.max(0, crashLayer - 1))) + (boomT < 0.7 ? (Math.random() - 0.5) * 3 : 0); py = ty(crashLayer) - 2; ang = 0.2 + Math.min(1, boomT) * 0.5; }
     }
-    if (!(lost && boomT >= 0.4)) drawPick(g, px, py, ang, DG.psize);
+    if (lost) DG.hp = Math.max(0, Math.round((DG.hp0 || DG.hp) * (1 - Math.min(1, boomT / 0.7))));
+    if (lost && !DG.hp0) DG.hp0 = DG.hp;
+    if (!(lost && boomT >= 0.7)) drawPick(g, px, py, ang, DG.psize);
     const mCur = sc ? (lost ? sc.crash : sc.status === 'won' ? sc.cashedAt : Math.max(1, Math.exp(DG.growth * Math.max(0, ms)))) : 1;
     if (sc && ms > 0 && broken > (DG.lastLayer || 0)) {
       for (let ly = (DG.lastLayer || 0); ly < broken; ly++) {
@@ -271,10 +272,10 @@
       }
       DG.lastLayer = broken;
     }
-    if (lost && boomT >= 0.4 && !DG.boomed) {
-      DG.boomed = true; DG.shake = 20; const bx = ccx(tc), by = cellY(crashLayer) + L / 2;
-      for (let i = 0; i < 60; i++) { const a = Math.random() * 6.283, v = 2 + Math.random() * 7; DG.parts.push({ x: bx, y: by, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, c: ['#ff9a1f', '#ffd84a', '#c83030', '#555', '#ffffff'][i % 5], t: 0 }); }
-      DG.booms.push({ x: bx, y: by, t: 0 });
+    if (lost && boomT >= 0.7 && !DG.boomed) {
+      DG.boomed = true; DG.shake = 9; const bx = px, by = py;
+      for (let i = 0; i < 26; i++) DG.parts.push({ x: bx, y: by, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 5 - 1, c: ['#c99a56', '#7a5326', '#6b4420', '#8d8d8d'][i % 4], t: 0 });
+      DG.nums.push({ x: W / 2, y: by - 20, txt: 'КИРКА СЛОМАНА', col: '#ff6b6b', t: 0 });
     }
     DG.booms = DG.booms.filter((bm) => { bm.t++; const r = bm.t * 6, al = Math.max(0, 1 - bm.t / 22); if (al <= 0) return false; const gr = g.createRadialGradient(bm.x, bm.y, 0, bm.x, bm.y, Math.max(1, r)); gr.addColorStop(0, 'rgba(255,255,220,' + al + ')'); gr.addColorStop(0.4, 'rgba(255,170,40,' + al * 0.9 + ')'); gr.addColorStop(1, 'rgba(200,40,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(bm.x, bm.y, r, 0, 7); g.fill(); return true; });
     DG.parts = DG.parts.filter((p) => { p.t++; p.x += p.vx; p.y += p.vy; p.vy += 0.25; g.fillStyle = p.c; g.fillRect(p.x, p.y, 4, 4); return p.t < 40; });
@@ -285,7 +286,7 @@
     g.fillStyle = '#2f4a2c'; g.fillRect(bx - 4, by - 4, bw + 8, 46); g.fillStyle = '#4b3a28'; g.fillRect(bx, by, bw, 38);
     g.fillStyle = '#f5c518'; g.beginPath(); g.arc(bx + 20, by + 19, 12, 0, 7); g.fill(); g.fillStyle = '#7a4a1e'; g.beginPath(); g.arc(bx + 20, by + 19, 5, 0, 7); g.fill();
     const col = lost ? '#ff6b6b' : sc?.status === 'won' ? '#6dffb0' : '#ffd84a'; g.textAlign = 'left'; g.font = '900 24px monospace'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText('x' + (Math.floor(mCur * 100) / 100).toFixed(2), bx + 42, by + 29); g.fillStyle = col; g.fillText('x' + (Math.floor(mCur * 100) / 100).toFixed(2), bx + 40, by + 27);
-    const hp = DG.hp || 100; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(bx, by + 44, bw, 12); g.fillStyle = hp > 50 ? '#3fd16a' : hp > 20 ? '#f0a53a' : '#e04a4a'; g.fillRect(bx + 1, by + 45, (bw - 2) * hp / 100, 10); g.fillStyle = '#fff'; g.font = '700 10px monospace'; g.textAlign = 'center'; g.fillText('❤ ' + hp + '/100', W / 2, by + 54);
+    const hp = DG.hp == null ? 100 : DG.hp; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(bx, by + 44, bw, 12); g.fillStyle = hp > 50 ? '#3fd16a' : hp > 20 ? '#f0a53a' : '#e04a4a'; g.fillRect(bx + 1, by + 45, (bw - 2) * hp / 100, 10); g.fillStyle = '#fff'; g.font = '700 10px monospace'; g.textAlign = 'center'; g.fillText('❤ ' + hp + '/100', W / 2, by + 54);
     g.textAlign = 'center'; g.font = '700 11px monospace'; g.fillStyle = '#fff'; g.fillText('глубина ' + cur + ' м', W / 2, H - 8);
     if (sc?.status === 'active' && state.game === 'dig') { const c = $('#cash'); c.disabled = ms < 0; c.textContent = ms < 0 ? 'Ставка принята' : 'Забрать ' + Math.floor(state.round.bet * mCur) + ' ⭐'; }
     if (state.game === 'dig' && $('#view-game').classList.contains('on')) DG.raf = requestAnimationFrame(digDraw);
@@ -305,7 +306,7 @@
       DG.growth = v.growth; DG.off = v.serverNow - Date.now() + (state.rtt || 0) / 2;
       const was = DG.sc;
       DG.sc = { startedAt: v.startedAt, status: round.status, crash: v.crash, cashedAt: v.cashedAt, lostAt: was?.lostAt || (round.status === 'lost' ? Date.now() : 0) };
-      if (!was || was.id !== round.id) { DG.lastLayer = 0; DG.seed = (Math.random() * 1e5) | 0; DG.path = null; DG.boomed = false; DG.booms = []; DG.holes = new Set(); DG.hp = 100; DG.psize = 1; DG.parts = []; DG.sc.id = round.id; } else DG.sc.id = was.id;
+      if (!was || was.id !== round.id) { DG.lastLayer = 0; DG.seed = (Math.random() * 1e5) | 0; DG.path = null; DG.boomed = false; DG.booms = []; DG.holes = new Set(); DG.hp0 = 0; DG.hp = 100; DG.psize = 1; DG.parts = []; DG.sc.id = round.id; } else DG.sc.id = was.id;
     }
     cancelAnimationFrame(DG.raf); digDraw();
     if (round?.status === 'active') digPoll();
