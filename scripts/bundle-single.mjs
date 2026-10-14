@@ -6,10 +6,11 @@ const dir = process.argv[2] || '_site', outFile = process.argv[3] || 'tonup-demo
 const MIME = { '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.gif': 'image/gif' };
 const uri = (f) => `data:${MIME[extname(f)]};base64,${readFileSync(f).toString('base64')}`;
 const walk = (d, base = '') => readdirSync(d).flatMap((n) => { const p = join(d, n), r = base ? `${base}/${n}` : n; return statSync(p).isDirectory() ? walk(p, r) : [[r, p]]; });
-const assets = walk(dir).filter(([r]) => MIME[extname(r)] && /^(img|fonts)\//.test(r) || r === 'rocket.svg').sort((a, b) => b[0].length - a[0].length);
+const assets = walk(dir).filter(([r]) => MIME[extname(r)] && /^(img|fonts)\//.test(r)).sort((a, b) => b[0].length - a[0].length);
 const inlineAssets = (text) => { for (const [r, p] of assets) if (text.includes(r)) text = text.split(r).join(uri(p)); return text; };
 const strip = (u) => u.replace(/\?v=[^"']*$/, '');
 let html = readFileSync(join(dir, 'index.html'), 'utf8');
+html = html.replace('<head>', `<head><script>window.ROCKET_SRC="${uri(join(dir, 'rocket.svg'))}";</script>`);
 html = html.replace(/<link rel="stylesheet" href="([^"]+)">/g, (m, h) => { try { return `<style>${inlineAssets(readFileSync(join(dir, strip(h)), 'utf8'))}</style>`; } catch { return m; } });
 html = html.replace(/<script src="([^"]+)"><\/script>/g, (m, s) => { if (/^https?:/.test(s)) return m; try { return `<script>${inlineAssets(readFileSync(join(dir, strip(s)), 'utf8')).replace(/<\/script/gi, '<\\/script')}</script>`; } catch { return m; } });
 html = inlineAssets(html);
