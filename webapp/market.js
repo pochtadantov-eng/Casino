@@ -21,6 +21,7 @@
     loaded = true; refresh();
   }
   const conv = (stars) => ({ ton: stars * rates.starTon, usd: stars * rates.starUsd, rub: stars * rates.starUsd * (rates.tonRub / rates.tonUsd) });
+  const tonToStars = (ton) => Math.round(ton / rates.starTon);
   const line = (stars) => { const c = conv(stars); return `≈ ${tonStr(c.ton)} TON · $${nf(c.usd, c.usd < 10 ? 2 : 0)} · ₽${nf(c.rub, 0)}`; };
   const num = (el) => parseInt((el?.textContent || '').replace(/[^\d]/g, ''), 10) || 0;
 
@@ -59,7 +60,7 @@
       catch { box.innerHTML = `<img src="${g.image}" alt="">`; }
     } catch { info.innerHTML = '<b>Подарок не найден</b>'; }
   }
-  window.Market = { load, rates: () => rates, conv, line, giftCard };
+  window.Market = { load, rates: () => rates, conv, line, giftCard, tonToStars };
   load(); setInterval(load, 5 * 60_000);
   const q = new URLSearchParams(location.search).get('gift');           // ?gift=hexpot-10348 shows a gift card (handy for checks)
   if (q) { const d = document.createElement('div'); d.className = 'nftc-demo'; d.onclick = () => d.remove(); document.body.append(d); giftCard(q, d); }

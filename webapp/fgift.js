@@ -12,8 +12,9 @@ window.FG = (function () {
   function get(ref) {
     if (!ref || !C[ref.slug]) return null;
     const c = C[ref.slug], it = c.items.find((x) => x.n === ref.n) || c.items[0];
-    return { slug: ref.slug, name: c.name, n: it.n, model: it.m, backdrop: it.b, symbol: it.s, rgb: it.c, img: it.img };
+    return { slug: ref.slug, name: c.name, n: it.n, model: it.m, backdrop: it.b, symbol: it.s, rgb: it.c, img: it.img, ton: it.p };
   }
   const html = (ref, cls) => { const g = get(ref); return g ? `<span class="fg ${cls || ''}" style="--fgc:${g.rgb.join(',')}"><img src="${g.img}" alt="${g.name}" draggable="false"></span>` : ''; };
-  return { pick, get, html, has: () => Object.keys(C).length > 0 };
+  const stars = (ref) => { const g = get(ref); if (!g) return 0; return Math.max(1, window.Market && window.Market.tonToStars ? window.Market.tonToStars(g.ton) : Math.round(g.ton / 0.01092)); };
+  return { pick, get, html, stars, has: () => Object.keys(C).length > 0 };
 })();
