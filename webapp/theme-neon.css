@@ -573,3 +573,7 @@ tg-star.stz{display:inline-block;margin:0;padding:0;border:0;font-size:inherit;l
 .gp-top h3{white-space:nowrap;font-size:18px}
 .gp-tier{width:152px}.gp-tier b{font-size:14.5px;white-space:nowrap}
 .gp-bar .pay{white-space:nowrap}
+.gp-bal,.gp-bar .pay{display:inline-flex!important;flex-wrap:nowrap;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.gp-bar .pay{display:flex!important;width:100%}
+.gp-bal tg-star,.gp-bar .pay tg-star{position:static!important;display:inline-block!important;flex:none}
+.gp-bar .pay{flex-direction:row!important;flex-wrap:nowrap!important;line-height:1!important}.gp-bar .pay>*{margin:0!important}
