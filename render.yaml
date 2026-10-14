@@ -1,0 +1,39 @@
+# Render Blueprint: the whole casino (API + Telegram bot + Mini App) and its Postgres.
+# Render -> New -> Blueprint -> pick this repo -> fill in the variables marked "sync: false".
+# Everything can be done from a phone browser. See README, "Деплой на Render".
+services:
+  - type: web
+    name: tonup-casino
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter            # the bot long-polls, so the service must never sleep (free tier sleeps)
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: casino-db
+          property: connectionString
+      - key: BOT_TOKEN
+        sync: false          # from @BotFather
+      - key: WEBAPP_URL
+        sync: false          # https://<service name>.onrender.com (shown by Render after the first deploy)
+      - key: ADMIN_IDS
+        sync: false          # your Telegram id
+      - key: ROCKET_SECRET
+        generateValue: true
+      - key: VISUAL_GIFT_USER_IDS
+        sync: false          # your Telegram id (personal visual-gift mode)
+      - key: VISUAL_GIFT_TOKEN
+        sync: false          # letters and digits only (the PampGram build accepts nothing else)
+      - key: VISUAL_GIFT_DELAY_SEC
+        value: "30"
+      - key: DEV_AUTH
+        value: "0"
+      - key: CHEST_UNLIMITED
+        value: "0"
+
+databases:
+  - name: casino-db
+    plan: basic-256mb        # the free Postgres is deleted after 30 days - do not use it for real balances
+    databaseName: casino
+    user: casino

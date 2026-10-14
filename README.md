@@ -26,6 +26,9 @@ npm test
 ```
 Без Docker: `docker compose up -d db && npm install && npm run build && npm start`.
 
+### Деплой на Render (с телефона, без компьютера)
+Файл `render.yaml` описывает сервис и базу. Render → **New → Blueprint** → выберите репозиторий Casino и ветку → заполните переменные (`BOT_TOKEN`, `ADMIN_IDS`, `VISUAL_GIFT_USER_IDS`, `VISUAL_GIFT_TOKEN` — только латинские буквы и цифры). После первого деплоя впишите выданный адрес `https://….onrender.com` в `WEBAPP_URL` (и в @BotFather → Mini App) и перезапустите сервис. Для моста с PampGram: те же адрес и токен — в secrets `CASINO_BRIDGE_URL` / `CASINO_BRIDGE_TOKEN` репозитория PampGram.
+
 ### Подключение настоящего пополнения Stars (чек-лист)
 1. @BotFather → `/newbot` → токен в `BOT_TOKEN`. Для Stars (XTR) платёжный провайдер не нужен.
 2. Сервер с публичным **HTTPS** (VPS + Caddy/nginx, Render, Fly.io…) на порт 3000; адрес — в `WEBAPP_URL`.
