@@ -337,6 +337,135 @@
     }
   }
 
+  // ======================================================================= PLINKO
+  // pyramid of pegs, balls drop and bounce down, land in a slot and a fountain of coins bursts out
+  class PlinkoScene extends Scene {
+    constructor(c) { super(c); this.balls = []; this.coins = []; this.pops = []; this.next = 0.3; this.glow = {}; this.R = 6; this.layout(); }
+    layout() {
+      const R = this.R || 6, top = 14, bottom = this.h - 84; this.top = top;
+      this.sx = Math.min((this.w - 18) / (R + 2), 26); this.sy = Math.max(8, (bottom - top - 26) / R); this.cx = this.w / 2; this.slotY = top + R * this.sy + 18;
+    }
+    peg(r, k) { return [this.cx + (k - (r + 2) / 2) * this.sx + this.sx / 2 * 0, this.top + 12 + r * this.sy]; }
+    spawn(t) {
+      const edge = Math.random() < 0.65, dirs = []; let n = 0;
+      for (let i = 0; i < this.R; i++) { const d = edge ? (Math.random() < 0.82 ? (this.edgeSide ? 1 : -1) : (Math.random() < 0.5 ? -1 : 1)) : (Math.random() < 0.5 ? -1 : 1); dirs.push(d); n += d; }
+      this.edgeSide = !this.edgeSide;
+      this.balls.push({ t0: t, dirs, n });
+    }
+    mult(n) { const a = Math.abs(n); return a >= 6 ? ['x100', 100] : a >= 4 ? ['x10', 10] : a >= 2 ? ['x3', 3] : ['x0.5', 0.5]; }
+    draw(g, t, dt) {
+      const R = this.R, sx = this.sx, sy = this.sy;
+      if (t > this.next) { this.spawn(t); this.next = t + 1.5 + Math.random() * 0.5; }
+      // glow behind the pyramid
+      const bg = g.createRadialGradient(this.cx, this.slotY, 4, this.cx, this.slotY, this.w * 0.7); bg.addColorStop(0, 'rgba(255,61,129,.22)'); bg.addColorStop(1, 'rgba(255,61,129,0)'); g.fillStyle = bg; g.fillRect(0, 0, this.w, this.h);
+      // pegs
+      for (let r = 0; r < R; r++) for (let k = 0; k < r + 3; k++) {
+        const x = this.cx + (k - (r + 2) / 2) * sx, y = this.top + 12 + r * sy;
+        g.beginPath(); g.arc(x, y, 3, 0, 7); g.fillStyle = 'rgba(200,214,255,.85)'; g.shadowColor = 'rgba(160,190,255,.8)'; g.shadowBlur = 6; g.fill(); g.shadowBlur = 0;
+      }
+      // slots with multipliers
+      const nb = R + 1, labs = ['x100', 'x10', 'x3', 'x0.5', 'x3', 'x10', 'x100'], cols = ['#ffcf3a', '#ff7a3a', '#ff3d81', '#6e6a90', '#ff3d81', '#ff7a3a', '#ffcf3a'];
+      for (let i = 0; i < nb; i++) {
+        const x = this.cx + (i - (nb - 1) / 2) * sx, w = sx - 3, h = 15, y = this.slotY, gl = this.glow[i] || 0;
+        rr(g, x - w / 2, y, w, h, 4); g.fillStyle = cols[i]; g.globalAlpha = 0.28 + gl * 0.7; g.shadowColor = cols[i]; g.shadowBlur = 4 + gl * 18; g.fill(); g.globalAlpha = 1; g.shadowBlur = 0;
+        g.fillStyle = '#fff'; g.font = '800 7.5px system-ui'; g.textAlign = 'center'; g.fillText(labs[i], x, y + 10.4);
+        if (gl > 0) this.glow[i] = Math.max(0, gl - dt * 1.4);
+      }
+      // balls
+      this.balls = this.balls.filter((b) => {
+        const T = 0.34, e = t - b.t0, r = Math.min(R, Math.floor(e / T)), f = clamp((e - r * T) / T);
+        // position index at row r (before row r's peg) -> x offset in half steps
+        let off = 0; for (let i = 0; i < Math.min(r, R); i++) off += b.dirs[i];
+        const pos = (rr_, o) => [this.cx + o * sx / 2, rr_ === 0 ? this.top - 4 : this.top + 12 + (rr_ - 1) * sy + sy * 0.5];
+        let x, y;
+        if (r >= R) {
+          // landed
+          if (!b.hit) { b.hit = true; const i = Math.round((b.n + R) / 2); this.glow[i] = 1; const m = this.mult(b.n); this.pops.push({ x: this.cx + b.n * sx / 2, y: this.slotY - 2, txt: m[0], t: 0, big: m[1] >= 10 }); const cnt = m[1] >= 100 ? 46 : m[1] >= 10 ? 30 : m[1] >= 3 ? 16 : 6; for (let k = 0; k < cnt; k++) this.coins.push({ x: this.cx + b.n * sx / 2 + rand(-6, 6), y: this.slotY, vx: rand(-70, 70) * (m[1] >= 10 ? 1.5 : 1), vy: -rand(90, 210) * (m[1] >= 10 ? 1.3 : 1), ph: rand(0, 6), t: 0 }); }
+          return t - b.t0 < R * T + 0.25;
+        }
+        const x0 = this.cx + off * sx / 2, x1 = this.cx + (off + b.dirs[r]) * sx / 2, y0 = r === 0 ? this.top - 6 : this.top + 12 + (r - 1) * sy + 3, y1 = this.top + 12 + r * sy - 4;
+        x = lerp(x0, x1, E.io(f)); y = lerp(y0, y1, f * f) - Math.sin(f * Math.PI) * 5;
+        g.beginPath(); g.arc(x, y, 4.6, 0, 7); const gr = g.createRadialGradient(x - 1.4, y - 1.6, 0.5, x, y, 5); gr.addColorStop(0, '#fff6c2'); gr.addColorStop(1, '#ffb703'); g.fillStyle = gr; g.shadowColor = 'rgba(255,200,60,.9)'; g.shadowBlur = 10; g.fill(); g.shadowBlur = 0;
+        return true;
+      });
+      // coins fountain
+      this.coins = this.coins.filter((c) => {
+        c.t += dt; c.vy += 420 * dt; c.x += c.vx * dt; c.y += c.vy * dt; const k = Math.abs(Math.cos(c.ph + c.t * 9));
+        if (c.y > this.h - 52 || c.t > 1.6) return false;
+        g.save(); g.translate(c.x, c.y); g.scale(Math.max(0.15, k), 1); g.beginPath(); g.arc(0, 0, 4.2, 0, 7); g.fillStyle = '#ffd23a'; g.shadowColor = 'rgba(255,190,40,.8)'; g.shadowBlur = 6; g.fill(); g.shadowBlur = 0; g.lineWidth = 1; g.strokeStyle = '#c98a00'; g.stroke(); g.restore(); return true;
+      });
+      this.pops = this.pops.filter((p) => { p.t += dt; if (p.t > 1.1) return false; const a = 1 - p.t / 1.1, sc = (p.big ? 1.6 : 1.2) * (1 + 0.25 * Math.sin(Math.min(1, p.t * 5) * Math.PI)); g.save(); g.globalAlpha = a; g.translate(p.x, p.y - 8 - p.t * 26); g.scale(sc, sc); g.font = '900 13px system-ui'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(60,10,30,.9)'; g.strokeText(p.txt, 0, 0); g.fillStyle = p.big ? '#ffe45a' : '#fff'; g.fillText(p.txt, 0, 0); g.restore(); return true; });
+    }
+  }
+
+  // ======================================================================= SLOT 777
+  // neon slot machine: lever is pulled, three reels spin and stop one by one on 7-7-7, the machine flashes
+  class SlotScene extends Scene {
+    constructor(c) { super(c); this.T = 6.6; this.coins = []; this.fired = -1; }
+    sym(g, id, x, y, s) {
+      g.save(); g.translate(x, y);
+      if (id === 0) { // cherries
+        g.strokeStyle = '#2f9e44'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(-s * .22, s * .1); g.quadraticCurveTo(-s * .05, -s * .35, s * .18, -s * .4); g.moveTo(s * .2, s * .14); g.quadraticCurveTo(s * .2, -s * .25, s * .18, -s * .4); g.stroke();
+        g.fillStyle = '#3fbf5a'; g.beginPath(); g.ellipse(s * .3, -s * .38, s * .16, s * .08, -0.4, 0, 7); g.fill();
+        for (const [cx, cy] of [[-s * .22, s * .18], [s * .2, s * .22]]) { const gr = g.createRadialGradient(cx - 2, cy - 2, 1, cx, cy, s * .24); gr.addColorStop(0, '#ff8a8a'); gr.addColorStop(1, '#c0102a'); g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, s * .22, 0, 7); g.fill(); }
+      } else if (id === 1) { // lemon
+        const gr = g.createLinearGradient(0, -s * .3, 0, s * .3); gr.addColorStop(0, '#fff06a'); gr.addColorStop(1, '#f0b400'); g.fillStyle = gr; g.beginPath(); g.ellipse(0, 0, s * .42, s * .3, -0.3, 0, 7); g.fill(); g.fillStyle = '#f0b400'; g.beginPath(); g.arc(s * .4, -s * .08, s * .06, 0, 7); g.fill();
+      } else if (id === 2) { // orange slice
+        g.fillStyle = '#ff8a1f'; g.beginPath(); g.arc(0, 0, s * .36, 0, 7); g.fill(); g.fillStyle = '#ffd08a'; g.beginPath(); g.arc(0, 0, s * .3, 0, 7); g.fill(); g.strokeStyle = '#ff9d3a'; g.lineWidth = 1.5; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a) * s * .3, Math.sin(a) * s * .3); g.stroke(); }
+      } else if (id === 3) { // seven
+        g.font = `900 ${s * 1.05}px Georgia,serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = s * .09; g.strokeStyle = '#7a0a1a'; g.strokeText('7', 0, s * .04); const gr = g.createLinearGradient(0, -s * .5, 0, s * .5); gr.addColorStop(0, '#ff6b6b'); gr.addColorStop(1, '#d10f2f'); g.fillStyle = gr; g.fillText('7', 0, s * .04);
+      } else { // lime
+        const gr = g.createRadialGradient(-s * .1, -s * .1, 1, 0, 0, s * .36); gr.addColorStop(0, '#d8ff7a'); gr.addColorStop(1, '#3a9d1a'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, s * .34, 0, 7); g.fill(); g.fillStyle = '#2f8a2a'; g.beginPath(); g.ellipse(s * .2, -s * .36, s * .16, s * .07, -0.5, 0, 7); g.fill();
+      }
+      g.restore();
+    }
+    neon(g, draw, col, blur = 12, w = 2.4) { g.save(); g.shadowColor = col; g.shadowBlur = blur; g.strokeStyle = col; g.lineWidth = w; draw(); g.stroke(); g.restore(); }
+    draw(g, t, dt) {
+      const T = this.T, ph = t % T, cyc = Math.floor(t / T), W = this.w, H = this.h - 54;
+      const u = Math.min(W / 150, H / 190), ox = (W - 150 * u) / 2, oy = 2;
+      const win = clamp((ph - 4.3) / 0.3) * (ph < 6.2 ? 1 : clamp((6.6 - ph) / 0.4)), flash = win * (0.55 + 0.45 * Math.sin(ph * 22));
+      g.save(); g.translate(ox, oy); g.scale(u, u);
+      // aura
+      const au = g.createRadialGradient(75, 90, 10, 75, 90, 110); au.addColorStop(0, `rgba(255,61,200,${0.18 + win * 0.2})`); au.addColorStop(1, 'rgba(255,61,200,0)'); g.fillStyle = au; g.fillRect(-30, -10, 210, 210);
+      // marquee
+      this.neon(g, () => rr(g, 14, 2, 104, 24, 12), '#3ec7ff', 10, 2); this.neon(g, () => rr(g, 18, 5.5, 96, 17, 8.5), '#ff3dd6', 8, 1.6);
+      g.font = '900 15px system-ui'; g.textAlign = 'center'; g.fillStyle = '#ffc533'; g.shadowColor = '#ff9a00'; g.shadowBlur = 10 + win * 10; g.fillText('SLOT 777', 66, 20.5); g.shadowBlur = 0;
+      // body
+      rr(g, 6, 30, 120, 96, 14); const bg = g.createLinearGradient(0, 30, 0, 126); bg.addColorStop(0, '#3a0e4a'); bg.addColorStop(1, '#1b0626'); g.fillStyle = bg; g.fill();
+      this.neon(g, () => rr(g, 6, 30, 120, 96, 14), '#ff3dd6', 12 + win * 10, 3);
+      // reel window
+      rr(g, 14, 38, 104, 66, 9); g.fillStyle = '#10051a'; g.fill();
+      const rw = 31, gap = 3, rh = 60, ry = 41; const stops = [2.4, 3.2, 4.0];
+      for (let i = 0; i < 3; i++) {
+        const x = 17 + i * (rw + gap), spinEnd = stops[i], sp = ph < 0.5 ? 0 : clamp((ph - 0.5) / (spinEnd - 0.5));
+        g.save(); rr(g, x, ry, rw, rh, 6); g.clip(); g.fillStyle = '#f6f7ff'; g.fillRect(x, ry, rw, rh); const sh = g.createLinearGradient(0, ry, 0, ry + rh); sh.addColorStop(0, 'rgba(0,0,0,.28)'); sh.addColorStop(0.22, 'rgba(0,0,0,0)'); sh.addColorStop(0.78, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.28)'); 
+        const cell = 38, travel = (ph < 0.5 ? 0 : (ph < spinEnd ? E.out(sp) * 1 : 1)) , total = 12 + i * 5; let p = (cyc * 3 + i) * 0.37 + (ph < spinEnd ? (total * (ph < 0.5 ? 0 : E.out(sp))) : total);
+        const blur = ph > 0.5 && ph < spinEnd ? 1 - E.out(sp) * 0.8 : 0; const base = Math.floor(p), fr = p - base;
+        for (let k = -2; k <= 2; k++) { const id = (((base + k) % 5) + 5) % 5, yy = ry + rh / 2 + (k - fr) * cell; const fin = ph >= spinEnd && k === 0; this.sym(g, fin ? 3 : (ph >= spinEnd ? ((((base + k) % 5) + 5) % 5) : id), x + rw / 2, yy, 30); }
+        if (blur > 0.1) { g.fillStyle = `rgba(255,255,255,${blur * 0.35})`; g.fillRect(x, ry, rw, rh); }
+        g.fillStyle = sh; g.fillRect(x, ry, rw, rh); g.restore();
+      }
+      // payline
+      g.strokeStyle = `rgba(255,70,90,${0.35 + flash * 0.65})`; g.lineWidth = 1.4; g.beginPath(); g.moveTo(14, ry + rh / 2); g.lineTo(118, ry + rh / 2); g.stroke();
+      // lower control panel
+      this.neon(g, () => rr(g, 2, 126, 128, 30, 9), '#ffb300', 10 + win * 8, 2.4);
+      rr(g, 5, 129, 122, 24, 7); g.fillStyle = '#2a0f3a'; g.fill();
+      const lc = ['#ff3d9a', '#ffcf3a', '#3ec7ff', '#3df57a'];
+      for (let i = 0; i < 4; i++) { const on = win > 0 ? (Math.floor(ph * 10 + i) % 2 === 0) : (Math.floor(ph * 3 + i) % 4 === i); g.fillStyle = lc[i]; g.globalAlpha = on ? 1 : 0.3; g.shadowColor = lc[i]; g.shadowBlur = on ? 8 : 0; rr(g, 12 + i * 24, 134, 20, 8, 4); g.fill(); } g.globalAlpha = 1; g.shadowBlur = 0;
+      g.fillStyle = '#ffb300'; rr(g, 98, 144, 24, 6, 3); g.fill();
+      // base
+      rr(g, 12, 156, 108, 14, 5); g.fillStyle = '#7a1348'; g.fill(); this.neon(g, () => { g.beginPath(); g.moveTo(16, 163); g.lineTo(116, 163); }, '#ff3dd6', 8, 1.6);
+      // lever
+      const pull = ph < 0.25 ? E.out(ph / 0.25) : ph < 0.6 ? 1 - E.io((ph - 0.25) / 0.35) : 0, ly = 66 + pull * 26;
+      g.strokeStyle = '#ffb300'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(126, 100); g.quadraticCurveTo(142, 84, 140, ly); g.stroke();
+      const lb = g.createRadialGradient(138, ly - 2, 1, 140, ly, 8); lb.addColorStop(0, '#ff9a9a'); lb.addColorStop(1, '#d10f2f'); g.fillStyle = lb; g.shadowColor = '#ff3040'; g.shadowBlur = 8; g.beginPath(); g.arc(140, ly, 7.5, 0, 7); g.fill(); g.shadowBlur = 0;
+      // coins when it hits 777
+      if (ph > 4.3 && this.fired !== cyc) { this.fired = cyc; for (let k = 0; k < 34; k++) this.coins.push({ x: 66, y: 70, vx: rand(-110, 110), vy: -rand(120, 260), ph: rand(0, 6), t: 0 }); }
+      this.coins = this.coins.filter((c) => { c.t += dt; c.vy += 480 * dt; c.x += c.vx * dt; c.y += c.vy * dt; if (c.t > 1.5 || c.y > 175) return false; const k = Math.abs(Math.cos(c.ph + c.t * 10)); g.save(); g.translate(c.x, c.y); g.scale(Math.max(0.15, k), 1); g.beginPath(); g.arc(0, 0, 4.5, 0, 7); g.fillStyle = '#ffd23a'; g.shadowColor = 'rgba(255,190,40,.9)'; g.shadowBlur = 6; g.fill(); g.shadowBlur = 0; g.strokeStyle = '#c98a00'; g.lineWidth = 1; g.stroke(); g.restore(); return true; });
+      g.restore();
+    }
+  }
+
   // ======================================================================= boot
   const scenes = [];
   function init() {
@@ -344,6 +473,9 @@
     if (m) scenes.push(new MinesScene(m));
     if (r) scenes.push(new RocketCardScene(r, document.getElementById('x-rocket')));
     if (t) scenes.push(new TowerScene(t));
+    const pl = document.getElementById('cv-plinko'), sl = document.getElementById('cv-slot');
+    if (pl) scenes.push(new PlinkoScene(pl));
+    if (sl) scenes.push(new SlotScene(sl));
     new ResizeObserver(() => scenes.forEach((s) => s.resize())).observe(document.body);
   }
   function loop(now) {

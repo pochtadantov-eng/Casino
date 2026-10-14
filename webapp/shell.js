@@ -34,6 +34,7 @@ function openGame(g) {
   load();
 }
 document.querySelectorAll('[data-game]').forEach((c) => c.onclick = () => openGame(c.dataset.game));
+document.querySelectorAll('[data-luck]').forEach((c) => c.onclick = () => { state.luckTier = c.dataset.luck; openGame('luck'); });
 document.querySelectorAll('[data-go]').forEach((c) => c.onclick = () => selectTab(c.dataset.go));
 $('#back').onclick = () => { show(tab); };
 if (window.Telegram?.WebApp?.initData) $('#back').hidden = true; // inside Telegram the native Back button is used instead

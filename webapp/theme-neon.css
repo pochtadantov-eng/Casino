@@ -628,3 +628,25 @@ body{background:#07060F;min-height:100vh;min-height:100dvh}
 .hrow2 .hamt{font:800 16px var(--disp);white-space:nowrap}.hrow2.in .hamt{color:#3df5b0}.hrow2.out .hamt{color:#ff6fae}
 .wd-hero .gs-tier{display:inline-block;font:800 11px/1 Onest,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--tc);padding:5px 10px;border-radius:999px;border:1px solid var(--tc);background:color-mix(in srgb,var(--tc) 14%,transparent);box-shadow:0 0 12px color-mix(in srgb,var(--tc) 40%,transparent)}
 .wd-amt input{text-align:left}
+
+/* ===== cards: plinko / slot canvases ===== */
+.c-plinko,.c-slot{height:222px}
+.c-plinko .txt,.c-slot .txt{position:relative;z-index:2}
+.c-slot{background:radial-gradient(120% 90% at 50% 20%,rgba(255,61,200,.22),rgba(12,6,24,.95) 70%)}
+.c-plinko{background:radial-gradient(120% 90% at 50% 25%,rgba(255,61,129,.22),rgba(20,6,18,.95) 70%)}
+
+/* ===== cases tab ===== */
+.cs-sub{margin:-4px 2px 14px;color:var(--hint);font:600 13px/1.35 Onest,sans-serif}
+.cs-list{display:flex;flex-direction:column;gap:12px}
+.cscard{position:relative;display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:12px 16px 12px 10px;border-radius:24px;border:1.5px solid rgba(var(--c),.5);background:linear-gradient(120deg,rgba(var(--c),.22),rgba(10,8,26,.92) 70%);box-shadow:0 0 26px rgba(var(--c),.22);color:#fff;overflow:hidden}
+.cscard:active{transform:scale(.985)}
+.csbox{position:relative;flex:none;width:96px;height:84px;display:grid;place-items:center}
+.csbox img{width:96px;height:auto;filter:hue-rotate(var(--h)) drop-shadow(0 0 14px rgba(var(--c),.7));animation:csfloat 3s ease-in-out infinite}
+@keyframes csfloat{50%{transform:translateY(-5px) rotate(-2deg)}}
+.cs-sp{position:absolute;width:8px;height:8px;border-radius:50%;background:rgb(var(--c));box-shadow:0 0 10px rgb(var(--c));opacity:0;animation:cssp 2.4s ease-in-out infinite}
+.cs-sp.a{left:6px;top:14px}.cs-sp.b{right:8px;top:6px;animation-delay:.8s}.cs-sp.c{right:14px;bottom:10px;animation-delay:1.5s}
+@keyframes cssp{0%,100%{opacity:0;transform:scale(.3)}50%{opacity:1;transform:scale(1)}}
+.csinfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.csinfo b{font:800 19px/1.1 var(--disp)}
+.csinfo small{font:600 12.5px/1.3 Onest,sans-serif;color:#c9c3ee}
+.cstag{flex:none;padding:9px 12px;border-radius:14px;font:900 18px var(--disp);color:#0a0610;background:rgb(var(--c));box-shadow:0 0 18px rgba(var(--c),.55)}

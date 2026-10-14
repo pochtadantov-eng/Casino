@@ -45,21 +45,30 @@
     </div>
     <div class="card c-plinko" data-game="plinko" style="--c:255,61,129">
       <div class="txt"><h3>Плинко</h3><p>Шарик падает — x растёт</p></div>
-      <div class="plart"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b></b></div>
+      <canvas class="cv" id="cv-plinko"></canvas>
     </div>
     <div class="card c-slot" data-game="slot" style="--c:255,214,10">
       <div class="txt"><h3>Слот 777</h3><p>Три в ряд</p></div>
-      <div class="slart"><span>7</span><span>7</span><span>7</span></div>
-    </div>
-    <div class="card c-luck wide" data-game="luck" style="--c:182,109,255">
-      <div class="txt"><h3>Кейсы · Удача</h3><p>1X · 10X · 25X · 50X · 100X</p></div>
-      <div class="lkart"><span>x1</span><span>x10</span><span>x100</span></div>
+      <canvas class="cv" id="cv-slot"></canvas>
     </div>
     <div class="card c-gull wide" data-game="seagull" style="--c:61,224,255">
       <div class="txt"><h3>Чайка</h3><p>Угадай, кого она не схватит</p></div>
       <img class="bird" src="img/gull.webp" alt="">
       <div class="mist"></div>
     </div>
+  </div>
+</section>
+
+<!-- ============ КЕЙСЫ ============ -->
+<section id="view-cases" class="view">
+  <h2 class="title">Кейсы</h2>
+  <p class="cs-sub">Выбери удачу: чем выше кейс, тем больше приз и реже выигрыш</p>
+  <div class="cs-list">
+    <button class="cscard" data-luck="1" style="--c:122,167,255;--h:0deg"><span class="csbox"><img src="img/chest.webp" alt=""><i class="cs-sp a"></i><i class="cs-sp b"></i><i class="cs-sp c"></i></span><span class="csinfo"><b>Кейс 1X</b><small>Ровный кейс · приз до x10</small></span><span class="cstag">1X</span></button>
+    <button class="cscard" data-luck="10" style="--c:255,154,60;--h:-155deg"><span class="csbox"><img src="img/chest.webp" alt=""><i class="cs-sp a"></i><i class="cs-sp b"></i><i class="cs-sp c"></i></span><span class="csinfo"><b>Кейс 10X</b><small>Редкие большие призы · до x50</small></span><span class="cstag">10X</span></button>
+    <button class="cscard" data-luck="25" style="--c:182,109,255;--h:70deg"><span class="csbox"><img src="img/chest.webp" alt=""><i class="cs-sp a"></i><i class="cs-sp b"></i><i class="cs-sp c"></i></span><span class="csinfo"><b>Кейс 25X</b><small>Высокая удача · до x100</small></span><span class="cstag">25X</span></button>
+    <button class="cscard" data-luck="50" style="--c:255,61,129;--h:120deg"><span class="csbox"><img src="img/chest.webp" alt=""><i class="cs-sp a"></i><i class="cs-sp b"></i><i class="cs-sp c"></i></span><span class="csinfo"><b>Кейс 50X</b><small>Легендарный · до x250</small></span><span class="cstag">50X</span></button>
+    <button class="cscard" data-luck="100" style="--c:255,214,10;--h:-35deg"><span class="csbox"><img src="img/chest.webp" alt=""><i class="cs-sp a"></i><i class="cs-sp b"></i><i class="cs-sp c"></i></span><span class="csinfo"><b>Кейс 100X</b><small>Мифический · до x500</small></span><span class="cstag">100X</span></button>
   </div>
 </section>
 
@@ -130,7 +139,8 @@
 <!-- liquid glass dock -->
 <nav id="dock" aria-label="Разделы">
   <div id="glass"><div class="blob"></div></div>
-  <button data-tab="play" class="on"><svg viewBox="0 0 24 24"><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01M17.3 5H6.7a4 4 0 0 0-3.9 3.2l-1.1 5.6A3 3 0 0 0 4.6 17c.8 0 1.5-.4 2-1l1.4-1.8h8l1.4 1.8c.5.6 1.2 1 2 1a3 3 0 0 0 2.9-3.2l-1.1-5.6A4 4 0 0 0 17.3 5Z"/></svg><span>Играть</span></button>
+  <button data-tab="play" class="on"><svg viewBox="0 0 24 24"><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01M17.3 5H6.7a4 4 0 0 0-3.9 3.2l-1.1 5.6A3 3 0 0 0 4.6 17c.8 0 1.5-.4 2-1l1.4-1.8h8l1.4 1.8c.5.6 1.2 1 2 1a3 3 0 0 0 2.9-3.2l-1.1-5.6A4 4 0 0 0 17.3 5Z"/></svg><span>Игры</span></button>
+  <button data-tab="cases"><svg viewBox="0 0 24 24"><path d="M3 10h18v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z"/><path d="M3 10V8a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v2"/><path d="M10 14h4v3h-4z"/></svg><span>Кейсы</span></button>
   <button data-tab="bonus"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5"/></svg><span>Бонусы</span></button>
   <button data-tab="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Профиль</span></button>
 </nav>
