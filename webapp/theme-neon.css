@@ -419,3 +419,16 @@ tg-star.stz{display:inline-block;margin:0;padding:0;border:0;font-size:inherit;l
 .rcard.gift b{font-size:13px;max-width:120px}
 .rcard.gift span{font:800 16px/1 Onest,sans-serif;color:#fff;display:flex;align-items:center;gap:4px}
 .rcard.gift span tg-star.stz{width:18px;height:18px}
+
+/* roulette: medium cards so ~3.5 are visible */
+.chestmodal.spin .cm-roul{height:164px}
+.cm-strip{margin-top:-72px;gap:8px}
+.rcard,.rcard{flex:0 0 104px;width:104px;height:144px;border-radius:15px;gap:3px}
+.rcard .rico tg-star.stz{width:50px;height:50px}
+.rcard b{font-size:22px}
+.rcard span{font-size:11px}
+.rcard.gift{padding:6px 5px 5px;gap:3px}
+.rcard .rico .fg{width:80px;height:80px;border-radius:13px}
+.rcard.gift b{font-size:11px;max-width:94px}
+.rcard.gift span{font:800 13px/1 Onest,sans-serif}
+.rcard.gift span tg-star.stz{width:15px;height:15px}

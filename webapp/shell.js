@@ -128,7 +128,7 @@ function openChestRoulette() {
     await wait(900);                                                 // the chest shakes while the server decides
     const out = await req;
     if (out.error) { m.querySelector('#cm-res').innerHTML = `<p class="cm-err">${out.error}</p>`; const ok = m.querySelector('#cm-ok'); ok.hidden = false; ok.textContent = 'Закрыть'; return; }
-    const prize = out.prize, T = 54, N = 64, W = 132, G = 8;
+    const prize = out.prize, T = 54, N = 64, W = 104, G = 8;
     const strip = m.querySelector('#cm-strip'), pool = prizes.flatMap((p) => Array(p.giftStars ? 1 : p.stars >= 500 ? 1 : p.stars >= 100 ? 2 : 4).fill(p));
     const starsPool = pool.filter((p) => !p.giftStars), giftBase = prizes.find((p) => p.giftStars) || { id: 'g100', giftStars: 100 }, hasFg = window.FG && window.FG.has();
     const items = Array.from({ length: N }, (_, i) => (i === T ? { ...(prizes.find((p) => p.id === prize.id) || prize), giftStars: prize.giftStars, emoji: prize.gift?.emoji, giftId: prize.gift?.giftId, fg: prize.gift?.fg } : (hasFg && Math.random() < 0.42 ? { ...giftBase, fg: window.FG.pick() } : starsPool[Math.floor(Math.random() * starsPool.length)])));
