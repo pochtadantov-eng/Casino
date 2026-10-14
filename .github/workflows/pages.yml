@@ -6,7 +6,7 @@ on:
     branches: [main, master, 'claude/**']
     paths: ['webapp/**', 'scripts/build-pages.mjs', 'scripts/market-snapshot.ts', 'src/market/**', '.github/workflows/pages.yml']
   schedule:
-    - cron: '7,27,47 * * * *'      # refresh rates and showcase gifts every 20 min
+    - cron: '7 */6 * * *'      # refresh rates and showcase gifts every 6 hours (frequent deploys clog GitHub Pages)
   workflow_dispatch:
 
 permissions:
