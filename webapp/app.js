@@ -513,7 +513,7 @@ async function openGifts() {
   const presets = maxA >= MINA ? [25, 50, 75, 100].map((p) => Math.max(MINA, Math.floor(maxA * p / 100))) : [];
   d.innerHTML = `<div class="pbox gs2"><i class="grab"></i>
     <div class="gs-head"><h3>Вывести подарком</h3><span class="gs-bal">баланс <b>${state.balance}</b> ⭐</span></div>
-    <div class="gs-top"><div class="gs-amtbox"><input id="g-amt" type="number" inputmode="numeric" min="${MINA}" max="${maxA}" value="${start || ''}" placeholder="0"><span>⭐</span></div>
+    <div class="gs-top"><div class="gs-amtbox"><input id="g-amt" type="number" inputmode="numeric" min="${MINA}" max="${maxA}" value="${start || ''}" placeholder="от ${MINA}"><span>⭐</span></div>
       <input id="g-rng" class="gs-rng" type="range" min="${MINA}" max="${Math.max(MINA + 1, maxA)}" value="${start || MINA}">
       <div class="gs-chips">${presets.map((x, i) => `<button class="gs-chip" data-a="${x}">${i === 3 ? 'Макс' : [25, 50, 75][i] + '%'}</button>`).join('')}</div></div>
     <div class="gs-stamp" id="g-stamp">Мин. 500 ⭐ · макс. за раз 100 000 ⭐</div>
@@ -540,6 +540,7 @@ async function openGifts() {
     } catch (e) { err.textContent = e.message; }
   };
   const later = () => { clearTimeout(tm); tm = setTimeout(find, 180); };
+  inp.onblur = () => { if (inp.value && Number(inp.value) < MINA) { inp.value = rng.value = MINA; find(); } };
   inp.oninput = () => { rng.value = Math.min(maxA, Math.max(MINA, Number(inp.value) || MINA)); rng.style.setProperty('--p', ((rng.value - rng.min) / (rng.max - rng.min) * 100) + '%'); later(); };
   rng.oninput = () => { inp.value = rng.value; rng.style.setProperty('--p', ((rng.value - rng.min) / (rng.max - rng.min) * 100) + '%'); later(); };
   rng.style.setProperty('--p', ((rng.value - rng.min) / (rng.max - rng.min) * 100) + '%');

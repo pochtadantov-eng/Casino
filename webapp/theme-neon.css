@@ -521,3 +521,4 @@ tg-star.stz{display:inline-block;margin:0;padding:0;border:0;font-size:inherit;l
 .gs2 .gs-amtbox input::-webkit-outer-spin-button,.gs2 .gs-amtbox input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .gs2 .gs-amtbox input{-moz-appearance:textfield;appearance:textfield}
 .gs2 .ginfo .gname{white-space:normal;overflow:visible}
+.gs2 .gs-amtbox input::placeholder{font-size:22px;font-weight:700;color:rgba(255,255,255,.35)}
