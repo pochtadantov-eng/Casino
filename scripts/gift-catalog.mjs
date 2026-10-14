@@ -22,7 +22,7 @@ for (const slug of COLL) {
   c.listed = nums.size; c.max = Math.max(0, ...nums);
   if (!nums.size) { c.err = 'no listing'; continue; }
   c.ok = true;
-  const picks = [...nums].sort(() => Math.random() - 0.5).slice(0, 48);
+  const picks = [...nums].sort(() => Math.random() - 0.5).slice(0, 80);
   const got = await pool(picks, async (n) => {
     if (left() < 0) return null;
     const j = await getJ(slug, n); if (!j) return null;
@@ -35,7 +35,7 @@ for (const slug of COLL) {
       const q = Math.floor(info.width * 0.08), corners = [px(q, q), px(info.width - 1 - q, q), px(q, info.height - 1 - q), px(info.width - 1 - q, info.height - 1 - q)];
       const m = [0, 1, 2, 3].map((i) => Math.round(corners.reduce((s, p) => s + p[i], 0) / 4));
       it.w = info.width; it.h = info.height; it.corner = m; it.lum = Math.round(0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]); it.bytes = buf.length;
-      if (c.items.length + 1 <= 3) writeFileSync(`${out}/samples/${slug}-${n}.webp`, buf);
+      if (it.lum >= 75 && (c.thumbs = c.thumbs || 0) < 16) { c.thumbs++; it.img = 'data:image/webp;base64,' + (await sharp(buf).resize(192).webp({ quality: 74 }).toBuffer()).toString('base64'); }
     } catch (e) { it.imgErr = String(e).slice(0, 80); }
     return it;
   });
