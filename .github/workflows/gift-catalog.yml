@@ -20,8 +20,9 @@ jobs:
       - env:
           COLLS: lolpop,deskcalendar,genielamp,libertyfigure,chillflame,eternalcandle,hangingstar
         timeout-minutes: 12
-        run: mkdir -p _gc && cd _gc && npm init -y >/dev/null && npm i sharp >/dev/null 2>&1 && cp ../scripts/gift-catalog.mjs . && node gift-catalog.mjs out
+        run: mkdir -p _gc && cd _gc && npm init -y >/dev/null && mkdir -p out && (npm i sharp 2>&1 | tail -3 > out/npm.log; cp ../scripts/gift-catalog.mjs . && node gift-catalog.mjs out 2>&1 | tee out/log.txt)
       - name: Publish to gift-catalog
+        if: always()
         run: |
           cd _gc/out
           git init -q -b gift-catalog

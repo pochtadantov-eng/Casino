@@ -1,7 +1,7 @@
 // Runs in GitHub Actions (full internet). Samples valid gift numbers (model/backdrop/symbol) for chosen Fragment collections.
 // Usage: node scripts/gift-catalog.mjs out_dir   (needs `npm i sharp` next to it)
 import { writeFileSync, mkdirSync } from 'node:fs';
-import sharp from 'sharp';
+let sharp = null; try { sharp = (await import('sharp')).default; } catch (e) { console.log('no sharp', String(e).slice(0, 120)); }
 const out = process.argv[2] || '_gc'; mkdirSync(out + '/samples', { recursive: true });
 const COLL = (process.env.COLLS || 'lolpop,deskcalendar,genielamp,libertyfigure,chillflame,eternalcandle,hangingstar,lightsword,lovecandle,spicedwine').split(',');
 const UA = { 'user-agent': 'Mozilla/5.0' };
@@ -26,6 +26,7 @@ for (const slug of COLL) {
     const it = { n, model: attr(j, 'Model'), backdrop: attr(j, 'Backdrop'), symbol: attr(j, 'Symbol') };
     try {
       const r = await fetch(`https://nft.fragment.com/gift/${slug}-${n}.webp`, { headers: UA, signal: AbortSignal.timeout(9000) }); const buf = Buffer.from(await r.arrayBuffer());
+      if (!sharp) throw new Error('nosharp');
       const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
       const px = (x, y) => { const o = (y * info.width + x) * 4; return [data[o], data[o + 1], data[o + 2], data[o + 3]]; };
       const q = Math.floor(info.width * 0.08), corners = [px(q, q), px(info.width - 1 - q, q), px(q, info.height - 1 - q), px(info.width - 1 - q, info.height - 1 - q)];
