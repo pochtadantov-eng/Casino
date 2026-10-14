@@ -46,15 +46,16 @@ for (const c of order) {
     const h = q.includes('asc') && c._html ? c._html : await get(`https://fragment.com/gifts/${c.slug}${q}`);
     for (const x of grid(h, c.slug)) if (!price.has(x.n)) price.set(x.n, x.ton);
   }
-  const all = [...price].map(([n, ton]) => ({ n, ton })).filter((x) => x.ton <= c.floor * 2.2 + 3).sort((a, b) => a.ton - b.ton);
+  const FULL = !!process.env.FULL, all = [...price].map(([n, ton]) => ({ n, ton })).filter((x) => x.ton <= c.floor * (FULL ? 3 : 2.2) + 3).sort((a, b) => a.ton - b.ton);
   const pickI = new Set(); for (let k = 0; k < Math.min(PER, all.length); k++) pickI.add(Math.round(k * (all.length - 1) / Math.max(1, Math.min(PER, all.length) - 1)));
-  const chosen = [...pickI].map((i) => all[i]);
+  const chosen = FULL ? all.slice(0, 160) : [...pickI].map((i) => all[i]);
   const rec = { slug: c.slug, name: c.plural, floor: c.floor, listed: all.length, max: all.length ? all[all.length - 1].ton : null, items: [] };
   await pool(chosen, async (it) => {
     if (left() < 20e3) return;
     const j = await get(`https://nft.fragment.com/gift/${c.slug}-${it.n}.json`, 'json'); if (!j) return;
     const at = (t) => (j.attributes || []).find((a) => a.trait_type === t)?.value || '';
     const o = { n: it.n, ton: it.ton, model: at('Model'), backdrop: at('Backdrop'), symbol: at('Symbol') };
+    if (FULL) { rec.items.push(o); return; }
     try {
       const buf = await get(`https://nft.fragment.com/gift/${c.slug}-${it.n}.webp`, 'buf'); if (buf && sharp) {
         const { data, info } = await sharp(buf).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -65,7 +66,7 @@ for (const c of order) {
       }
     } catch (e) { o.imgErr = String(e).slice(0, 60); }
     rec.items.push(o);
-  }, 8);
+  }, FULL ? 16 : 8);
   console.log(c.slug, 'floor', c.floor, 'listed', all.length, 'max', rec.max, 'items', rec.items.length, Math.round((Date.now() - T0) / 1000) + 's');
   result.collections.push(rec);
   writeFileSync(out + '/market.json', JSON.stringify(result));
