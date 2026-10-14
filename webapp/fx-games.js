@@ -156,7 +156,7 @@
   }
 
   // =========================================== SHAFT (dig) ===========================================
-  const DG = { L: 36, step: Math.log(1.03), W: 360, H: 430, raf: 0, poll: 0, off: 0, sc: null, COLS: 10, shaft: [3, 4, 5, 6] };
+  const DG = { L: 36, step: Math.log(1.03), W: 360, H: 430, raf: 0, poll: 0, off: 0, sc: null, COLS: 12, shaft: [3, 4, 5, 6] };
   const rh = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
   // ---- pixel-art tiles (16x16, generated once, drawn without smoothing) ----
   const TILE = {}, cvs = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
@@ -190,9 +190,10 @@
     if (c === 0 || c === DG.COLS - 1) return ['bed', (ly + c) % 3];
     if (ly === 0) return ['grass', c % 3];
     const deep = ly > 26, sd = (ly * 3 + c) % 3, sp = rh(ly * 131 + c * 17 + (DG.seed || 0), ly * 7 + c * 29 + 5);
-    if (ly >= 3 && sp < 0.012) return ['tnt', 0];
+    if (ly >= 3 && sp < 0.004) return ['tnt', 0];
     return [ly < 3 ? 'dirt' : deep ? 'deep' : 'cobble', sd];
   };
+  const isDecoy = (ly, c) => ly >= 4 && c >= 1 && c <= DG.COLS - 2 && rh(ly * 29 + c * 7 + (DG.seed || 0), 17) < 0.014;      // upgrade blocks the pick can see but never gets: pure tease
   // where the pick is horizontally while it works at depth t: it drifts left and right through the field
   const pickX = (t, L) => L * (1.6 + (Math.sin(t * 0.9) * 0.5 + 0.5) * (DG.COLS - 3.2) + 0.0);
   let BG = null;
@@ -239,6 +240,7 @@
           const c0 = Math.floor((pk.x - rad) / L), c1 = Math.floor((pk.x + rad) / L), r0 = Math.floor((pk.y - rad) / L), r1 = Math.floor((pk.y + rad) / L);
           for (let ly = Math.max(0, r0); ly <= r1 && hit < 3; ly++) for (let c = Math.max(1, c0); c <= Math.min(DG.COLS - 2, c1) && hit < 3; c++) {
             if (DG.holes.has(ly * 16 + c)) continue;
+            if (isDecoy(ly, c)) { const dx = pk.x - Math.max(c * L, Math.min(pk.x, (c + 1) * L)), dy = pk.y - Math.max(ly * L, Math.min(pk.y, (ly + 1) * L)); if (dx * dx + dy * dy < rad * rad) { const m = Math.hypot(dx, dy) || 1; pk.x += dx / m * 2.5; pk.y += dy / m * 2.5; pk.vx = (dx / m) * (2 + Math.random() * 2) + (Math.random() - 0.5); pk.vy = Math.min(pk.vy * -0.3, 0) + (dy / m) * 1.5 - 1; pk.va = (Math.random() - 0.5) * 0.9; } continue; }
             const nx = Math.max(c * L, Math.min(pk.x, (c + 1) * L)), ny = Math.max(ly * L, Math.min(pk.y, (ly + 1) * L));
             if ((pk.x - nx) ** 2 + (pk.y - ny) ** 2 > rad * rad) continue;
             DG.holes.add(ly * 16 + c); hit++; hx += pk.x - (c + 0.5) * L; hy += pk.y - (ly + 0.5) * L; DG.todo.push([ly, c]);
@@ -250,7 +252,7 @@
     // ---- ore and upgrade blocks arrive exactly when the server says: they appear in front of the pick ----
     const place = (key, info, t) => {
       let r = Math.max(2, Math.round(t / 450) + 2), c = 1 + Math.floor(rh(key.length * 7 + (+key.slice(1)) * 13 + (DG.seed || 0), 91) * (DG.COLS - 2));
-      for (let i = 0; i < 12 && (DG.oreAt[r * 16 + c] || tileAt(r, c)[0] === 'tnt'); i++) { c = c % (DG.COLS - 2) + 1; if (i % 3 === 2) r++; }
+      for (let i = 0; i < 12 && (DG.oreAt[r * 16 + c] || isDecoy(r, c) || tileAt(r, c)[0] === 'tnt'); i++) { c = c % (DG.COLS - 2) + 1; if (i % 3 === 2) r++; }
       DG.oreAt[r * 16 + c] = { ...info, t, due: t + 2600 }; DG.sp.add(key);
     };
     if (sc && !(done && !autoEnd)) {
@@ -260,6 +262,7 @@
     if (sc && !done && ms >= 0) {
       // the pick is drawn towards the next valuable block that is just below it, and shoved away from walls and corners
       let best = null, bd = 1e9; for (const key in DG.oreAt) { const ry = Math.floor(+key / 16), cx = (+key % 16) * L + L / 2, dd = ry * L - pk.y; if (dd > -L && dd < 5 * L && dd < bd) { bd = dd; best = cx; } }
+      for (let rr = Math.floor(pk.y / L); rr <= Math.floor(pk.y / L) + 4; rr++) for (let cc = 1; cc <= DG.COLS - 2; cc++) if (isDecoy(rr, cc) && rh(rr * 5 + cc, 3) < 0.6) { const dd = rr * L - pk.y; if (dd > -L && dd < bd) { bd = dd; best = cc * L + L / 2; } }
       if (best != null) pk.vx += Math.max(-0.2, Math.min(0.2, (best - pk.x) * 0.006));
       pk.vx += (Math.random() - 0.5) * 0.25;
       if (pk.x < L * 2.3) pk.vx += 0.12; if (pk.x > W - L * 2.3) pk.vx -= 0.12;
@@ -280,7 +283,7 @@
       const y = cellY(ly); if (y > H || y < -L) continue;
       for (let c = 0; c < DG.COLS; c++) {
         if (DG.holes.has(ly * 16 + c)) continue;
-        const o = DG.oreAt[ly * 16 + c], [t, sd] = o ? [o.k, 0] : tileAt(ly, c); g.drawImage(getTile(t, sd), Math.round(c * L), y, Math.ceil(L), Math.ceil(L));
+        const o = DG.oreAt[ly * 16 + c] || (isDecoy(ly, c) ? { k: 'up' } : null), [t, sd] = o ? [o.k, 0] : tileAt(ly, c); g.drawImage(getTile(t, sd), Math.round(c * L), y, Math.ceil(L), Math.ceil(L));
         if (o || t === 'tnt') { g.strokeStyle = o ? (o.k === 'up' ? '#6ae6ff' : OREK[o.k]) : '#ff6a4a'; g.globalAlpha = 0.55 + 0.35 * Math.sin(Date.now() / 220 + c); g.lineWidth = 2; g.strokeRect(Math.round(c * L) + 1, y + 1, Math.ceil(L) - 2, Math.ceil(L) - 2); g.globalAlpha = 1; }
       }
     }
@@ -329,7 +332,7 @@
   }
   R.dig = (round) => {
     const st = $('#stage'); st.className = 'xstage digstage'; goText('Копать'); $('#opts').innerHTML = '';
-    if (!DG.ctx || !st.querySelector('canvas')) { DG.W = Math.min(400, st.clientWidth - 8 || 360); DG.H = Math.max(380, Math.min(560, (st.clientHeight || 430) - 8)); DG.ctx = canvasIn(st, DG.W, DG.H); DG.parts = []; DG.nums = []; }
+    if (!DG.ctx || !st.querySelector('canvas')) { DG.W = Math.min(400, st.clientWidth - 8 || 360); DG.H = Math.max(380, Math.min(720, (st.clientHeight || 430) - 8)); DG.ctx = canvasIn(st, DG.W, DG.H); DG.parts = []; DG.nums = []; }
     DG.booms = DG.booms || []; DG.holes = DG.holes || new Set(); DG.oreAt = DG.oreAt || {}; DG.sp = DG.sp || new Set(); DG.todo = DG.todo || []; DG.psize = DG.psize || 1;
     const v = round?.view;
     if (!round) DG.sc = null;

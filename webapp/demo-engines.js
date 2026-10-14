@@ -182,8 +182,8 @@ var __extra = (() => {
   };
   var DIG_INTRO = 1800;
   var DIG_SEG = 28e3;
-  var DIG_RATE = 0.295 / 1e3;
-  var DIG_TIERS = [["coal", 0.55, 0.04], ["iron", 0.25, 0.08], ["gold", 0.12, 0.16], ["red", 0.05, 0.24], ["lapis", 0.02, 0.4], ["dia", 8e-3, 0.8], ["em", 2e-3, 1.6]];
+  var DIG_RATE = 0.9 / 1e3;
+  var DIG_TIERS = [["coal", 0.55, 0.01], ["iron", 0.25, 0.02], ["gold", 0.12, 0.04], ["red", 0.05, 0.06], ["lapis", 0.02, 0.1], ["dia", 8e-3, 0.2], ["em", 2e-3, 0.4]];
   var digMultAt = (s, el) => floor2(s.ore.reduce((a, e) => e.t <= el ? a + e.inc : a, 0));
   function digSettle(s, now) {
     const el = now - s.startedAt;
@@ -194,9 +194,13 @@ var __extra = (() => {
     value: (st) => digMultAt(st, st.endAt),
     init(_p, rng, now) {
       const ups = [];
-      if (rng.float() < 0.5) {
-        ups.push(8e3 + rng.float() * 14e3);
-        if (rng.float() < 0.25) ups.push(ups[0] + 8e3 + rng.float() * 12e3);
+      if (rng.float() < 0.8) {
+        let u = 6e3 + rng.float() * 8e3;
+        ups.push(u);
+        while (ups.length < 6 && rng.float() < 0.6) {
+          u += 6e3 + rng.float() * 8e3;
+          ups.push(u);
+        }
       }
       const endAt = (ups.length ? ups[ups.length - 1] : 0) + DIG_SEG;
       const ore = [];

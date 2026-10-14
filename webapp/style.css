@@ -664,3 +664,5 @@ button.primary,button.small,.primary{background:linear-gradient(135deg,#9ff0ff,#
 @keyframes balsh{60%,100%{transform:translateX(120%)}}
 
 .panel,.inv{padding-top:26px}.panel .ice,.inv .ice{height:32px;background-size:92px 32px}.panel.list,.panel.prof{padding-top:26px}
+
+.digstage{min-height:max(260px,calc(100dvh - 104px - var(--ctrl-h,250px)))!important}
