@@ -508,22 +508,38 @@ if ($('#btn-luck')) $('#btn-luck').onclick = openLuck;
 async function openGifts() {
   if (document.querySelector('.giftsheet')) return;
   const d = document.createElement('div'); d.className = 'paysheet giftsheet';
-  d.innerHTML = `<div class="pbox"><i class="grab"></i><div class="gs-head"><h3>Вывести подарком</h3><span class="gs-bal"><b id="gs-bal">${state.balance}</b> ⭐</span></div><p class="psub" id="g-sub">Подарок прилетит вам в чат с ботом. Цена списывается с баланса.</p>
-    <div class="ggrid" id="g-grid"><p class="hint">Загружаем подарки…</p></div><p class="perr" id="g-err"></p>
+  const maxA = Math.max(0, state.balance), presets = [...new Set([500, 2000, 10000, 50000].filter((x) => x < maxA).concat(maxA > 0 ? [maxA] : []))];
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><div class="gs-head"><h3>Вывести подарком</h3><span class="gs-bal"><b id="gs-bal">${state.balance}</b> ⭐</span></div>
+    <p class="psub">Сколько звёзд хотите вывести? Подберём реальные подарки с Fragment на эту сумму (цена подарка + 10% комиссия).</p>
+    <div class="gs-amt"><input id="g-amt" type="number" inputmode="numeric" min="1" placeholder="Сумма в ⭐" value="${Math.min(maxA, 1000) || ''}"><button class="plink" id="g-find">Подобрать</button></div>
+    <div class="gs-chips">${presets.map((x) => `<button class="gs-chip" data-a="${x}">${x === maxA ? 'Всё · ' : ''}${x}</button>`).join('')}</div>
+    <div class="gs-stamp" id="g-stamp"></div>
+    <div class="ggrid" id="g-grid"><p class="hint">Введите сумму</p></div><p class="perr" id="g-err"></p>
     <button class="primary pay" id="g-go" disabled>Выберите подарок</button><button class="plink" id="g-no">Закрыть</button></div>`;
   document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
   const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
   d.querySelector('#g-no').onclick = close; d.onclick = (e) => { if (e.target === d) close(); };
-  const grid = d.querySelector('#g-grid'), go = d.querySelector('#g-go'), err = d.querySelector('#g-err'); let list = [], sel = null;
+  const grid = d.querySelector('#g-grid'), go = d.querySelector('#g-go'), err = d.querySelector('#g-err'), inp = d.querySelector('#g-amt'), stamp = d.querySelector('#g-stamp'); let list = [], sel = null;
   const paint = () => { go.disabled = !sel; go.textContent = sel ? (sel.price > state.balance ? `Не хватает ${sel.price - state.balance} ⭐` : `Отправить за ${sel.price} ⭐`) : 'Выберите подарок'; if (sel && sel.price > state.balance) go.disabled = true; grid.querySelectorAll('.gcard').forEach((c) => c.classList.toggle('on', sel && c.dataset.id === sel.id)); };
-  try {
-    const j = await api('gifts'); list = j.gifts; d.querySelector('#g-sub').textContent = `Подарок прилетит вам в чат с ботом. До ${j.perDay} в сутки, цена = стоимость подарка + комиссия.`;
-    grid.innerHTML = list.length ? list.map((g) => `<button class="gcard" data-id="${g.id}"><span class="gem">${gimg(g.id, g.emoji, g.fg)}</span>${g.name ? `<span class="gname">${g.name}</span><small class="gmodel">${g.model || ''}</small>` : ''}<b>${g.price} ⭐</b>${window.Market ? `<small class="gmx">${window.Market.line(g.price).replace(/ · ₽.*$/, '')}</small>` : ''}${g.limited ? '<i>лимит</i>' : ''}</button>`).join('') : '<p class="hint">Подарков пока нет</p>';
-    grid.querySelectorAll('.gcard').forEach((c) => c.onclick = () => { sel = list.find((g) => g.id === c.dataset.id); err.textContent = ''; paint(); });
-  } catch (e) { grid.innerHTML = ''; err.textContent = e.message; }
+  const fmt = (iso) => { try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
+  const find = async () => {
+    const amount = Math.floor(Number(inp.value)); sel = null; err.textContent = ''; paint();
+    if (!(amount > 0)) { grid.innerHTML = '<p class="hint">Введите сумму</p>'; return; }
+    if (amount > state.balance) { grid.innerHTML = ''; err.textContent = `На балансе только ${state.balance} ⭐`; return; }
+    grid.innerHTML = '<p class="hint">Подбираем…</p>';
+    try {
+      const j = await api('gifts', { amount }); list = j.gifts || [];
+      stamp.innerHTML = j.at ? `Цены Fragment на момент · <b>${fmt(j.at)}</b>` : '';
+      grid.innerHTML = list.length ? list.map((g) => `<button class="gcard" data-id="${g.id}"><span class="gem">${g.img ? `<span class="fg" style="--fgc:${(g.rgb || [90, 90, 120]).join(',')}"><img src="${g.img}" alt="" draggable="false"></span>` : gimg(g.id, g.emoji, g.fg)}</span><span class="gname">${g.name || ''}</span><small class="gmodel">${[g.model, g.backdrop, g.symbol].filter(Boolean).join(' · ')}</small><b>${g.price} ⭐</b>${window.Market ? `<small class="gmx">${window.Market.line(g.price).replace(/ · ₽.*$/, '')}</small>` : ''}${g.url ? `<a class="gfr" href="${g.url}" target="_blank" rel="noopener">Fragment ↗</a>` : ''}</button>`).join('') : '<p class="hint">Под такую сумму подарков нет — увеличьте сумму</p>';
+      grid.querySelectorAll('.gcard').forEach((c) => c.onclick = (e) => { if (e.target.closest('.gfr')) return; sel = list.find((g) => g.id === c.dataset.id); err.textContent = ''; paint(); });
+    } catch (e) { grid.innerHTML = ''; err.textContent = e.message; }
+  };
+  d.querySelector('#g-find').onclick = find; inp.onkeydown = (e) => { if (e.key === 'Enter') find(); };
+  d.querySelectorAll('.gs-chip').forEach((c) => c.onclick = () => { inp.value = c.dataset.a; find(); });
+  if (inp.value) find();
   go.onclick = async () => {
     if (!sel) return; go.disabled = true; go.textContent = 'Отправляем…';
-    try { const r = await api('gifts/send', { giftId: sel.id }); setBalance(r.balance); close(); toast(`Подарок ${sel.name || sel.emoji} в обработке: придёт в чат с ботом через ~${r.etaSec || 15} с`, 'wait', 5200); if (typeof loadCash === 'function') { loadCash(); let n = 0; const iv = setInterval(() => { loadCash(); if (++n > 12) clearInterval(iv); }, 4000); } window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); if (window.Telegram?.WebApp?.close && !window.__mockApi) setTimeout(() => {}, 0); }
+    try { const r = await api('gifts/send', { giftId: sel.id }); setBalance(r.balance); close(); toast(`Подарок ${sel.name || sel.emoji} в обработке: придёт в чат с ботом через ~${r.etaSec || 15} с`, 'wait', 5200); if (typeof loadCash === 'function') { loadCash(); let n = 0; const iv = setInterval(() => { loadCash(); if (++n > 12) clearInterval(iv); }, 4000); } window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); }
     catch (e) { err.textContent = e.message; paint(); }
   };
 }

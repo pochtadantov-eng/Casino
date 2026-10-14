@@ -460,3 +460,13 @@ tg-star.stz{display:inline-block;margin:0;padding:0;border:0;font-size:inherit;l
 .ctrl[data-game="tower"] .chip.on{background:#FFB347;color:#1A0E00;box-shadow:0 0 18px rgba(255,158,61,.4)}
 .ctrl[data-game="tower"] .chip.alt{background:rgba(255,158,61,.14);color:#FFB347}
 .ctrl[data-game="tower"] #go{background:linear-gradient(135deg,#FFB347,#FFD60A);color:#1A0E00;box-shadow:0 0 30px rgba(255,180,50,.4)}
+
+/* gift withdraw by amount */
+.giftsheet .gs-amt{display:flex;gap:8px;margin:4px 0 8px}
+.giftsheet .gs-amt input{flex:1;min-width:0;background:#0c0a1c;border:1px solid rgba(255,255,255,.14);border-radius:12px;color:#fff;font:700 18px/1 inherit;padding:12px 14px;outline:0}
+.giftsheet .gs-amt input:focus{border-color:#7df9ff}
+.giftsheet .gs-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.giftsheet .gs-chip{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:999px;color:#fff;font:600 13px/1 inherit;padding:7px 12px}
+.giftsheet .gs-stamp{font-size:12px;opacity:.7;margin:2px 0 6px}
+.giftsheet .gfr{display:block;margin-top:4px;font-size:11px;color:#7df9ff;text-decoration:none}
+.giftsheet .gmodel{display:block;font-size:10.5px;line-height:1.25;opacity:.75}
