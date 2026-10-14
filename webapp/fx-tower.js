@@ -455,24 +455,28 @@
         const ROPE = 'rgba(22,19,18,.97)';
         const rope = (x1, y1, x2, y2, sag, w = 2, ph = 0) => { g.strokeStyle = ROPE; g.lineWidth = w; g.beginPath(); g.moveTo(x1, y1); g.quadraticCurveTo((x1 + x2) / 2 + Math.sin(t * 2.2 + ph) * 1.6, (y1 + y2) / 2 + sag, x2, y2); g.stroke(); };
         const knot = (x, y, r = 2.7) => { g.fillStyle = ROPE; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); g.strokeStyle = 'rgba(255,255,255,.28)'; g.lineWidth = 0.8; g.beginPath(); g.arc(x - 0.5, y - 0.6, r * 0.5, 3.4, 5.2); g.stroke(); };
-        const top = letters.slice(0, 4), low = letters.slice(4);
-        // solid parts: N left stem, O top arc, V left arm, A apex (as a fraction of the font size from the letter centre)
-        const topAt = [-0.27, -0.05, 0.27, 0.0], botAt = [-0.27, 0, 0, 0.3];
-        const lowTop = [-0.27, -0.0, -0.3, 0.0, 0.28];                               // Б left stem, А apex, Ш left stem, Н (unused), И right stem
-        const hookX = hx + 0.9 * hs, beltY = hy + 1.4 * hs, ringX = hookX + Math.sin(t * 1.3) * 1.5, ringY = hy + 3.5 * hs;
-        g.fillStyle = '#2a2d33'; g.fillRect(hookX - 0.28 * hs, beltY - 0.1 * hs, 0.56 * hs, 0.34 * hs);
-        rope(hookX, beltY + 0.2 * hs, ringX, ringY - 4, 0, 2.4);
-        g.strokeStyle = '#d5d8de'; g.lineWidth = 2; g.beginPath(); g.arc(ringX, ringY, 4.5, 0, 6.283); g.stroke(); g.strokeStyle = 'rgba(30,30,34,.7)'; g.lineWidth = 0.8; g.beginPath(); g.arc(ringX, ringY, 5.6, 0, 6.283); g.stroke();
-        // the lashings are tied to the OUTER EDGES of the title (the outside of the first and last letters), never to the letters themselves
-        const E = 0.56;                                                              // outside of the letter outline, as a share of the font size from the letter centre
+        // proper rigging: cable -> ring -> two slings -> steel spreader bar -> chains with shackles down to the title; two chains tie БАШНИ to TONUP
         const nTop = lines[0][0].length, N = letters[0], A = letters[nTop - 1], B = letters[nTop], I = letters[letters.length - 1];
-        const tl = xf(N.x - E * N.fs, N.y - 0.36 * N.fs), tr = xf(A.x + E * A.fs, A.y - 0.36 * A.fs);          // top-left / top-right edge of the top word
-        rope(ringX, ringY + 4, tl[0], tl[1], 3, 2.3, 1); rope(ringX, ringY + 4, tr[0], tr[1], 3, 2.3, 2); knot(tl[0], tl[1], 3); knot(tr[0], tr[1], 3);
-        // NOVA -> БАШНИ: down the left edge and down the right edge
-        for (const [U, D, ux, dx2, ph] of [[N, B, -E, -E, 3], [A, I, E, E, 4]]) {
-          const [px, py] = xf(U.x + ux * U.fs, U.y + 0.3 * U.fs), [qx, qy] = xf(D.x + dx2 * D.fs, D.y - 0.3 * D.fs);
-          rope(px, py, qx, qy, ux < 0 ? -1.5 : 1.5, 2.3, ph); knot(px, py, 3); knot(qx, qy, 3);
-        }
+        const hookX = hx + 0.9 * hs, beltY = hy + 1.4 * hs, ringX = hookX + Math.sin(t * 1.3) * 1.2, ringY = hy + 3.1 * hs;
+        const bx0 = N.x - 0.42 * N.fs, bx1 = A.x + 0.42 * A.fs, byy = N.y - 0.98 * N.fs;
+        const P0 = xf(bx0, byy), P1 = xf(bx1, byy), PC = xf((bx0 + bx1) / 2, byy);
+        const strap = (x1, y1, x2, y2, w) => { g.strokeStyle = '#1b1c20'; g.lineWidth = w + 1.6; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.strokeStyle = '#e0a62a'; g.lineWidth = w; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(x1 - 0.6, y1); g.lineTo(x2 - 0.6, y2); g.stroke(); };
+        const shackle = (x, y, r = 3.4) => { g.strokeStyle = '#c9ced6'; g.lineWidth = 1.9; g.beginPath(); g.arc(x, y, r, 0, 6.283); g.stroke(); g.fillStyle = '#6b7079'; g.fillRect(x - 1.1, y + r - 1.4, 2.2, 3.4); };
+        const chain = (x1, y1, x2, y2) => { const len = Math.hypot(x2 - x1, y2 - y1), n = Math.max(2, Math.round(len / 7)), ang = Math.atan2(y2 - y1, x2 - x1); for (let i = 0; i <= n; i++) { const u = i / n, x = x1 + (x2 - x1) * u, y = y1 + (y2 - y1) * u; g.save(); g.translate(x, y); g.rotate(ang + (i % 2 ? 0 : 1.5708)); g.strokeStyle = '#2b2e35'; g.lineWidth = 3.2; g.beginPath(); g.ellipse(0, 0, 4.1, i % 2 ? 1.5 : 2.4, 0, 0, 6.283); g.stroke(); g.strokeStyle = '#b8bec8'; g.lineWidth = 1.6; g.beginPath(); g.ellipse(0, 0, 4.1, i % 2 ? 1.5 : 2.4, 0, 0, 6.283); g.stroke(); g.restore(); } };
+        g.fillStyle = '#2a2d33'; g.fillRect(hookX - 0.3 * hs, beltY - 0.1 * hs, 0.6 * hs, 0.36 * hs);
+        strap(hookX, beltY + 0.2 * hs, ringX, ringY - 5, 2.6);                      // cargo cable from the belly of the helicopter
+        g.strokeStyle = '#d5d8de'; g.lineWidth = 2.4; g.beginPath(); g.arc(ringX, ringY, 5, 0, 6.283); g.stroke(); g.strokeStyle = 'rgba(30,30,34,.7)'; g.lineWidth = 0.8; g.beginPath(); g.arc(ringX, ringY, 6.2, 0, 6.283); g.stroke();
+        strap(ringX - 2, ringY + 4, P0[0] + (PC[0] - P0[0]) * 0.12, P0[1] - 1, 2.2); strap(ringX + 2, ringY + 4, P1[0] + (PC[0] - P1[0]) * 0.12, P1[1] - 1, 2.2);   // two slings
+        // steel spreader bar
+        g.save(); g.lineCap = 'round'; g.strokeStyle = '#15171b'; g.lineWidth = 8; g.beginPath(); g.moveTo(P0[0], P0[1]); g.lineTo(P1[0], P1[1]); g.stroke();
+        const bg = g.createLinearGradient(0, PC[1] - 3, 0, PC[1] + 3); bg.addColorStop(0, '#e8ecf2'); bg.addColorStop(0.5, '#9aa2ae'); bg.addColorStop(1, '#5a606b'); g.strokeStyle = bg; g.lineWidth = 5.6; g.beginPath(); g.moveTo(P0[0], P0[1]); g.lineTo(P1[0], P1[1]); g.stroke(); g.restore();
+        for (const q of [P0, P1, PC]) { g.fillStyle = '#3b4048'; g.beginPath(); g.arc(q[0], q[1], 1.5, 0, 6.283); g.fill(); }
+        shackle(ringX, ringY + 6.5, 2.4);
+        // chains from the bar down to the top of the first and the last letter
+        for (const [q, L2, k] of [[P0, N, -0.2], [P1, A, 0.2]]) { const e = xf(L2.x + k * L2.fs, L2.y - 0.5 * L2.fs); chain(q[0], q[1] + 3, e[0], e[1] - 3); shackle(e[0], e[1] - 1, 3); }
+        // TONUP -> БАШНИ: two chains between the words
+        const lw = letters.slice(nTop); const lx0 = lw[0].x - 0.15 * lw[0].fs, lx1 = lw[lw.length - 1].x + 0.15 * lw[lw.length - 1].fs;
+        for (const [U, D, k] of [[N, B, 0.0], [A, I, 0.0]]) { const ux = U.x + (U === N ? 0.05 : -0.05) * U.fs, dxx = D === B ? lx0 : lx1; const a1 = xf(ux, U.y + 0.46 * U.fs), a2 = xf(dxx, D.y - 0.44 * D.fs); chain(a1[0], a1[1], a2[0], a2[1]); shackle(a1[0], a1[1], 2.6); shackle(a2[0], a2[1], 2.6); }
         g.restore();
       }
       if (this.loadStart == null) this.loadStart = Date.now();
