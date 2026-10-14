@@ -22,7 +22,7 @@ jobs:
         with: { node-version: 22 }
       - env:
           COLLS: ${{ github.event.inputs.colls || '' }}
-          PER: 12
+          PER: 16
           BUDGET_MIN: 14
         run: mkdir -p _gm/out && cd _gm && (npm init -y >/dev/null; npm i sharp 2>&1 | tail -2 > out/npm.log; cp ../scripts/gift-market.mjs . && node gift-market.mjs out 2>&1 | tee out/log.txt)
       - name: Publish to gift-market

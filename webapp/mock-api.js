@@ -94,7 +94,7 @@
   const sing = (n) => n.replace(/(ch|sh|x)es$/i, '$1').replace(/s$/i, '');
   const mItems = () => ((window.FG_MARKET && window.FG_MARKET.items) || []).map((it) => { const stars = Math.max(1, window.Market ? window.Market.tonToStars(it.p) : Math.round(it.p / 0.01092)); return { id: 'm_' + it.s + '_' + it.n, slug: it.s, n: it.n, name: sing(it.name) + ' #' + it.n, model: it.m, backdrop: it.b, symbol: it.y, rgb: it.c, img: it.img, ton: it.p, stars, price: Math.ceil(stars * 1.1), url: 'https://fragment.com/gift/' + it.s + '-' + it.n }; });
   const offerById = (id) => mItems().find((g) => g.id === id);
-  const offers = (amount) => { const all = mItems().filter((g) => g.price <= amount).sort((a, b) => b.price - a.price); const per = {}, out = []; for (const g of all) { if ((per[g.slug] = (per[g.slug] || 0) + 1) > 2) continue; out.push(g); if (out.length >= 12) break; } return out; };
+  const offers = (amount) => { const all = mItems().filter((g) => g.price <= amount).sort((a, b) => b.price - a.price); const per = {}, out = [], lo = amount * 0.25; for (const g of all) { if (g.price < lo && out.length >= 24) break; if ((per[g.slug] = (per[g.slug] || 0) + 1) > 3) continue; out.push(g); if (out.length >= 48) break; } return out; };
   const handlers = {
     me: () => ({ id: 1, balance: db.balance, limits: LIMITS, isAdmin: true, luck: db.luck || 0 }),      // demo: everyone is the owner
     'admin/luck': (b) => { const l = Math.round(Number(b.luck)); if (!(l >= -100 && l <= 100)) fail('Luck must be -100..100'); db.luck = l; save(); return { luck: l }; },

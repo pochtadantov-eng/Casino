@@ -522,3 +522,11 @@ tg-star.stz{display:inline-block;margin:0;padding:0;border:0;font-size:inherit;l
 .gs2 .gs-amtbox input{-moz-appearance:textfield;appearance:textfield}
 .gs2 .ginfo .gname{white-space:normal;overflow:visible}
 .gs2 .gs-amtbox input::placeholder{font-size:22px;font-weight:700;color:rgba(255,255,255,.35)}
+
+/* gift withdraw v4: tier colours */
+.gs2 .gs-top{--tc:#2bd96b;border-color:color-mix(in srgb,var(--tc) 55%,transparent);box-shadow:0 0 22px color-mix(in srgb,var(--tc) 28%,transparent),inset 0 0 18px color-mix(in srgb,var(--tc) 10%,transparent);transition:box-shadow .25s,border-color .25s}
+.gs2 .gs-tier{display:inline-block;font:800 11px/1 Onest,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--tc);padding:4px 8px;border-radius:999px;border:1px solid var(--tc);background:color-mix(in srgb,var(--tc) 14%,transparent);margin-bottom:4px;box-shadow:0 0 12px color-mix(in srgb,var(--tc) 40%,transparent)}
+.gs2 .gs-amtbox input{color:var(--tc);text-shadow:0 0 16px color-mix(in srgb,var(--tc) 60%,transparent)}
+.gs2 .gs-rng::-webkit-slider-runnable-track{background:linear-gradient(90deg,transparent var(--p),rgba(12,10,28,.82) var(--p)),var(--tr,#2bd96b);box-shadow:0 0 14px color-mix(in srgb,var(--tc) 55%,transparent)}
+.gs2 .gs-rng::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--tc),0 0 14px var(--tc)}
+.gs2 .gs-chip{border-color:color-mix(in srgb,var(--tc) 60%,transparent);color:var(--tc)}
