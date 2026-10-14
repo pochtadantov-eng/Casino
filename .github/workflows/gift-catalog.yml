@@ -17,7 +17,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: mkdir -p _gc && cd _gc && npm init -y >/dev/null && npm i sharp >/dev/null 2>&1 && cp ../scripts/gift-catalog.mjs . && node gift-catalog.mjs out
+      - env:
+          COLLS: lolpop,deskcalendar,genielamp,libertyfigure,chillflame,eternalcandle,hangingstar
+        timeout-minutes: 12
+        run: mkdir -p _gc && cd _gc && npm init -y >/dev/null && npm i sharp >/dev/null 2>&1 && cp ../scripts/gift-catalog.mjs . && node gift-catalog.mjs out
       - name: Publish to gift-catalog
         run: |
           cd _gc/out
