@@ -1,5 +1,6 @@
 const tg = window.Telegram?.WebApp;
 tg?.ready(); tg?.expand();
+try { tg?.setBackgroundColor?.('#07060F'); tg?.setHeaderColor?.('#07060F'); tg?.setBottomBarColor?.('#07060F'); } catch {}
 
 const $ = (s) => document.querySelector(s);
 const state = { game: 'rocket', round: null, balance: 0, limits: { minBet: 50, maxBet: 100000, minWithdraw: 100, minDeposit: 50, maxDeposit: 10000 }, busy: false, raf: 0 };
