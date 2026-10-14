@@ -320,9 +320,9 @@ button.small.ghost,.small.ghost{background:var(--glass);color:var(--fg)}
 #splash .sp-write{width:252px;height:auto;margin-top:6px;overflow:visible;stroke-width:7}
 #splash .sp-write .w1{stroke:#F4F2FF;filter:drop-shadow(0 0 8px rgba(244,242,255,.35))}
 #splash .sp-write .w2{stroke:#C6FF3D;filter:drop-shadow(0 0 10px rgba(198,255,61,.55))}
-#splash .sp-write path{stroke-dasharray:1;stroke-dashoffset:1;animation:spWrite .55s ease-in-out forwards}
+#splash .sp-write path{stroke-dasharray:1;stroke-dashoffset:1;animation:spWrite .4s ease-in-out forwards}
 @keyframes spWrite{to{stroke-dashoffset:0}}
-#splash .sp-sub{font:700 11px/1 Onest,sans-serif;letter-spacing:3px;text-transform:uppercase;color:var(--hint);margin-top:8px;animation:spUp .6s 4s both}
+#splash .sp-sub{font:700 11px/1 Onest,sans-serif;letter-spacing:3px;text-transform:uppercase;color:var(--hint);margin-top:8px;animation:spUp .6s 2.7s both}
 #splash .sp-bar{width:150px;height:4px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:34px}
 #splash .sp-bar i{display:block;height:100%;width:100%;background:var(--lime);border-radius:4px;transform-origin:left;animation:spBar linear both;box-shadow:0 0 12px var(--lime)}
 @keyframes spIn{from{transform:scale(.4) rotate(-12deg);opacity:0}to{transform:none;opacity:1}}

@@ -26,7 +26,7 @@
     ms = ms || 5000;
     const old = $('#splash'); if (old) old.remove();
     const s = document.createElement('div'); s.id = 'splash';
-    const P = (d, dx, i) => `<path pathLength="1" d="${d}" transform="translate(${dx} 0)" style="animation-delay:${(0.8 + i * 0.42).toFixed(2)}s" />`;
+    const P = (d, dx, i) => `<path pathLength="1" d="${d}" transform="translate(${dx} 0)" style="animation-delay:${(0.4 + i * 0.26).toFixed(2)}s" />`;
     const ton = ['M18 28C42 21 68 22 94 26', 'M58 24C56 48 60 70 56 88C54 96 48 98 44 92', 'M124 62C108 60 98 72 102 84C106 94 124 92 128 76C130 68 126 62 120 62', 'M130 80C136 84 142 76 146 64C148 58 148 54 146 54C144 54 144 80 144 92C146 70 160 50 172 60C178 66 172 84 174 92'];
     const up = ['M190 24C188 50 186 70 198 86C210 98 224 80 228 54C229 44 230 34 230 24', 'M230 30C230 54 228 76 224 94C228 94 236 90 240 80', 'M262 58C260 82 258 102 256 118', 'M258 70C268 54 288 56 288 72C288 88 270 94 258 84'];
     s.innerHTML = `<div class="sp-logo">${V[cur].svg}</div><svg class="sp-write" viewBox="0 0 286 130" fill="none" stroke-linecap="round" stroke-linejoin="round"><g class="w1">${ton.map((d, i) => P(d, [0, 0, -9, -9][i], i)).join('')}</g><g class="w2">${up.map((d, i) => P(d, [-12, -12, -28, -28][i], i + 4)).join('')}</g></svg><div class="sp-sub">играй · поднимайся</div><div class="sp-bar"><i style="animation-duration:${ms}ms"></i></div>`;
