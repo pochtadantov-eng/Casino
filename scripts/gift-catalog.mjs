@@ -15,10 +15,21 @@ for (const slug of COLL) {
   if (left() < 0) break;
   const c = { slug, ok: false, items: [] };
   catalog[slug] = c;
-  const nums = new Set();
+  const nums = new Set(), price = new Map(), saleP = [], soldP = [];
   for (const q of ['?sort=price_asc&filter=sale', '?sort=price_desc&filter=sale', '?sort=listed&filter=sale', '?filter=sold', '?sort=ending&filter=auction', '']) {
-    try { const r = await fetch(`https://fragment.com/gifts/${slug}${q}`, { headers: UA, signal: AbortSignal.timeout(15000) }); const t = await r.text(); for (const m of t.matchAll(new RegExp(`/gift/${slug}-(\\d+)`, 'g'))) nums.add(+m[1]); console.log(slug, q, r.status, nums.size); } catch (e) { console.log(slug, q, 'err', String(e).slice(0, 80)); }
+    try {
+      const r = await fetch(`https://fragment.com/gifts/${slug}${q}`, { headers: UA, signal: AbortSignal.timeout(15000) }); const t = await r.text();
+      for (const blk of t.split('class="tm-grid-item"').slice(1)) {
+        const m = new RegExp(`/gift/${slug}-(\\d+)`).exec(blk); if (!m) continue; nums.add(+m[1]);
+        const pr = /icon-ton">\s*([\d,]+)(?:<span class="mini-frac">(\.\d+)<\/span>)?/.exec(blk);
+        const v = pr ? parseFloat(pr[1].replace(/,/g, '') + (pr[2] ?? '')) : NaN;
+        if (v > 0) { if (!price.has(+m[1])) price.set(+m[1], v); (q.includes('sold') ? soldP : q.includes('sale') ? saleP : []).push(v); }
+      }
+      console.log(slug, q, r.status, nums.size);
+    } catch (e) { console.log(slug, q, 'err', String(e).slice(0, 80)); }
   }
+  const med = (a) => a.length ? [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)] : null;
+  c.floor = saleP.length ? Math.min(...saleP) : null; c.saleMedian = med(saleP); c.soldMedian = med(soldP);
   c.listed = nums.size; c.max = Math.max(0, ...nums);
   if (!nums.size) { c.err = 'no listing'; continue; }
   c.ok = true;
@@ -26,7 +37,7 @@ for (const slug of COLL) {
   const got = await pool(picks, async (n) => {
     if (left() < 0) return null;
     const j = await getJ(slug, n); if (!j) return null;
-    const it = { n, model: attr(j, 'Model'), backdrop: attr(j, 'Backdrop'), symbol: attr(j, 'Symbol') };
+    const it = { n, model: attr(j, 'Model'), backdrop: attr(j, 'Backdrop'), symbol: attr(j, 'Symbol'), price: price.get(n) ?? null };
     try {
       const r = await fetch(`https://nft.fragment.com/gift/${slug}-${n}.webp`, { headers: UA, signal: AbortSignal.timeout(9000) }); const buf = Buffer.from(await r.arrayBuffer());
       if (!sharp) throw new Error('nosharp');
