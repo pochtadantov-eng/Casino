@@ -406,3 +406,16 @@ tg-star.stz{display:inline-block;margin:0;padding:0;border:0;font-size:inherit;l
 .rcard .rico{line-height:0}
 .rcard .rico tg-star.stz{width:48px;height:48px;vertical-align:top;margin-bottom:2px}
 .rcard b{margin-top:2px}
+
+/* bigger roulette cards */
+.chestmodal.spin .cm-roul{height:204px}
+.cm-strip{margin-top:-90px;gap:8px}
+.rcard,.rcard{flex:0 0 132px;width:132px;height:180px;border-radius:18px;gap:4px}
+.rcard .rico tg-star.stz{width:68px;height:68px}
+.rcard b{font-size:28px}
+.rcard span{font-size:13px}
+.rcard.gift{padding:8px 6px 6px;gap:4px}
+.rcard .rico .fg{width:104px;height:104px;border-radius:16px}
+.rcard.gift b{font-size:13px;max-width:120px}
+.rcard.gift span{font:800 16px/1 Onest,sans-serif;color:#fff;display:flex;align-items:center;gap:4px}
+.rcard.gift span tg-star.stz{width:18px;height:18px}
