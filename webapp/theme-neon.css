@@ -355,3 +355,9 @@ button.small.ghost,.small.ghost{background:var(--glass);color:var(--fg)}
 @keyframes tbFill{to{transform:translateX(0)}}
 @keyframes tbWave{to{transform:translateY(-44px)}}
 @keyframes tbBub{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(-26px);opacity:0}}
+
+/* topbar: wordmark | sound | balance | profile */
+#topbar .logobtn{width:auto;height:36px;filter:drop-shadow(0 0 10px rgba(198,255,61,.25))}
+#topbar .logobtn svg.wm{height:36px;width:auto;display:block}
+#topbar .sndbtn{margin-left:auto}
+#topbar .balchip{margin-left:0}

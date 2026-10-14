@@ -15,9 +15,13 @@
   ];
   const ls = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
   let cur = Math.min(4, Math.max(0, parseInt(ls.get('tonup_logo') || '0', 10) || 0));
+  const ton = ['M14 28C32 22 52 22 78 26', 'M58 24C56 48 60 70 56 88C54 96 48 98 44 92', 'M124 62C108 60 98 72 102 84C106 94 124 92 128 76C130 68 126 62 120 62', 'M130 80C136 84 142 76 146 64C148 58 148 54 146 54C144 54 144 80 144 92C146 70 160 50 172 60C178 66 172 84 174 92'];
+  const up = ['M190 24C188 50 186 70 198 86C210 98 224 80 228 54C229 44 230 34 230 24', 'M230 30C230 54 228 76 224 94C228 94 236 90 240 80', 'M262 58C260 82 258 102 256 118', 'M258 70C268 54 288 56 288 72C288 88 270 94 258 84'];
+  const wmSvg = (w) => `<svg class="wm" viewBox="8 14 244 112" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="${w}"><g stroke="#F4F2FF">${ton.map((d, i) => `<path d="${d}" transform="translate(${[0, 0, -33, -33][i]} 0)"/>`).join('')}</g><g stroke="#C6FF3D">${up.map((d, i) => `<path d="${d}" transform="translate(${[-36, -36, -48, -48][i]} 0)"/>`).join('')}</g></svg>`;
   const $ = (s, r = document) => r.querySelector(s);
 
   function paint() {
+    document.querySelectorAll('[data-wm]').forEach((el) => { el.innerHTML = wmSvg(8); });
     document.querySelectorAll('[data-logo]').forEach((el) => { el.innerHTML = V[cur].svg; });
     const bs = $('.brandrow > svg'); if (bs) bs.remove();
   }
@@ -27,8 +31,6 @@
     const old = $('#splash'); if (old) old.remove();
     const s = document.createElement('div'); s.id = 'splash';
     const P = (d, dx, i) => `<path pathLength="1" d="${d}" transform="translate(${dx} 0)" style="animation-delay:${(0.4 + i * 0.26).toFixed(2)}s" />`;
-    const ton = ['M14 28C32 22 52 22 78 26', 'M58 24C56 48 60 70 56 88C54 96 48 98 44 92', 'M124 62C108 60 98 72 102 84C106 94 124 92 128 76C130 68 126 62 120 62', 'M130 80C136 84 142 76 146 64C148 58 148 54 146 54C144 54 144 80 144 92C146 70 160 50 172 60C178 66 172 84 174 92'];
-    const up = ['M190 24C188 50 186 70 198 86C210 98 224 80 228 54C229 44 230 34 230 24', 'M230 30C230 54 228 76 224 94C228 94 236 90 240 80', 'M262 58C260 82 258 102 256 118', 'M258 70C268 54 288 56 288 72C288 88 270 94 258 84'];
     s.innerHTML = `<div class="sp-logo">${V[cur].svg}</div><svg class="sp-write" viewBox="0 0 252 130" fill="none" stroke-linecap="round" stroke-linejoin="round"><g class="w1">${ton.map((d, i) => P(d, [0, 0, -33, -33][i], i)).join('')}</g><g class="w2">${up.map((d, i) => P(d, [-36, -36, -48, -48][i], i + 4)).join('')}</g></svg><div class="sp-sub">играй · поднимайся</div><div class="sp-tube"><svg viewBox="0 0 260 60" aria-hidden="true"><defs><clipPath id="tbc"><path d="M30 8H230a22 22 0 0 1 0 44H30a22 22 0 0 1 0-44Z"/></clipPath><linearGradient id="tbw" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3DE0A0"/><stop offset="1" stop-color="#C6FF3D"/></linearGradient></defs><path d="M30 8H230a22 22 0 0 1 0 44H30a22 22 0 0 1 0-44Z" fill="rgba(255,255,255,.04)"/><g clip-path="url(#tbc)"><g class="tb-water" style="animation-duration:${ms}ms"><g class="tb-wave"><path d="M-260 -36H266q-10 11 0 22t0 22t0 22t0 22t0 22t0 22t0 22H-260Z" fill="url(#tbw)"/></g><circle class="bb b1" cx="60" cy="40" r="2.6"/><circle class="bb b2" cx="120" cy="44" r="1.8"/><circle class="bb b3" cx="170" cy="38" r="3"/><circle class="bb b4" cx="220" cy="42" r="1.6"/><circle class="bb b5" cx="90" cy="42" r="2"/></g></g><path d="M30 8H230a22 22 0 0 1 0 44H30a22 22 0 0 1 0-44Z" fill="none" stroke="#F4F2FF" stroke-opacity=".85" stroke-width="2.4"/><path d="M34 17H226" stroke="#fff" stroke-opacity=".35" stroke-width="2.6" stroke-linecap="round"/></svg><b class="sp-pct">0%</b></div>`;
     document.body.appendChild(s);
     const pc = $('.sp-pct', s), t0 = performance.now();
