@@ -156,64 +156,107 @@
   }
 
   // =========================================== SHAFT (dig) ===========================================
-  const DG = { L: 28, step: Math.log(1.15), W: 360, H: 430, raf: 0, poll: 0, off: 0, sc: null };
+  const DG = { L: 36, step: Math.log(1.15), W: 360, H: 430, raf: 0, poll: 0, off: 0, sc: null, COLS: 10, shaft: [3, 4, 5, 6] };
   const rh = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
-  const BL = (layer, col) => {                     // block palette by depth, with ore veins
-    const r = rh(layer, col);
-    if (layer < 1) return ['#5db04a', '#7a5a35'];
-    if (layer < 4) return r < 0.12 ? ['#7a5a35', '#3a3a3a'] : ['#7a5a35', '#8a6a42'];
-    if (layer < 12) return r < 0.1 ? ['#8b8b8b', '#1f1f1f'] : r < 0.14 ? ['#8b8b8b', '#c79a6b'] : ['#8b8b8b', '#9a9a9a'];
-    if (layer < 22) return r < 0.1 ? ['#7d7d7d', '#f2c230'] : r < 0.16 ? ['#7d7d7d', '#e0e0e0'] : ['#777', '#868686'];
-    if (layer < 32) return r < 0.12 ? ['#6a6a72', '#5be6ff'] : r < 0.2 ? ['#6a6a72', '#d83a3a'] : ['#65656d', '#76767e'];
-    return r < 0.14 ? ['#3d3d46', '#4fe08a'] : ['#38383f', '#46464e'];
+  // ---- pixel-art tiles (16x16, generated once, drawn without smoothing) ----
+  const TILE = {}, cvs = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+  const hexA = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const shade = (h, k) => { const [r, g, b] = hexA(h); return `rgb(${Math.max(0, Math.min(255, r * k)) | 0},${Math.max(0, Math.min(255, g * k)) | 0},${Math.max(0, Math.min(255, b * k)) | 0})`; };
+  function noiseTile(base, seed, spread = 0.18, cobble = false) {
+    const c = cvs(16, 16), g = c.getContext('2d');
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { let k = 1 + (rh(x + seed * 17, y + seed * 31) - 0.5) * spread * 2; if (cobble) { const cx = (x + (y > 7 ? 4 : 0)) % 8, edge = cx === 0 || y % 8 === 0 || y % 8 === 7; if (edge) k *= 0.72; } g.fillStyle = shade(base, k); g.fillRect(x, y, 1, 1); }
+    return [c, g];
+  }
+  function dots(g, col, seed, n, hi) { for (let i = 0; i < n; i++) { const x = 1 + Math.floor(rh(seed, i * 3) * 13), y = 1 + Math.floor(rh(i * 5, seed) * 13); g.fillStyle = col; g.fillRect(x, y, 2, 2); if (hi) { g.fillStyle = hi; g.fillRect(x, y, 1, 1); } } }
+  function mkTile(type, seed) {
+    if (type === 'grass') { const [c, g] = noiseTile('#7a5a35', seed, 0.14); g.fillStyle = '#5fb04a'; g.fillRect(0, 0, 16, 5); for (let x = 0; x < 16; x++) { const h = 5 + Math.floor(rh(x, seed) * 3); g.fillStyle = x % 3 ? '#4f9a3c' : '#6ac455'; g.fillRect(x, 3, 1, h - 3); } return c; }
+    if (type === 'dirt') return noiseTile('#8a5e36', seed, 0.26)[0];
+    if (type === 'cobble') return noiseTile('#8d8d8d', seed, 0.14, true)[0];
+    if (type === 'deep') return noiseTile('#4d4d58', seed, 0.14, true)[0];
+    if (type === 'bed') { const [c, g] = noiseTile('#4a4566', seed, 0.1); g.fillStyle = 'rgba(0,0,0,.35)'; for (let y = 0; y < 16; y += 4) g.fillRect(0, y, 16, 1); for (let y = 0; y < 16; y += 8) { g.fillRect(((y / 8) % 2) * 8, y, 1, 4); g.fillRect(((y / 8) % 2) * 8 + 8, y + 4, 1, 4); } return c; }
+    const deep = type.endsWith('_d'), t = type.replace('_d', ''), [c, g] = noiseTile(deep ? '#4d4d58' : '#8d8d8d', seed, 0.14, true);
+    if (t === 'gold') dots(g, '#f0a53a', seed + 1, 12, '#ffe08a');
+    else if (t === 'red') dots(g, '#d23a3a', seed + 2, 12, '#ff8a7a');
+    else if (t === 'dia') { g.fillStyle = '#2d6fd6'; g.fillRect(0, 0, 16, 16); for (let y = 0; y < 16; y += 5) for (let x = 0; x < 16; x += 5) { g.fillStyle = (x + y) % 10 ? '#46b6ff' : '#9ae8ff'; g.fillRect(x + 1, y + 1, 4, 4); } g.fillStyle = '#e8fbff'; g.fillRect(2, 2, 2, 1); g.fillRect(9, 7, 2, 1); g.fillStyle = 'rgba(0,0,40,.35)'; g.fillRect(0, 15, 16, 1); g.fillRect(15, 0, 1, 16); }
+    else if (t === 'em') { g.fillStyle = '#1f8f43'; g.fillRect(0, 0, 16, 16); for (let y = 0; y < 16; y += 4) for (let x = 0; x < 16; x += 4) { g.fillStyle = (x + y) % 8 ? '#3fd16a' : '#86f2a4'; g.fillRect(x + 1, y + 1, 3, 3); } g.fillStyle = 'rgba(0,30,0,.35)'; g.fillRect(0, 15, 16, 1); g.fillRect(15, 0, 1, 16); }
+    else if (t === 'tnt') { g.fillStyle = '#c83030'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#e8e4d8'; g.fillRect(0, 5, 16, 6); g.fillStyle = '#222'; g.font = 'bold 6px monospace'; g.textAlign = 'center'; g.fillText('TNT', 8, 10.4); g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(0, 15, 16, 1); for (let x = 3; x < 16; x += 5) g.fillRect(x, 0, 1, 5); }
+    else if (t === 'arrow') { g.fillStyle = '#e8932a'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#ffc25a'; g.fillRect(1, 1, 14, 14); g.fillStyle = '#2fbf4a'; g.fillRect(7, 6, 2, 8); g.fillRect(5, 8, 6, 1); g.fillRect(6, 7, 4, 1); g.fillRect(4, 9, 8, 1); g.fillStyle = '#18892f'; g.fillRect(8, 6, 1, 8); }
+    return c;
+  }
+  const getTile = (type, seed) => TILE[type + seed] || (TILE[type + seed] = mkTile(type, seed));
+  const tileAt = (ly, c) => {
+    if (c === 0 || c === DG.COLS - 1) return ['bed', (ly + c) % 3];
+    if (ly === 0) return ['grass', c % 3];
+    const deep = ly > 26, grp = rh(ly >> 1, c >> 1), one = rh(ly * 7 + c, c * 13 + ly), sd = (ly * 3 + c) % 3;
+    if (one < 0.035 && ly > 3) return ['tnt', 0];
+    if (one > 0.985 && ly > 2) return ['arrow', 0];
+    if (ly < 4) return ['dirt', sd];
+    if (ly > 12 && grp > 0.93) return ['dia', 0];
+    if (ly > 16 && grp > 0.88) return ['em', 0];
+    if (ly > 6 && grp < 0.2) return [deep ? 'red_d' : 'red', sd];
+    if (ly > 3 && grp > 0.62 && grp < 0.8) return [deep ? 'gold_d' : 'gold', sd];
+    return [deep ? 'deep' : 'cobble', sd];
   };
+  // ---- backdrop seen through the dug shaft: sky, mountains, pines, floating island ----
+  let BG = null;
+  function backdrop(W, H) {
+    if (BG && BG.width === W && BG.height === H) return BG;
+    BG = cvs(W, H); const g = BG.getContext('2d'); g.imageSmoothingEnabled = false;
+    const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#7bb8f5'); sky.addColorStop(0.55, '#bfe0ff'); sky.addColorStop(1, '#dff3ff'); g.fillStyle = sky; g.fillRect(0, 0, W, H);
+    const ridge = (base, amp, col, seed, step) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, H); for (let x = 0; x <= W + step; x += step) g.lineTo(x, base - Math.abs(Math.sin(x * 0.011 + seed) * amp) - rh(x, seed) * 14); g.lineTo(W, H); g.fill(); };
+    ridge(H * 0.62, 110, '#8fb4d6', 1, 12); ridge(H * 0.72, 80, '#6f9fc8', 4, 12); ridge(H * 0.82, 50, '#58b36a', 9, 10); ridge(H * 0.9, 30, '#3f9a56', 2, 10);
+    g.fillStyle = '#2b7a3f'; for (let i = 0; i < 16; i++) { const x = (i * 47 + 20) % W, y = H * 0.84 + (i % 3) * 12, h = 26 + (i % 4) * 8; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 9, y + h); g.lineTo(x + 9, y + h); g.fill(); g.beginPath(); g.moveTo(x, y + 8); g.lineTo(x - 12, y + h + 8); g.lineTo(x + 12, y + h + 8); g.fill(); }
+    g.fillStyle = '#9b5f55'; g.fillRect(24, 34, 90, 14); g.fillStyle = '#6ac455'; g.fillRect(24, 30, 90, 6); g.fillStyle = '#e8f6ff'; [[200, 50, 60], [270, 90, 44], [90, 100, 50]].forEach(([x, y, w]) => { g.fillRect(x, y, w, 10); g.fillRect(x + 8, y - 8, w - 20, 10); });
+    return BG;
+  }
+  // ---- diamond pickaxe sprite (12x12) ----
+  const PICK = ['....cccc....', '..ccBBBBcc..', '.cBB....BBc.', 'cBB..hh..BBc', 'cB..hhh...Bc', 'c...hh.....c', '....hh......', '....hh......', '...hh.......', '...hh.......', '..hh........', '..hh........'];
+  function drawPick(g, x, y, ang, burn) {
+    g.save(); g.translate(x, y); g.rotate(ang); g.imageSmoothingEnabled = false; const u = 3.4, pal = burn ? { c: '#ff9a3c', B: '#ffd08a', h: '#7a4a1e' } : { c: '#27b8c8', B: '#8ff4ff', h: '#7a4a1e' };
+    PICK.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '.') return; g.fillStyle = pal[ch]; g.fillRect((i - 6) * u, (j - 4) * u, u + 0.6, u + 0.6); })); g.restore();
+  }
   OPTS.dig = () => '';
   const digLayerAt = (ms) => (ms <= 0 ? 0 : Math.floor((DG.growth * ms) / DG.step));
-  function drawPick(g, x, y, ang, burn) {
-    g.save(); g.translate(x, y); g.rotate(ang);
-    g.fillStyle = '#6b4423'; g.fillRect(-3, -4, 6, 40); g.fillStyle = '#8a5a2e'; g.fillRect(-3, -4, 3, 40);
-    g.fillStyle = burn ? '#ff7a2f' : '#3fe0d0'; g.fillRect(-22, -12, 44, 9); g.fillRect(-26, -6, 8, 9); g.fillRect(18, -6, 8, 9);
-    g.fillStyle = burn ? '#ffc27a' : '#b9fff7'; g.fillRect(-20, -12, 38, 3); g.restore();
-  }
   function digDraw() {
-    const sc = DG.sc, g = DG.ctx.g, W = DG.W, H = DG.H, L = DG.L, now = Date.now() + DG.off;
+    const sc = DG.sc, g = DG.ctx.g, W = DG.W, H = DG.H, L = W / DG.COLS, now = Date.now() + DG.off;
+    DG.L = L; g.imageSmoothingEnabled = false;
     const ms = sc ? now - sc.startedAt : -1e9, layer = sc ? digLayerAt(ms) : 0, frac = sc ? ((DG.growth * Math.max(0, ms)) / DG.step) % 1 : 0;
     const lost = sc?.status === 'lost', crashLayer = lost ? Math.ceil(Math.log(Math.max(1.01, sc.crash)) / DG.step) : null;
-    const maxLayer = lost ? Math.min(layer, crashLayer) : layer;
-    const cam = Math.max(0, (maxLayer + frac) * L - 150), groundY = 150;
-    const sky = g.createLinearGradient(0, 0, 0, groundY); sky.addColorStop(0, '#5aa7ff'); sky.addColorStop(1, '#bfe3ff'); g.fillStyle = sky; g.fillRect(0, 0, W, H);
-    // clouds
-    g.fillStyle = 'rgba(255,255,255,.85)'; [[40, 40], [220, 70], [300, 28]].forEach(([cx, cy]) => { const o = (cx - cam * 0.2 + now / 90) % (W + 80); g.fillRect(o - 40, cy - cam * 0.4, 56, 14); g.fillRect(o - 28, cy - 10 - cam * 0.4, 32, 12); });
-    const cols = 9, bw = W / cols, shaft = [3, 4, 5];            // three centre columns are dug out
-    for (let ly = 0; ly < 80; ly++) {
-      const y = groundY + ly * L - cam; if (y > H || y < -L) continue;
-      for (let c = 0; c < cols; c++) {
-        const dug = shaft.includes(c) && ly < maxLayer + (ly === maxLayer ? (frac > 0.55 ? 1 : 0) : 0);
-        const [a, b] = BL(ly, c);
-        if (dug) { g.fillStyle = '#1b1426'; g.fillRect(c * bw, y, bw + 0.5, L); continue; }
-        const lava = lost && ly === crashLayer && shaft.includes(c);
-        g.fillStyle = lava ? '#ff5a1f' : a; g.fillRect(c * bw, y, bw + 0.5, L);
-        g.fillStyle = lava ? '#ffb347' : b; g.fillRect(c * bw + 4, y + 4, bw * 0.45, L * 0.4); g.fillRect(c * bw + bw * 0.5, y + L * 0.5, bw * 0.38, L * 0.34);
-        g.strokeStyle = 'rgba(0,0,0,.28)'; g.strokeRect(c * bw + 0.5, y + 0.5, bw - 1, L - 1);
+    const maxLayer = lost ? Math.min(layer, crashLayer) : layer, groundY = H * 0.42, cam = Math.max(0, (maxLayer + frac) * L - H * 0.3);
+    g.drawImage(backdrop(W, H), 0, 0);
+    for (let ly = 0; ly < 90; ly++) {
+      const y = Math.round(groundY + ly * L - cam); if (y > H || y < -L) continue;
+      for (let c = 0; c < DG.COLS; c++) {
+        const wall = c === 0 || c === DG.COLS - 1, inShaft = DG.shaft.includes(c);
+        const dug = inShaft && ly >= 0 && ly < maxLayer + (ly === maxLayer ? (frac > 0.55 ? 1 : 0) : 0) || (inShaft && ly === 0 && maxLayer >= 0);
+        if (dug && !wall) continue;                                   // open shaft shows the landscape
+        const [t, sd] = tileAt(ly, c);
+        g.drawImage(getTile(t, sd), Math.round(c * L), y, Math.ceil(L), Math.ceil(L));
+        if (lost && ly === crashLayer && inShaft) { g.fillStyle = 'rgba(255,90,20,.75)'; g.fillRect(Math.round(c * L), y, Math.ceil(L), Math.ceil(L)); }
       }
     }
-    // pickaxe: falls from the sky until the launch, then swings at the layer it is breaking
     let px = W / 2, py, ang;
-    if (!sc) { py = 40; ang = 0.3; }
-    else if (ms < 0) { const f = Math.min(1, 1 - -ms / 1800); py = -60 + (groundY - 12 + 60) * f * f; ang = 0.9 + f * 9; }
-    else { const swing = Math.sin(frac * Math.PI); py = groundY + (maxLayer + Math.min(1, frac * 1.3)) * L - cam - 18 - swing * 10; ang = -0.55 + swing * 1.1; if (ms < 260) py -= Math.sin(ms / 260 * Math.PI) * 14; }
+    if (!sc) { py = groundY - 40; ang = 0.3; }
+    else if (ms < 0) { const f = Math.min(1, 1 - -ms / 1800); py = -60 + (groundY - 20 + 60) * f * f; ang = 0.9 + f * 9; }
+    else { const swing = Math.sin(frac * Math.PI); py = groundY + (maxLayer + Math.min(1, frac * 1.3)) * L - cam - 20 - swing * 8; ang = -0.55 + swing * 1.1; if (ms < 260) py -= Math.sin(ms / 260 * Math.PI) * 14; }
     if (lost && layer >= crashLayer) { py = groundY + crashLayer * L - cam - 6 + (now - sc.lostAt) / 12; ang = 2.4; }
     drawPick(g, px, py, ang, lost && layer >= crashLayer);
-    // debris at every new layer
-    if (sc && ms > 0 && layer !== DG.lastLayer) { DG.lastLayer = layer; for (let i = 0; i < 9; i++) DG.parts.push({ x: px + (Math.random() - 0.5) * 40, y: py + 18, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 3 - 1, c: BL(layer, 4)[0], t: 0 }); }
-    DG.parts = DG.parts.filter((p) => { p.t++; p.x += p.vx; p.y += p.vy; p.vy += 0.25; g.fillStyle = p.c; g.fillRect(p.x, p.y, 5, 5); return p.t < 40; });
-    // multiplier
-    const m = sc ? (lost ? sc.crash : sc.status === 'won' ? sc.cashedAt : Math.max(1, Math.exp(DG.growth * Math.max(0, ms)))) : 1;
-    g.fillStyle = 'rgba(8,10,20,.62)'; g.beginPath(); g.roundRect(W / 2 - 62, 10, 124, 44, 12); g.fill();
-    g.fillStyle = lost ? '#ff6b6b' : sc?.status === 'won' ? '#6dffb0' : '#fff'; g.font = '800 26px system-ui'; g.textAlign = 'center'; g.fillText('x' + (Math.floor(m * 100) / 100).toFixed(2), W / 2, 40);
-    g.fillStyle = '#9fb0d9'; g.font = '600 11px system-ui'; g.fillText('глубина ' + maxLayer + ' м', W / 2, H - 8);
-    // keep the cash button label live
-    if (sc?.status === 'active' && state.game === 'dig') { const c = $('#cash'); c.disabled = ms < 0; c.textContent = ms < 0 ? 'Ставка принята' : 'Забрать ' + Math.floor(state.round.bet * m) + ' ⭐'; }
+    const mCur = sc ? (lost ? sc.crash : sc.status === 'won' ? sc.cashedAt : Math.max(1, Math.exp(DG.growth * Math.max(0, ms)))) : 1;
+    if (sc && ms > 0 && layer !== DG.lastLayer) {
+      DG.lastLayer = layer; const [tt] = tileAt(layer, 4), col = { gold: '#f0a53a', red: '#d23a3a', dia: '#46b6ff', em: '#3fd16a', tnt: '#c83030' }[tt.replace('_d', '')] || '#9a9a9a';
+      for (let i = 0; i < 12; i++) DG.parts.push({ x: px + (Math.random() - 0.5) * 50, y: py + 20, vx: (Math.random() - 0.5) * 3.4, vy: -Math.random() * 3 - 1, c: Math.random() < 0.5 ? col : '#8d8d8d', t: 0 });
+      if (state.round) DG.nums.push({ x: px + (Math.random() - 0.5) * L * 3, y: py + 4, txt: (state.round.bet * Math.exp(DG.growth * Math.max(0, ms))).toFixed(2), t: 0 });
+    }
+    DG.parts = DG.parts.filter((p) => { p.t++; p.x += p.vx; p.y += p.vy; p.vy += 0.25; g.fillStyle = p.c; g.fillRect(p.x, p.y, 4, 4); return p.t < 40; });
+    g.textAlign = 'center'; g.font = '700 11px monospace';
+    DG.nums = DG.nums.filter((n) => { n.t++; const a = 1 - n.t / 50; g.globalAlpha = Math.max(0, a); g.fillStyle = 'rgba(0,0,0,.5)'; g.fillText(n.txt, n.x + 1, n.y - n.t * 0.7 + 1); g.fillStyle = '#d7ecff'; g.fillText(n.txt, n.x, n.y - n.t * 0.7); g.globalAlpha = 1; return n.t < 50; });
+    // mossy plaque with the multiplier (like the win banner in the reference)
+    const bw = 170, bx = W / 2 - bw / 2, by = 8;
+    g.fillStyle = '#2f4a2c'; g.fillRect(bx - 4, by - 4, bw + 8, 50); g.fillStyle = '#5a8a3a'; g.fillRect(bx - 4, by - 4, bw + 8, 7); g.fillStyle = '#4b3a28'; g.fillRect(bx, by + 3, bw, 38); g.fillStyle = '#6a5238'; g.fillRect(bx, by + 3, bw, 3);
+    g.fillStyle = '#f5c518'; g.beginPath(); g.arc(bx + 20, by + 22, 14, 0, 7); g.fill(); g.fillStyle = '#7a4a1e'; g.beginPath(); g.arc(bx + 20, by + 22, 6, 0, 7); g.fill(); g.fillStyle = '#ffd84a'; for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283; g.fillRect(bx + 20 + Math.cos(a) * 11 - 2, by + 22 + Math.sin(a) * 11 - 2, 4, 4); }
+    const col = lost ? '#ff6b6b' : sc?.status === 'won' ? '#6dffb0' : '#ffd84a'; g.textAlign = 'left'; g.font = '900 26px monospace'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText('x' + (Math.floor(mCur * 100) / 100).toFixed(2), bx + 42, by + 33); g.fillStyle = col; g.fillText('x' + (Math.floor(mCur * 100) / 100).toFixed(2), bx + 40, by + 31);
+    g.textAlign = 'center'; g.font = '700 11px monospace'; g.fillStyle = '#fff'; g.fillText('♥ глубина ' + maxLayer + ' м', W / 2, H - 8);
+    if (sc?.status === 'active' && state.game === 'dig') { const c = $('#cash'); c.disabled = ms < 0; c.textContent = ms < 0 ? 'Ставка принята' : 'Забрать ' + Math.floor(state.round.bet * mCur) + ' ⭐'; }
     if (state.game === 'dig' && $('#view-game').classList.contains('on')) DG.raf = requestAnimationFrame(digDraw);
   }
   async function digPoll() {
@@ -223,7 +266,7 @@
   }
   R.dig = (round) => {
     const st = $('#stage'); st.className = 'xstage digstage'; goText('Копать'); $('#opts').innerHTML = '';
-    if (!DG.ctx || !st.querySelector('canvas')) { DG.W = Math.min(400, st.clientWidth - 8 || 360); DG.H = Math.max(380, Math.min(560, (st.clientHeight || 430) - 8)); DG.ctx = canvasIn(st, DG.W, DG.H); DG.parts = []; }
+    if (!DG.ctx || !st.querySelector('canvas')) { DG.W = Math.min(400, st.clientWidth - 8 || 360); DG.H = Math.max(380, Math.min(560, (st.clientHeight || 430) - 8)); DG.ctx = canvasIn(st, DG.W, DG.H); DG.parts = []; DG.nums = []; }
     const v = round?.view;
     if (!round) DG.sc = null;
     else {
