@@ -1,0 +1,36 @@
+name: Gift market
+
+# Collects real Fragment gift prices (per collection and per model) and publishes market.json to the gift-market branch.
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['scripts/gift-market.mjs', '.github/workflows/gift-market.yml']
+  workflow_dispatch:
+    inputs:
+      colls: { description: 'comma separated slugs (empty = all)', required: false, default: '' }
+
+permissions:
+  contents: write
+
+jobs:
+  market:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - env:
+          COLLS: ${{ github.event.inputs.colls || 'lolpop,hexpot,plushpepe' }}
+          MAXMODELS: 14
+          BUDGET_MIN: 8
+        run: mkdir -p _gm/out && cd _gm && (npm init -y >/dev/null; npm i sharp 2>&1 | tail -2 > out/npm.log; cp ../scripts/gift-market.mjs . && node gift-market.mjs out 2>&1 | tee out/log.txt)
+      - name: Publish to gift-market
+        if: always()
+        run: |
+          cd _gm/out
+          git init -q -b gift-market
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -q -m "gift market ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gift-market
