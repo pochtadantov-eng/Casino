@@ -32,7 +32,7 @@ var __extra = (() => {
     SLOT_SYMBOLS: () => SLOT_SYMBOLS,
     SLOT_TWO_CHERRIES: () => SLOT_TWO_CHERRIES,
     dig: () => dig,
-    digMultiplier: () => digMultiplier,
+    DIG_SEG: () => DIG_SEG,
     luck: () => luck,
     luckyInit: () => luckyInit,
     plinko: () => plinko,
@@ -180,18 +180,38 @@ var __extra = (() => {
       return status === "active" ? base : { ...base, idx: state.idx, mult: state.mult };
     }
   };
-  var DIG_GROWTH = 35e-5;
   var DIG_INTRO = 1800;
-  var digMultiplier = (ms) => floor2(Math.exp(DIG_GROWTH * Math.max(0, ms)));
+  var DIG_SEG = 28e3;
+  var DIG_RATE = 0.295 / 1e3;
+  var DIG_TIERS = [["coal", 0.55, 0.04], ["iron", 0.25, 0.08], ["gold", 0.12, 0.16], ["red", 0.05, 0.24], ["lapis", 0.02, 0.4], ["dia", 8e-3, 0.8], ["em", 2e-3, 1.6]];
+  var digMultAt = (s, el) => floor2(s.ore.reduce((a, e) => e.t <= el ? a + e.inc : a, 0));
   function digSettle(s, now) {
-    const m = digMultiplier(now - s.startedAt);
-    return m >= s.crash ? { status: "lost", multiplier: s.crash, state: s } : { status: "active", multiplier: m, state: s };
+    const el = now - s.startedAt;
+    return el >= s.endAt ? { status: "won", multiplier: digMultAt(s, s.endAt), state: s } : { status: "active", multiplier: digMultAt(s, el), state: s };
   }
   var dig = {
     id: "dig",
-    value: (st) => st.crash,
+    value: (st) => digMultAt(st, st.endAt),
     init(_p, rng, now) {
-      return { state: { crash: crashPoint(rng), startedAt: now + DIG_INTRO }, multiplier: 1 };
+      const ups = [];
+      if (rng.float() < 0.5) {
+        ups.push(8e3 + rng.float() * 14e3);
+        if (rng.float() < 0.25) ups.push(ups[0] + 8e3 + rng.float() * 12e3);
+      }
+      const endAt = (ups.length ? ups[ups.length - 1] : 0) + DIG_SEG;
+      const ore = [];
+      let t = 1200;
+      for (; ; ) {
+        t += -Math.log(1 - rng.float()) / DIG_RATE;
+        if (t >= endAt - 800) break;
+        let x = rng.float(), i = 0;
+        while (i < DIG_TIERS.length - 1 && x >= DIG_TIERS[i][1]) {
+          x -= DIG_TIERS[i][1];
+          i++;
+        }
+        ore.push({ t: Math.round(t), k: DIG_TIERS[i][0], inc: DIG_TIERS[i][2] });
+      }
+      return { state: { startedAt: now + DIG_INTRO, ups: ups.map(Math.round), ore, endAt: Math.round(endAt) }, multiplier: 0 };
     },
     act(state, _i, now) {
       return digSettle(state, now);
@@ -202,11 +222,11 @@ var __extra = (() => {
       return r.status !== "active" ? r : { status: "won", multiplier: r.multiplier, state: { ...state, cashedAt: r.multiplier } };
     },
     view(state, status, now) {
-      const base = { growth: DIG_GROWTH, startedAt: state.startedAt, serverNow: now };
-      return status === "active" ? base : { ...base, crash: state.crash, cashedAt: state.cashedAt ?? null };
+      const base = { seg: DIG_SEG, startedAt: state.startedAt, serverNow: now }, el = now - state.startedAt;
+      return status === "active" ? { ...base, ups: state.ups.filter((u) => u <= el + 3e3), ore: state.ore.filter((e) => e.t <= el + 2500) } : { ...base, ups: state.ups, ore: state.ore, endAt: state.endAt, cashedAt: state.cashedAt ?? null };
     },
     debug(state, now) {
-      return { crash: state.crash, msToCrash: Math.max(0, Math.round(Math.log(state.crash) / DIG_GROWTH) - (now - state.startedAt)) };
+      return { endAt: state.endAt, total: digMultAt(state, state.endAt), ore: state.ore.length };
     }
   };
   return __toCommonJS(extra_exports);

@@ -1,6 +1,5 @@
 import { Rng } from '../../fair/fair';
 import { Engine, GameError, floor2 } from './types';
-import { crashPoint } from './rocket';
 
 /* Plinko / Slot / Luck cases are one-shot games (instant engines); Dig is a crash-style descent. Pure maths, no node imports: the same file is bundled into the demo. */
 
@@ -106,19 +105,33 @@ export const luck: Engine<LuckState> = {
   },
 };
 
-// ---------------- Dig: the pickaxe drops from the sky and digs down on its own; every layer raises the multiplier. Cash out before it hits lava ----------------
-export const DIG_GROWTH = 0.00035;      // x2 after 2 s, x10 after 6.6 s
+// ---------------- Dig: the pick falls from the sky and bounces around the mine until its health runs out. Every ore it breaks adds money; cash out any time ----------------
 export const DIG_INTRO = 1800;          // ms: the fall from the sky before the first block breaks
-export const digMultiplier = (ms: number) => floor2(Math.exp(DIG_GROWTH * Math.max(0, ms)));
-interface DigState { crash: number; startedAt: number; cashedAt?: number }
-function digSettle(s: DigState, now: number): { status: 'active' | 'lost' | 'won'; multiplier: number; state: DigState } {
-  const m = digMultiplier(now - s.startedAt);
-  return m >= s.crash ? { status: 'lost', multiplier: s.crash, state: s } : { status: 'active', multiplier: m, state: s };
+export const DIG_SEG = 28000;           // ms of pick health: 100 -> 0 (an upgrade block refills it)
+const DIG_RATE = 0.295 / 1000;          // ore per ms
+const DIG_TIERS: [string, number, number][] = [['coal', 0.55, 0.04], ['iron', 0.25, 0.08], ['gold', 0.12, 0.16], ['red', 0.05, 0.24], ['lapis', 0.02, 0.4], ['dia', 0.008, 0.8], ['em', 0.002, 1.6]];   // [ore, weight, multiplier it adds]; RTP about 94%
+interface DigEvent { t: number; k: string; inc: number }
+interface DigState { startedAt: number; ups: number[]; ore: DigEvent[]; endAt: number; cashedAt?: number }
+const digMultAt = (s: DigState, el: number) => floor2(s.ore.reduce((a, e) => (e.t <= el ? a + e.inc : a), 0));
+function digSettle(s: DigState, now: number): { status: 'active' | 'won'; multiplier: number; state: DigState } {
+  const el = now - s.startedAt;
+  return el >= s.endAt ? { status: 'won', multiplier: digMultAt(s, s.endAt), state: s } : { status: 'active', multiplier: digMultAt(s, el), state: s };
 }
 export const dig: Engine<DigState> = {
   id: 'dig',
-  value: (st) => st.crash,
-  init(_p, rng, now) { return { state: { crash: crashPoint(rng), startedAt: now + DIG_INTRO }, multiplier: 1 }; },
+  value: (st) => digMultAt(st, st.endAt),
+  init(_p, rng, now) {
+    const ups: number[] = [];
+    if (rng.float() < 0.5) { ups.push(8000 + rng.float() * 14000); if (rng.float() < 0.25) ups.push(ups[0] + 8000 + rng.float() * 12000); }
+    const endAt = (ups.length ? ups[ups.length - 1] : 0) + DIG_SEG;
+    const ore: DigEvent[] = []; let t = 1200;
+    for (;;) {
+      t += -Math.log(1 - rng.float()) / DIG_RATE; if (t >= endAt - 800) break;
+      let x = rng.float(), i = 0; while (i < DIG_TIERS.length - 1 && x >= DIG_TIERS[i][1]) { x -= DIG_TIERS[i][1]; i++; }
+      ore.push({ t: Math.round(t), k: DIG_TIERS[i][0], inc: DIG_TIERS[i][2] });
+    }
+    return { state: { startedAt: now + DIG_INTRO, ups: ups.map(Math.round), ore, endAt: Math.round(endAt) }, multiplier: 0 };
+  },
   act(state, _i, now) { return digSettle(state, now); },
   cashout(state, now) {
     if (now < state.startedAt) throw new GameError('Wait for the launch');
@@ -126,8 +139,10 @@ export const dig: Engine<DigState> = {
     return r.status !== 'active' ? r : { status: 'won', multiplier: r.multiplier, state: { ...state, cashedAt: r.multiplier } };
   },
   view(state, status, now) {
-    const base = { growth: DIG_GROWTH, startedAt: state.startedAt, serverNow: now };
-    return status === 'active' ? base : { ...base, crash: state.crash, cashedAt: state.cashedAt ?? null };
+    const base = { seg: DIG_SEG, startedAt: state.startedAt, serverNow: now }, el = now - state.startedAt;
+    return status === 'active'
+      ? { ...base, ups: state.ups.filter((u) => u <= el + 3000), ore: state.ore.filter((e) => e.t <= el + 2500) }
+      : { ...base, ups: state.ups, ore: state.ore, endAt: state.endAt, cashedAt: state.cashedAt ?? null };
   },
-  debug(state, now) { return { crash: state.crash, msToCrash: Math.max(0, Math.round(Math.log(state.crash) / DIG_GROWTH) - (now - state.startedAt)) }; },
+  debug(state, now) { return { endAt: state.endAt, total: digMultAt(state, state.endAt), ore: state.ore.length }; },
 };

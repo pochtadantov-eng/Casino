@@ -236,9 +236,10 @@ R.tower = (round) => {                       // flat construction-site scene; th
 // ---------- flow ----------
 const RES_LOSS = { mines: 'ПРОИГРЫШ', tower: 'ПРОИГРЫШ', seagull: 'ПРОИГРЫШ', rocket: 'РАКЕТА УЛЕТЕЛА' };
 function showResult(r, delay, kind) {          // "win" / "loss" plaque over the board (glass background, opaque text)
+  const lowDig = state.game === 'dig' && r.status === 'won' && r.payout < r.bet; if (lowDig) kind = 'loss';
   document.querySelector('.resban')?.remove();
   const el = document.createElement('div'); el.className = 'resban ' + kind + (kind === 'win' && state.game === 'tower' ? ' tw' : '') + (state.game === 'mines' ? ' mn' : ''); el.style.setProperty('--d', delay + 's');
-  el.innerHTML = kind === 'win'
+  el.innerHTML = lowDig ? `<b>КИРКА СЛОМАНА</b><span>+${r.payout} ⭐ <em>x${r.multiplier.toFixed(2)}</em></span>` : kind === 'win'
     ? `<b>ВЫИГРЫШ</b><span>+${r.payout} ⭐ <em>x${r.multiplier.toFixed(2)}</em></span>`
     : `<b>${RES_LOSS[state.game] || 'ПРОИГРЫШ'}</b><span>−${r.bet} ⭐</span>`;
   $('#stage').append(el);

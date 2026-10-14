@@ -22,7 +22,7 @@
       if (r.payout > 0) { const el = document.querySelector('.resban'); if (el) { el.querySelector('b').textContent = 'ВОЗВРАТ'; el.querySelector('span').textContent = `+${r.payout} ⭐`; } }
     }
   };
-  Object.assign(RES_LOSS, { slot: 'МИМО', luck: 'ПУСТО', dig: 'КИРКА СЛОМАНА', plinko: 'ПРОИГРЫШ' });
+  Object.assign(RES_LOSS, { slot: 'МИМО', luck: 'ПУСТО', dig: 'ПРОИГРЫШ', plinko: 'ПРОИГРЫШ' });
   const goText = (t) => { const g = $('#go'); if (g && !g.hidden) g.textContent = t; };
   const optClicks = (attr, key, redo) => document.querySelectorAll(`#opts [data-${attr}]`).forEach((b) => b.onclick = () => { state[key] = b.dataset[attr]; redo(); });
 
@@ -191,11 +191,7 @@
     if (ly === 0) return ['grass', c % 3];
     const deep = ly > 26, sd = (ly * 3 + c) % 3, sp = rh(ly * 131 + c * 17 + (DG.seed || 0), ly * 7 + c * 29 + 5);
     if (ly >= 3 && sp < 0.012) return ['tnt', 0];
-    if (ly >= 6 && sp > 0.991) return ['up', 0];
-    if (ly < 3) return ['dirt', sd];
-    const one = rh(ly * 53 + c * 19 + (DG.seed || 0), ly * 3 + c * 41 + 9);
-    let acc = 0; for (let i = ORES.length - 1; i >= 0; i--) { const [k, p, from] = ORES[i]; if (ly < from) continue; acc += p; if (one < acc) return [deep ? k + '_d' : k, sd]; }
-    return [deep ? 'deep' : 'cobble', sd];
+    return [ly < 3 ? 'dirt' : deep ? 'deep' : 'cobble', sd];
   };
   // where the pick is horizontally while it works at depth t: it drifts left and right through the field
   const pickX = (t, L) => L * (1.6 + (Math.sin(t * 0.9) * 0.5 + 0.5) * (DG.COLS - 3.2) + 0.0);
@@ -214,19 +210,20 @@
     PICK.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '.') return; g.fillStyle = pal[ch]; g.fillRect((i - 6) * u, (j - 9) * u, u + 0.6, u + 0.6); })); g.restore();
   }
   OPTS.dig = () => '';
-  const digLayerAt = (ms) => (ms <= 0 ? 0 : Math.floor((DG.growth * ms) / DG.step));
+  const W8 = { coal: 'УГОЛЬ', iron: 'ЖЕЛЕЗО', gold: 'ЗОЛОТО', red: 'РЕДСТОУН', lapis: 'ЛАПИС', dia: 'АЛМАЗ', em: 'ИЗУМРУД' };
   function digDraw() {
     const sc = DG.sc, g = DG.ctx.g, W = DG.W, H = DG.H, L = W / DG.COLS, now = Date.now() + DG.off;
     DG.L = L; g.imageSmoothingEnabled = false;
-    const ms = sc ? now - sc.startedAt : -1e9, layer = sc ? digLayerAt(ms) : 0, frac = sc ? ((DG.growth * Math.max(0, ms)) / DG.step) % 1 : 0;
-    const lost = sc?.status === 'lost', crashLayer = lost ? Math.ceil(Math.log(Math.max(1.01, sc.crash)) / DG.step) : null;
-    const cur = lost ? Math.min(layer, crashLayer) : layer, boomT = lost ? (Date.now() - sc.lostAt) / 1000 : 0, groundY = H * 0.2; let cam = 0;
+    const done = !!sc && sc.status !== 'active', autoEnd = done && sc.cashedAt == null;
+    if (sc && done && sc.frozenMs == null) sc.frozenMs = Math.min(now - sc.startedAt, sc.endAt != null ? sc.endAt : 1e9);
+    const msReal = sc ? now - sc.startedAt : -1e9, ms = done ? (autoEnd ? Math.min(msReal, sc.endAt) : sc.frozenMs) : msReal;
+    const boomT = autoEnd ? (Date.now() - sc.lostAt) / 1000 : 0, groundY = H * 0.2; let cam = 0;
     const ccx = (c) => c * L + L / 2, cellY = (ly) => Math.round(groundY + ly * L - cam);
     // ---- the pick is a falling object: gravity, bounces off what it hits, breaks the blocks it touches ----
     const pk = DG.pk || (DG.pk = { x: W / 2, y: -groundY - 60, vx: 1.2, vy: 0, a: 0.6, va: 0.2, t: Date.now() });
     const tnow = Date.now(), dt = Math.min(3, (tnow - pk.t) / 16.7); pk.t = tnow;
-    const targetY = (cur + frac) * L, rad = L * 0.7;
-    if (sc && !(lost)) {
+    const targetY = Math.max(0, ms) / 450 * L, rad = L * 0.7;
+    if (sc && !done) {
       const steps = Math.max(1, Math.round(dt));
       for (let k = 0; k < steps; k++) {
         pk.vy += 0.32; pk.vx *= 0.995; pk.x += pk.vx; pk.y += pk.vy; pk.a += pk.va; pk.va *= 0.985;
@@ -234,7 +231,7 @@
         if (pk.x > W - L - rad * 0.6) { pk.x = W - L - rad * 0.6; pk.vx = -Math.abs(pk.vx) * 0.85 - 0.5; pk.va = -0.25; }
         if (ms < 0) { if (pk.y > -L * 0.55) { pk.y = -L * 0.55; pk.vy = -Math.abs(pk.vy) * 0.35; } }
         else {
-          if (pk.y < targetY - 2.5 * L) pk.vy += 0.5;                                // lagging behind the schedule: gets pulled down
+          if (pk.y < targetY - 2.5 * L) pk.vy += 0.5;
           if (pk.y > targetY + 1.4 * L) { pk.y = targetY + 1.4 * L; pk.vy = -Math.abs(pk.vy) * 0.6 - 1; }
         }
         if (ms >= 0 || pk.y > -L) {
@@ -244,47 +241,59 @@
             if (DG.holes.has(ly * 16 + c)) continue;
             const nx = Math.max(c * L, Math.min(pk.x, (c + 1) * L)), ny = Math.max(ly * L, Math.min(pk.y, (ly + 1) * L));
             if ((pk.x - nx) ** 2 + (pk.y - ny) ** 2 > rad * rad) continue;
-            DG.holes.add(ly * 16 + c); hit++; hx += pk.x - (c + 0.5) * L; hy += pk.y - (ly + 0.5) * L; (DG.todo = DG.todo || []).push([ly, c]);
+            DG.holes.add(ly * 16 + c); hit++; hx += pk.x - (c + 0.5) * L; hy += pk.y - (ly + 0.5) * L; DG.todo.push([ly, c]);
           }
           if (hit) { const m = Math.hypot(hx, hy) || 1; pk.vx = pk.vx * 0.4 + (hx / m) * (1.6 + Math.random() * 2.2) + (Math.random() - 0.5) * 2.5; pk.vy = Math.max(-5.5, pk.vy * -0.35 + (hy / m) * 2.2 - Math.random() * 1.5); pk.va = (Math.random() - 0.5) * 0.7; }
         }
       }
     }
-    if (lost) { pk.vx = 0; pk.vy = 0; }
+    // ---- ore and upgrade blocks arrive exactly when the server says: they appear in front of the pick ----
+    const dropBlock = (key, info) => {
+      let c = Math.min(DG.COLS - 2, Math.max(1, Math.floor(pk.x / L))), r = Math.max(1, Math.floor((pk.y + rad * 0.8) / L) + 1);
+      for (let i = 0; i < 8 && (DG.holes.has(r * 16 + c) || DG.oreAt[r * 16 + c]); i++) { if (i % 2) r++; else c = Math.min(DG.COLS - 2, Math.max(1, c + (Math.random() < 0.5 ? -1 : 1))); }
+      DG.oreAt[r * 16 + c] = { ...info, due: Date.now() + 1500 }; DG.sp.add(key);
+    };
+    if (sc && ms >= 0 && !(done && !autoEnd)) {
+      (sc.ore || []).forEach((e, i) => { if (e.t <= ms && !DG.sp.has('o' + i)) dropBlock('o' + i, { k: e.k, inc: e.inc }); });
+      (sc.ups || []).forEach((u, i) => { if (u <= ms && !DG.sp.has('u' + i)) { dropBlock('u' + i, { k: 'up' }); DG.hp0 = 0; } });
+    }
+    for (const key in DG.oreAt) if (DG.oreAt[key].due < Date.now() && !DG.holes.has(+key)) { DG.holes.add(+key); DG.todo.push([Math.floor(+key / 16), +key % 16]); }
     cam = Math.max(0, groundY + pk.y - H * 0.4);
+    DG.depth = Math.max(DG.depth || 0, Math.floor(Math.max(0, pk.y) / L));
+    // hit points follow the schedule: 100 -> 0 over the segment, an upgrade refills them
+    let segStart = 0; (sc?.ups || []).forEach((u) => { if (u <= ms && u > segStart) segStart = u; });
+    const hp = !sc ? 100 : ms < 0 ? 100 : Math.max(0, Math.min(100, Math.round(100 * (1 - (ms - segStart) / (sc.seg || 28000)))));
+    const S = !sc ? 0 : done ? (sc.final != null ? sc.final : 0) : (sc.ore || []).reduce((a, e) => (e.t <= ms ? a + e.inc : a), 0);
+
     g.save(); if (DG.shake > 0) { g.translate((Math.random() - 0.5) * DG.shake, (Math.random() - 0.5) * DG.shake); DG.shake *= 0.9; if (DG.shake < 0.3) DG.shake = 0; }
     g.drawImage(backdrop(W, H), 0, 0);
-    for (let ly = 0; ly < 90; ly++) {
+    for (let ly = 0; ly < 140; ly++) {
       const y = cellY(ly); if (y > H || y < -L) continue;
       for (let c = 0; c < DG.COLS; c++) {
         if (DG.holes.has(ly * 16 + c)) continue;
-        const [t, sd] = tileAt(ly, c); g.drawImage(getTile(t, sd), Math.round(c * L), y, Math.ceil(L), Math.ceil(L));
+        const o = DG.oreAt[ly * 16 + c], [t, sd] = o ? [o.k, 0] : tileAt(ly, c); g.drawImage(getTile(t, sd), Math.round(c * L), y, Math.ceil(L), Math.ceil(L));
       }
     }
     let px = pk.x, py = groundY + pk.y - cam, ang = pk.a;
     if (!sc) { px = W / 2; py = groundY - L * 0.4; ang = 0.2; }
-    if (lost) ang += Math.min(1, boomT) * 0.5;
-    if (lost) DG.hp = Math.max(0, Math.round((DG.hp0 || DG.hp) * (1 - Math.min(1, boomT / 1.1))));
-    if (lost && !DG.hp0) DG.hp0 = DG.hp;
-    if (!(lost && boomT >= 1.1)) drawPick(g, px, py, ang, DG.psize);
-    const mCur = sc ? (lost ? sc.crash : sc.status === 'won' ? sc.cashedAt : Math.max(1, Math.exp(DG.growth * Math.max(0, ms)))) : 1;
-    const W8 = { coal: 1, iron: 2, gold: 4, red: 6, lapis: 9, dia: 14, em: 22 };
-    (DG.todo || []).splice(0).forEach(([yy, c2]) => {
-      const [tt] = tileAt(yy, c2), k = tt.replace('_d', ''), ore = OREN[k], tx = ccx(c2), tyy = cellY(yy) + L / 2;
-      const col = ore ? OREK[k] : tt === 'tnt' ? '#c83030' : '#8d8d8d';
+    if (autoEnd) ang += Math.min(1, boomT) * 0.5;
+    if (!(autoEnd && boomT >= 0.6)) drawPick(g, px, py, ang, DG.psize);
+    DG.todo.splice(0).forEach(([yy, c2]) => {
+      const key = yy * 16 + c2, o = DG.oreAt[key]; delete DG.oreAt[key];
+      const tt = o ? o.k : tileAt(yy, c2)[0], ore = W8[tt], tx = ccx(c2), tyy = cellY(yy) + L / 2;
+      const col = ore ? OREK[tt] : tt === 'tnt' ? '#c83030' : '#8d8d8d';
       for (let i = 0; i < (ore ? 14 : 6); i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * (ore ? 6 : 4), vy: -Math.random() * 4 - 1, c: i % 3 ? col : '#8d8d8d', t: 0 });
-      if (yy > 0) DG.hp = Math.max(1, DG.hp - 1);
       DG.shake = Math.max(DG.shake || 0, ore ? 5 : 1.2);
-      if (ore && state.round) { const gain = Math.max(1, Math.round(state.round.bet * (Math.exp(DG.step * (cur + 1)) - Math.exp(DG.step * cur)) * 6 * W8[k])); DG.nums.push({ x: Math.min(W - 46, Math.max(46, tx)), y: tyy - 6, txt: '+' + gain + ' ⭐ ' + ore, col, t: 0 }); }
-      if (tt === 'up') { DG.hp = 100; DG.psize = Math.min(1.9, DG.psize + 0.3); DG.shake = 8; for (let i = 0; i < 20; i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 5 - 1, c: i % 2 ? '#ffd84a' : '#6ae6ff', t: 0 }); DG.nums.push({ x: W / 2, y: tyy - 6, txt: 'КИРКА УЛУЧШЕНА! ❤ 100', col: '#6ae6ff', t: 0 }); }
+      if (ore && state.round) DG.nums.push({ x: Math.min(W - 46, Math.max(46, tx)), y: tyy - 6, txt: '+' + Math.max(1, Math.round(state.round.bet * o.inc)) + ' ⭐ ' + ore, col, t: 0 });
+      if (tt === 'up') { DG.psize = Math.min(1.9, DG.psize + 0.3); DG.shake = 8; for (let i = 0; i < 20; i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 5 - 1, c: i % 2 ? '#ffd84a' : '#6ae6ff', t: 0 }); DG.nums.push({ x: W / 2, y: tyy - 6, txt: 'КИРКА УЛУЧШЕНА! ❤ 100', col: '#6ae6ff', t: 0 }); }
       if (tt === 'tnt') {
         const m = 4 + Math.floor(Math.random() * 7), cand = [];
-        for (let dl = -2; dl <= 2; dl++) for (let dc = -2; dc <= 2; dc++) { const y3 = yy + dl, c3 = c2 + dc; if (y3 < 1 || c3 < 1 || c3 > DG.COLS - 2 || (dl === 0 && dc === 0) || DG.holes.has(y3 * 16 + c3)) continue; cand.push([y3, c3]); }
+        for (let dl = -2; dl <= 2; dl++) for (let dc = -2; dc <= 2; dc++) { const y3 = yy + dl, c3 = c2 + dc; if (y3 < 1 || c3 < 1 || c3 > DG.COLS - 2 || (dl === 0 && dc === 0) || DG.holes.has(y3 * 16 + c3) || DG.oreAt[y3 * 16 + c3]) continue; cand.push([y3, c3]); }
         cand.sort(() => Math.random() - 0.5).slice(0, m).forEach(([y3, c3]) => { DG.holes.add(y3 * 16 + c3); for (let i = 0; i < 6; i++) DG.parts.push({ x: ccx(c3), y: cellY(y3) + L / 2, vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 4 - 1, c: ['#ff9a1f', '#8d8d8d', '#555'][i % 3], t: 0 }); });
         DG.booms.push({ x: tx, y: tyy, t: 0 }); DG.shake = 12; DG.nums.push({ x: Math.min(W - 40, Math.max(40, tx)), y: tyy - 6, txt: 'ТНТ! −' + Math.min(m, cand.length) + ' блоков', col: '#ff9a1f', t: 0 });
       }
     });
-    if (lost && boomT >= 1.1 && !DG.boomed) {
+    if (autoEnd && boomT >= 0.6 && !DG.boomed) {
       DG.boomed = true; DG.shake = 9;
       for (let i = 0; i < 26; i++) DG.parts.push({ x: px, y: py, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 5 - 1, c: ['#c99a56', '#7a5326', '#6b4420', '#8d8d8d'][i % 4], t: 0 });
       DG.nums.push({ x: W / 2, y: py - 20, txt: 'КИРКА СЛОМАНА', col: '#ff6b6b', t: 0 });
@@ -294,31 +303,31 @@
     g.textAlign = 'center';
     DG.nums = DG.nums.filter((n) => { n.t++; g.font = '900 13px monospace'; g.globalAlpha = Math.max(0, 1 - n.t / 55); g.fillStyle = 'rgba(0,0,0,.7)'; g.fillText(n.txt, n.x + 1, n.y - n.t * 0.8 + 1); g.fillStyle = n.col; g.fillText(n.txt, n.x, n.y - n.t * 0.8); g.globalAlpha = 1; return n.t < 55; });
     g.restore();
-    const bw = 150, bx = W / 2 - bw / 2, by = 8;
+    const bw = 150, bx = W / 2 - bw / 2, by = 8, mTxt = 'x' + (Math.floor(S * 100) / 100).toFixed(2);
     g.fillStyle = '#2f4a2c'; g.fillRect(bx - 4, by - 4, bw + 8, 46); g.fillStyle = '#4b3a28'; g.fillRect(bx, by, bw, 38);
     g.fillStyle = '#f5c518'; g.beginPath(); g.arc(bx + 20, by + 19, 12, 0, 7); g.fill(); g.fillStyle = '#7a4a1e'; g.beginPath(); g.arc(bx + 20, by + 19, 5, 0, 7); g.fill();
-    const col = lost ? '#ff6b6b' : sc?.status === 'won' ? '#6dffb0' : '#ffd84a'; g.textAlign = 'left'; g.font = '900 24px monospace'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText('x' + (Math.floor(mCur * 100) / 100).toFixed(2), bx + 42, by + 29); g.fillStyle = col; g.fillText('x' + (Math.floor(mCur * 100) / 100).toFixed(2), bx + 40, by + 27);
-    const hp = DG.hp == null ? 100 : DG.hp; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(bx, by + 44, bw, 12); g.fillStyle = hp > 50 ? '#3fd16a' : hp > 20 ? '#f0a53a' : '#e04a4a'; g.fillRect(bx + 1, by + 45, (bw - 2) * hp / 100, 10); g.fillStyle = '#fff'; g.font = '700 10px monospace'; g.textAlign = 'center'; g.fillText('❤ ' + hp + '/100', W / 2, by + 54);
-    g.textAlign = 'center'; g.font = '700 11px monospace'; g.fillStyle = '#fff'; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(W / 2 - 50, H - 22, 100, 16); g.fillStyle = '#fff'; g.fillText('глубина ' + cur + ' м', W / 2, H - 10);
-    if (sc?.status === 'active' && state.game === 'dig') { const c = $('#cash'); c.disabled = ms < 0; c.textContent = ms < 0 ? 'Ставка принята' : 'Забрать ' + Math.floor(state.round.bet * mCur) + ' ⭐'; }
+    g.textAlign = 'left'; g.font = '900 24px monospace'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(mTxt, bx + 42, by + 29); g.fillStyle = done ? '#6dffb0' : '#ffd84a'; g.fillText(mTxt, bx + 40, by + 27);
+    g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(bx, by + 44, bw, 12); g.fillStyle = hp > 50 ? '#3fd16a' : hp > 20 ? '#f0a53a' : '#e04a4a'; g.fillRect(bx + 1, by + 45, (bw - 2) * hp / 100, 10); g.fillStyle = '#fff'; g.font = '700 10px monospace'; g.textAlign = 'center'; g.fillText('❤ ' + hp + '/100', W / 2, by + 54);
+    g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(W / 2 - 50, H - 22, 100, 16); g.fillStyle = '#fff'; g.font = '700 11px monospace'; g.fillText('глубина ' + (DG.depth || 0) + ' м', W / 2, H - 10);
+    if (sc?.status === 'active' && state.game === 'dig') { const c = $('#cash'); c.disabled = ms < 0; c.textContent = ms < 0 ? 'Ставка принята' : 'Забрать ' + Math.floor(state.round.bet * S) + ' ⭐'; }
     if (state.game === 'dig' && $('#view-game').classList.contains('on')) DG.raf = requestAnimationFrame(digDraw);
   }
   async function digPoll() {
     clearTimeout(DG.poll); if (state.game !== 'dig' || state.round?.status !== 'active') return;
-    try { const j = await api('games/dig'); if (state.game === 'dig' && j.round?.status !== 'active') { apply(j); return; } } catch {}
+    try { const j = await api('games/dig'); if (state.game === 'dig' && j.round?.status !== 'active') { apply(j); return; } if (DG.sc && j.round?.view) { DG.sc.ore = j.round.view.ore; DG.sc.ups = j.round.view.ups; } } catch {}
     DG.poll = setTimeout(digPoll, 450);
   }
   R.dig = (round) => {
     const st = $('#stage'); st.className = 'xstage digstage'; goText('Копать'); $('#opts').innerHTML = '';
     if (!DG.ctx || !st.querySelector('canvas')) { DG.W = Math.min(400, st.clientWidth - 8 || 360); DG.H = Math.max(380, Math.min(560, (st.clientHeight || 430) - 8)); DG.ctx = canvasIn(st, DG.W, DG.H); DG.parts = []; DG.nums = []; }
-    DG.booms = DG.booms || []; DG.holes = DG.holes || new Set(); DG.hp = DG.hp || 100; DG.psize = DG.psize || 1;
+    DG.booms = DG.booms || []; DG.holes = DG.holes || new Set(); DG.oreAt = DG.oreAt || {}; DG.sp = DG.sp || new Set(); DG.todo = DG.todo || []; DG.psize = DG.psize || 1;
     const v = round?.view;
     if (!round) DG.sc = null;
     else {
-      DG.growth = v.growth; DG.off = v.serverNow - Date.now() + (state.rtt || 0) / 2;
-      const was = DG.sc;
-      DG.sc = { startedAt: v.startedAt, status: round.status, crash: v.crash, cashedAt: v.cashedAt, lostAt: was?.lostAt || (round.status === 'lost' ? Date.now() : 0) };
-      if (!was || was.id !== round.id) { DG.lastLayer = 0; DG.seed = (Math.random() * 1e5) | 0; DG.path = null; DG.boomed = false; DG.booms = []; DG.holes = new Set(); DG.pk = null; DG.todo = []; DG.hp0 = 0; DG.hp = 100; DG.psize = 1; DG.parts = []; DG.sc.id = round.id; } else DG.sc.id = was.id;
+      DG.off = v.serverNow - Date.now() + (state.rtt || 0) / 2;
+      const was = DG.sc, done = round.status !== 'active';
+      DG.sc = { startedAt: v.startedAt, status: round.status, seg: v.seg, ore: v.ore, ups: v.ups, endAt: v.endAt, cashedAt: v.cashedAt, final: done ? round.multiplier : null, lostAt: was?.lostAt || (done ? Date.now() : 0), frozenMs: was?.frozenMs };
+      if (!was || was.id !== round.id) { DG.seed = (Math.random() * 1e5) | 0; DG.boomed = false; DG.booms = []; DG.holes = new Set(); DG.oreAt = {}; DG.sp = new Set(); DG.pk = null; DG.todo = []; DG.depth = 0; DG.psize = 1; DG.parts = []; DG.nums = []; DG.sc.id = round.id; DG.sc.frozenMs = null; DG.sc.lostAt = done ? Date.now() : 0; } else DG.sc.id = was.id;
     }
     cancelAnimationFrame(DG.raf); digDraw();
     if (round?.status === 'active') digPoll();
