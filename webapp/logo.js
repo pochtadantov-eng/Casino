@@ -26,7 +26,10 @@
     ms = ms || 3000;
     const old = $('#splash'); if (old) old.remove();
     const s = document.createElement('div'); s.id = 'splash';
-    s.innerHTML = `<div class="sp-logo">${V[cur].svg}</div><div class="sp-name">Ton<i>Up</i></div><div class="sp-sub">играй · поднимайся</div><div class="sp-bar"><i style="animation-duration:${ms}ms"></i></div>`;
+    const P = (d, c, i) => `<path pathLength="1" d="${d}" style="animation-delay:${(0.55 + i * 0.27).toFixed(2)}s" />`;
+    const ton = ['M16 28C48 20 80 22 108 26', 'M64 24C62 48 60 70 56 88C54 96 48 98 44 92', 'M124 62C108 60 98 72 102 84C106 94 124 92 128 76C130 68 126 62 120 62', 'M130 80C136 84 142 76 146 64C148 58 148 54 146 54C144 54 144 80 144 92C146 70 160 50 172 60C178 66 172 84 174 92'];
+    const up = ['M190 24C188 50 186 70 198 86C210 98 224 80 228 54C229 44 230 34 230 24', 'M230 30C230 54 228 76 224 94C228 94 236 90 240 80', 'M262 58C260 82 258 102 256 118', 'M258 70C268 54 288 56 288 72C288 88 270 94 258 84'];
+    s.innerHTML = `<div class="sp-logo">${V[cur].svg}</div><svg class="sp-write" viewBox="0 0 304 130" fill="none" stroke-linecap="round" stroke-linejoin="round"><g class="w1">${ton.map((d, i) => P(d, 0, i)).join('')}</g><g class="w2">${up.map((d, i) => P(d, 0, i + 4)).join('')}</g></svg><div class="sp-sub">играй · поднимайся</div><div class="sp-bar"><i style="animation-duration:${ms}ms"></i></div>`;
     document.body.appendChild(s);
     setTimeout(() => { s.classList.add('out'); setTimeout(() => s.remove(), 450); }, ms);
   }
