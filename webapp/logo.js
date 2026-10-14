@@ -50,7 +50,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => { });
-  function init() { paint(); const b = $('#btn-logo'); if (b) b.onclick = picker; splash(5000); }
+  function init() { paint(); const b = $('#btn-logo'); if (b) b.onclick = picker; let rl = false; try { rl = sessionStorage.getItem('tu_rl') === '1'; sessionStorage.removeItem('tu_rl'); } catch {} if (!rl) splash(5000); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
   window.TonLogo = { paint, splash, picker, variants: V };
 })();
