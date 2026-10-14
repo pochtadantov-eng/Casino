@@ -17,7 +17,7 @@ window.FG = (function () {
   const html = (ref, cls) => { const g = get(ref); return g ? `<span class="fg ${cls || ''}" style="--fgc:${g.rgb.join(',')}"><img src="${g.img}" alt="${g.name}" draggable="false"></span>` : ''; };
   const stars = (ref) => { const g = get(ref); if (!g) return 0; return Math.max(1, window.Market && window.Market.tonToStars ? window.Market.tonToStars(g.ton) : Math.round(g.ton / 0.01092)); };
   // upgrade <span class="fg" data-slug data-n>: full-size picture from Fragment, then the real Lottie animation while the row is on screen
-  const BASE = 'https://nft.fragment.com/gift/', live = [], MAXLIVE = 8; let io = null;
+  const BASE = 'https://nft.fragment.com/gift/', live = [], MAXLIVE = 10; let io = null;
   const stop = (el) => { if (el._an) { try { el._an.destroy(); } catch {} el._an = null; } const l = el.querySelector('.lot'); if (l) l.remove(); const i = el.querySelector('img'); if (i) i.style.visibility = ''; const k = live.indexOf(el); if (k >= 0) live.splice(k, 1); };
   const start = async (el) => {
     if (el._an || el._busy || el._dead || live.length >= MAXLIVE) return; el._busy = 1;

@@ -506,58 +506,43 @@ if ($('#btn-luck')) $('#btn-luck').onclick = openLuck;
 
 // ---------- withdraw as a Telegram gift: pick a gift, the bot drops it into the chat with the bot ----------
 async function openGifts() {
-  if (document.querySelector('.giftsheet')) return;
-  const d = document.createElement('div'); d.className = 'paysheet giftsheet';
-  const CAP = 300000, MINA = 500, maxA = Math.min(Math.max(0, state.balance), CAP), start = maxA >= MINA ? Math.min(maxA, 5000) : 0;
-  const TIERS = [{ lo: 500, to: 5000, n: 'Стандартный', c: '#2bd96b' }, { lo: 5000, to: 10000, n: 'Средний', c: '#3d9bff' }, { lo: 10000, to: 50000, n: 'Повышенный', c: '#ff4fd8' }, { lo: 50000, to: 100000, n: 'Крупный', c: '#ff3b3b' }, { lo: 100000, to: 300000, n: 'Богач', c: '#ffc933' }];
-  const tierOf = (a) => TIERS.find((t) => a <= t.to) || TIERS[4];
-  const posOf = (a) => { const i = Math.max(0, TIERS.findIndex((t) => a <= t.to)), t = TIERS[i < 0 ? 4 : i]; return Math.round(i * 1000 + (Math.min(Math.max(a, t.lo), t.to) - t.lo) / (t.to - t.lo) * 1000); };
-  const amtOf = (pos) => { const i = Math.min(4, Math.floor(pos / 1000)), t = TIERS[i], a = t.lo + ((pos - i * 1000) / 1000) * (t.to - t.lo), st = a < 10000 ? 50 : a < 100000 ? 500 : 1000; return Math.max(MINA, Math.min(maxA, Math.round(a / st) * st)); };
-  const pmax = Math.max(1, posOf(maxA));
-  
-  const presets = maxA >= MINA ? [...TIERS.map((t) => t.to).filter((x) => x <= maxA), ...(TIERS.some((t) => t.to === maxA) ? [] : [maxA])] : [];
-  d.innerHTML = `<div class="pbox gs2"><i class="grab"></i>
-    <div class="gs-head"><h3>Вывести подарком</h3><span class="gs-bal">баланс <b>${state.balance}</b> ⭐</span></div>
-    <div class="gs-top"><div class="gs-tier" id="g-tier"></div><div class="gs-amtbox"><input id="g-amt" type="number" inputmode="numeric" min="${MINA}" max="${maxA}" value="${start || ''}" placeholder="от ${MINA}"><span>⭐</span></div>
-      <input id="g-rng" class="gs-rng" type="range" min="0" max="${pmax}" value="${posOf(start || MINA)}">
-      <div class="gs-chips">${presets.map((x) => `<button class="gs-chip" data-a="${x}" style="--tc:${tierOf(x).c}">${x === maxA && !TIERS.some((t) => t.to === x) ? 'Макс' : x >= 1000 ? x / 1000 + 'к' : x}</button>`).join('')}</div></div>
-    <div class="gs-stamp" id="g-stamp">Мин. 500 ⭐ · макс. за раз 300 000 ⭐</div>
-    <div class="glist" id="g-grid"><p class="hint">Введите сумму</p></div>
-    <p class="perr" id="g-err"></p>
-    <div class="gs-foot"><button class="primary pay" id="g-go" disabled>Выберите подарок</button><button class="plink" id="g-no">Закрыть</button></div></div>`;
+  if (document.querySelector('.gpage')) return;
+  const MINA = 500, CAP = 300000, maxA = Math.min(Math.max(0, state.balance), CAP);
+  const TIERS = [{ lo: 500, to: 5000, n: 'Стандартный', c: '#2bd96b', st: 50 }, { lo: 5000, to: 10000, n: 'Средний', c: '#3d9bff', st: 100 }, { lo: 10000, to: 50000, n: 'Повышенный', c: '#ff4fd8', st: 500 }, { lo: 50000, to: 100000, n: 'Крупный', c: '#ff3b3b', st: 1000 }, { lo: 100000, to: 300000, n: 'Богач', c: '#ffc933', st: 2000 }];
+  const kf = (x) => x >= 1000 ? (x / 1000) + 'к' : x;
+  const d = document.createElement('div'); d.className = 'gpage';
+  d.innerHTML = `<div class="gp-top"><button class="gp-back" id="gp-back">‹</button><h3>Вывод подарком</h3><span class="gp-bal"><b>${state.balance}</b> ⭐</span></div>
+    <div class="gp-tiers" id="gp-tiers">${TIERS.map((t, i) => `<button class="gp-tier${t.lo > maxA ? ' lock' : ''}" data-i="${i}" style="--tc:${t.c}"><i class="pips">${'<u></u>'.repeat(i + 1)}</i><b>${t.n}</b><small>${kf(t.lo)} – ${kf(t.to)} ⭐</small>${t.lo > maxA ? '<em>🔒</em>' : ''}</button>`).join('')}</div>
+    <div class="gp-budget" id="gp-budget"><div class="gp-brow"><span>Бюджет</span><b id="gp-amt"></b><span class="gp-cnt" id="gp-cnt"></span></div><input id="gp-rng" type="range" class="gp-rng"></div>
+    <div class="gp-grid" id="gp-grid"><p class="hint">Загружаем…</p></div>
+    <div class="gp-bar"><p class="perr" id="gp-err"></p><button class="primary pay" id="gp-go" disabled>Выберите подарок</button></div>`;
   document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
   const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
-  d.querySelector('#g-no').onclick = close; d.onclick = (e) => { if (e.target === d) close(); };
-  const grid = d.querySelector('#g-grid'), go = d.querySelector('#g-go'), err = d.querySelector('#g-err'), inp = d.querySelector('#g-amt'), rng = d.querySelector('#g-rng'), stamp = d.querySelector('#g-stamp'); let list = [], sel = null, tm = 0, seq = 0;
-  const paint = () => { go.disabled = !sel || sel.price > state.balance; go.textContent = sel ? (sel.price > state.balance ? `Не хватает ${sel.price - state.balance} ⭐` : `Вывести за ${sel.price} ⭐`) : 'Выберите подарок'; grid.querySelectorAll('.grow').forEach((c) => c.classList.toggle('on', !!sel && c.dataset.id === sel.id)); };
-  const fmt = (iso) => { try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
+  d.querySelector('#gp-back').onclick = close;
+  const grid = d.querySelector('#gp-grid'), go = d.querySelector('#gp-go'), err = d.querySelector('#gp-err'), rng = d.querySelector('#gp-rng'), amt = d.querySelector('#gp-amt'), cnt = d.querySelector('#gp-cnt');
+  let ti = 0, list = [], sel = null, tm = 0, seq = 0;
+  const paint = () => { go.disabled = !sel || sel.price > state.balance; go.textContent = sel ? (sel.price > state.balance ? `Не хватает ${sel.price - state.balance} ⭐` : `Вывести за ${sel.price} ⭐`) : 'Выберите подарок'; grid.querySelectorAll('.gc2').forEach((c) => c.classList.toggle('on', !!sel && c.dataset.id === sel.id)); };
+  const paintRng = () => { const t = TIERS[ti], hi = Math.min(t.to, maxA), pc = hi > t.lo ? (rng.value - rng.min) / (rng.max - rng.min) * 100 : 100; d.style.setProperty('--tc', t.c); rng.style.setProperty('--p', pc + '%'); amt.textContent = rng.value + ' ⭐'; };
   const find = async () => {
-    const amount = Math.floor(Number(inp.value)), my = ++seq; err.textContent = '';
-    if (maxA < MINA) { grid.innerHTML = `<p class="hint">Для вывода нужно минимум ${MINA} ⭐</p>`; return; }
-    if (!(amount >= MINA)) { list = []; sel = null; grid.innerHTML = `<p class="hint">Минимум ${MINA} ⭐</p>`; paint(); return; }
-    if (amount > maxA) { setAmt(maxA); return find(); }
+    const t = TIERS[ti], amount = Number(rng.value), my = ++seq; err.textContent = '';
     try {
-      const j = await api('gifts', { amount }); if (my !== seq) return; list = j.gifts || []; if (sel && !list.find((g) => g.id === sel.id)) sel = null;
-      stamp.innerHTML = j.at ? `Цены с Fragment на <b>${fmt(j.at)}</b> · комиссия 10% уже в цене · макс. 300 000 ⭐` : '';
-      grid.innerHTML = list.length ? list.map((g) => `<div class="grow" data-id="${g.id}"><span class="gimgw">${g.img ? `<span class="fg" data-slug="${g.slug}" data-n="${g.n}" style="--fgc:${(g.rgb || [90, 90, 120]).join(',')}"><img src="${g.img}" alt="" draggable="false"></span>` : gimg(g.id, g.emoji, g.fg)}</span><span class="ginfo"><b class="gname">${g.name || ''}</b><small>${[g.model, g.backdrop, g.symbol].filter(Boolean).join(' · ')}</small><small class="gton">${g.ton} TON · $${Math.round(g.ton * (window.Market && window.Market.rates().tonUsd || 1.37))}</small></span><span class="gprice"><b>${g.price} ⭐</b></span></div>`).join('') : '<p class="hint">Под такую сумму подарков нет — увеличьте сумму</p>';
-      grid.querySelectorAll('.grow').forEach((c) => c.onclick = (e) => { sel = list.find((g) => g.id === c.dataset.id); err.textContent = ''; paint(); });
+      const j = await api('gifts', { amount, min: t.lo }); if (my !== seq) return; list = j.gifts || []; if (sel && !list.find((g) => g.id === sel.id)) sel = null;
+      cnt.textContent = list.length ? `${list.length} шт.` : '';
+      grid.innerHTML = list.length ? list.map((g) => `<button class="gc2" data-id="${g.id}"><span class="gimg2">${g.img ? `<span class="fg" data-slug="${g.slug}" data-n="${g.n}" style="--fgc:${(g.rgb || [90, 90, 120]).join(',')}"><img src="${g.img}" alt="" draggable="false"></span>` : ''}</span><b class="gname">${g.name}</b><small>${[g.model, g.backdrop, g.symbol].filter(Boolean).join(' · ')}</small><span class="gpr"><b>${g.price} ⭐</b><small>${g.ton} TON · $${Math.round(g.ton * (window.Market && window.Market.rates().tonUsd || 1.37))}</small></span></button>`).join('') : '<p class="hint">В этом диапазоне подарков нет — подними бюджет</p>';
+      grid.scrollTop = 0; grid.querySelectorAll('.gc2').forEach((c) => c.onclick = () => { sel = list.find((g) => g.id === c.dataset.id); err.textContent = ''; paint(); });
       paint(); window.FG && window.FG.upgrade && window.FG.upgrade(grid);
     } catch (e) { err.textContent = e.message; }
   };
-  const later = () => { clearTimeout(tm); tm = setTimeout(find, 180); };
-  const paintTier = () => {
-    const v = Math.floor(Number(inp.value)) || MINA, t = tierOf(Math.max(MINA, v)), pc = rng.value / pmax * 100, st = [];
-    TIERS.forEach((x, i) => { const a = i * 1000 / pmax * 100, z = Math.min(100, (i + 1) * 1000 / pmax * 100); if (a < 100) st.push(`${x.c} ${a}% ${z}%`); });
-    rng.style.setProperty('--tr', `linear-gradient(90deg,${st.join(',')})`); rng.style.setProperty('--p', pc + '%'); rng.style.setProperty('--tc', t.c);
-    d.querySelector('.gs-top').style.setProperty('--tc', t.c); const tb = d.querySelector('#g-tier'); tb.textContent = t.n + ' вывод'; tb.style.setProperty('--tc', t.c);
+  const setTier = (i, keep) => {
+    const t = TIERS[i]; if (t.lo > maxA) { err.textContent = `Этот ранг от ${t.lo} ⭐ — не хватает баланса`; return; }
+    ti = i; const hi = Math.min(t.to, maxA); rng.min = t.lo; rng.max = Math.max(t.lo + 1, hi); rng.step = t.st; rng.value = keep ? Math.min(Math.max(+rng.value, t.lo), hi) : hi;
+    d.querySelectorAll('.gp-tier').forEach((b, k) => b.classList.toggle('on', k === i)); paintRng(); sel = null; paint(); find();
+    const on = d.querySelector('.gp-tier.on'); on && on.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
   };
-  const setAmt = (a) => { a = Math.max(MINA, Math.min(maxA, Math.round(a))); inp.value = a; rng.value = posOf(a); paintTier(); };
-  inp.onblur = () => { if (inp.value && Number(inp.value) < MINA) { setAmt(MINA); find(); } };
-  inp.oninput = () => { const v = Number(inp.value); if (v > maxA) inp.value = maxA; rng.value = posOf(Math.min(maxA, Math.max(MINA, v || MINA))); paintTier(); later(); };
-  rng.oninput = () => { inp.value = amtOf(Number(rng.value)); paintTier(); later(); };
-  paintTier();
-  d.querySelectorAll('.gs-chip').forEach((c) => c.onclick = () => { setAmt(Number(c.dataset.a)); find(); });
-  find();
+  d.querySelectorAll('.gp-tier').forEach((b) => b.onclick = () => setTier(+b.dataset.i));
+  rng.oninput = () => { paintRng(); clearTimeout(tm); tm = setTimeout(find, 160); };
+  if (maxA < MINA) { grid.innerHTML = `<p class="hint">Для вывода нужно минимум ${MINA} ⭐</p>`; d.querySelector('#gp-budget').hidden = true; }
+  else setTier(0);
   go.onclick = async () => {
     if (!sel) return; go.disabled = true; go.textContent = 'Отправляем…';
     try { const r = await api('gifts/send', { giftId: sel.id }); setBalance(r.balance); close(); toast(`Подарок ${sel.name || sel.emoji} в обработке: придёт в чат с ботом через ~${r.etaSec || 15} с`, 'wait', 5200); if (typeof loadCash === 'function') { loadCash(); let n = 0; const iv = setInterval(() => { loadCash(); if (++n > 12) clearInterval(iv); }, 4000); } window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success'); }
