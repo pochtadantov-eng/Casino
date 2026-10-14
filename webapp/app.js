@@ -508,14 +508,15 @@ if ($('#btn-luck')) $('#btn-luck').onclick = openLuck;
 async function openGifts() {
   if (document.querySelector('.giftsheet')) return;
   const d = document.createElement('div'); d.className = 'paysheet giftsheet';
-  const maxA = Math.max(0, state.balance), start = Math.min(maxA, 1000);
-  const presets = [...new Set([25, 50, 75].map((p) => Math.max(1, Math.floor(maxA * p / 100))).concat(maxA ? [maxA] : []))];
+  const CAP = 100000, MINA = 500, maxA = Math.min(Math.max(0, state.balance), CAP), start = maxA >= MINA ? Math.min(maxA, 5000) : 0;
+  
+  const presets = maxA >= MINA ? [25, 50, 75, 100].map((p) => Math.max(MINA, Math.floor(maxA * p / 100))) : [];
   d.innerHTML = `<div class="pbox gs2"><i class="grab"></i>
-    <div class="gs-head"><h3>Вывести подарком</h3><span class="gs-bal">баланс <b>${maxA}</b> ⭐</span></div>
-    <div class="gs-top"><div class="gs-amtbox"><input id="g-amt" type="number" inputmode="numeric" min="1" max="${maxA}" value="${start || ''}" placeholder="0"><span>⭐</span></div>
-      <input id="g-rng" class="gs-rng" type="range" min="1" max="${Math.max(1, maxA)}" value="${start || 1}">
-      <div class="gs-chips">${presets.map((x, i) => `<button class="gs-chip" data-a="${x}">${i === presets.length - 1 ? 'Всё' : [25, 50, 75][i] + '%'}</button>`).join('')}</div></div>
-    <div class="gs-stamp" id="g-stamp"></div>
+    <div class="gs-head"><h3>Вывести подарком</h3><span class="gs-bal">баланс <b>${state.balance}</b> ⭐</span></div>
+    <div class="gs-top"><div class="gs-amtbox"><input id="g-amt" type="number" inputmode="numeric" min="${MINA}" max="${maxA}" value="${start || ''}" placeholder="0"><span>⭐</span></div>
+      <input id="g-rng" class="gs-rng" type="range" min="${MINA}" max="${Math.max(MINA + 1, maxA)}" value="${start || MINA}">
+      <div class="gs-chips">${presets.map((x, i) => `<button class="gs-chip" data-a="${x}">${i === 3 ? 'Макс' : [25, 50, 75][i] + '%'}</button>`).join('')}</div></div>
+    <div class="gs-stamp" id="g-stamp">Мин. 500 ⭐ · макс. за раз 100 000 ⭐</div>
     <div class="glist" id="g-grid"><p class="hint">Введите сумму</p></div>
     <p class="perr" id="g-err"></p>
     <div class="gs-foot"><button class="primary pay" id="g-go" disabled>Выберите подарок</button><button class="plink" id="g-no">Закрыть</button></div></div>`;
@@ -527,20 +528,22 @@ async function openGifts() {
   const fmt = (iso) => { try { return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
   const find = async () => {
     const amount = Math.floor(Number(inp.value)), my = ++seq; err.textContent = '';
-    if (!(amount > 0)) { list = []; sel = null; grid.innerHTML = '<p class="hint">Введите сумму</p>'; paint(); return; }
-    if (amount > state.balance) { err.textContent = `На балансе только ${state.balance} ⭐`; return; }
+    if (maxA < MINA) { grid.innerHTML = `<p class="hint">Для вывода нужно минимум ${MINA} ⭐</p>`; return; }
+    if (!(amount >= MINA)) { list = []; sel = null; grid.innerHTML = `<p class="hint">Минимум ${MINA} ⭐</p>`; paint(); return; }
+    if (amount > maxA) { inp.value = rng.value = maxA; return find(); }
     try {
       const j = await api('gifts', { amount }); if (my !== seq) return; list = j.gifts || []; if (sel && !list.find((g) => g.id === sel.id)) sel = null;
-      stamp.innerHTML = j.at ? `Цены Fragment · проверено <b>${fmt(j.at)}</b> · комиссия 10% уже в цене` : '';
-      grid.innerHTML = list.length ? list.map((g) => `<div class="grow" data-id="${g.id}"><span class="gimgw">${g.img ? `<span class="fg" data-slug="${g.slug}" data-n="${g.n}" style="--fgc:${(g.rgb || [90, 90, 120]).join(',')}"><img src="${g.img}" alt="" draggable="false"></span>` : gimg(g.id, g.emoji, g.fg)}</span><span class="ginfo"><b class="gname">${g.name || ''}</b><small>${[g.model, g.backdrop, g.symbol].filter(Boolean).join(' · ')}</small>${g.url ? `<a class="gfr" href="${g.url}" target="_blank" rel="noopener">на Fragment ↗ · ${g.ton} TON</a>` : ''}</span><span class="gprice"><b>${g.price} ⭐</b></span></div>`).join('') : '<p class="hint">Под такую сумму подарков нет — увеличьте сумму</p>';
-      grid.querySelectorAll('.grow').forEach((c) => c.onclick = (e) => { if (e.target.closest('.gfr')) return; sel = list.find((g) => g.id === c.dataset.id); err.textContent = ''; paint(); });
+      stamp.innerHTML = j.at ? `Цены с Fragment на <b>${fmt(j.at)}</b> · комиссия 10% уже в цене · макс. 100 000 ⭐` : '';
+      grid.innerHTML = list.length ? list.map((g) => `<div class="grow" data-id="${g.id}"><span class="gimgw">${g.img ? `<span class="fg" data-slug="${g.slug}" data-n="${g.n}" style="--fgc:${(g.rgb || [90, 90, 120]).join(',')}"><img src="${g.img}" alt="" draggable="false"></span>` : gimg(g.id, g.emoji, g.fg)}</span><span class="ginfo"><b class="gname">${g.name || ''}</b><small>${[g.model, g.backdrop, g.symbol].filter(Boolean).join(' · ')}</small><small class="gton">${g.ton} TON · $${Math.round(g.ton * (window.Market && window.Market.rates().tonUsd || 1.37))}</small></span><span class="gprice"><b>${g.price} ⭐</b></span></div>`).join('') : '<p class="hint">Под такую сумму подарков нет — увеличьте сумму</p>';
+      grid.querySelectorAll('.grow').forEach((c) => c.onclick = (e) => { sel = list.find((g) => g.id === c.dataset.id); err.textContent = ''; paint(); });
       paint(); window.FG && window.FG.upgrade && window.FG.upgrade(grid);
     } catch (e) { err.textContent = e.message; }
   };
   const later = () => { clearTimeout(tm); tm = setTimeout(find, 180); };
-  inp.oninput = () => { rng.value = Math.min(maxA, Math.max(1, Number(inp.value) || 1)); later(); };
-  rng.oninput = () => { inp.value = rng.value; later(); };
-  d.querySelectorAll('.gs-chip').forEach((c) => c.onclick = () => { inp.value = rng.value = c.dataset.a; find(); });
+  inp.oninput = () => { rng.value = Math.min(maxA, Math.max(MINA, Number(inp.value) || MINA)); rng.style.setProperty('--p', ((rng.value - rng.min) / (rng.max - rng.min) * 100) + '%'); later(); };
+  rng.oninput = () => { inp.value = rng.value; rng.style.setProperty('--p', ((rng.value - rng.min) / (rng.max - rng.min) * 100) + '%'); later(); };
+  rng.style.setProperty('--p', ((rng.value - rng.min) / (rng.max - rng.min) * 100) + '%');
+  d.querySelectorAll('.gs-chip').forEach((c) => c.onclick = () => { inp.value = rng.value = c.dataset.a; rng.oninput && rng.style.setProperty('--p', ((rng.value - rng.min) / (rng.max - rng.min) * 100) + '%'); find(); });
   find();
   go.onclick = async () => {
     if (!sel) return; go.disabled = true; go.textContent = 'Отправляем…';

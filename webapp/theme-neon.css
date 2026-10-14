@@ -502,3 +502,22 @@ tg-star.stz{display:inline-block;margin:0;padding:0;border:0;font-size:inherit;l
 .fg .lot svg{width:100%!important;height:100%!important;display:block}
 .gs2 .gimgw,.gs2 .gimgw .fg{width:68px;height:68px}
 .gs2 .gimgw .fg{border-radius:14px}
+
+/* gift withdraw v3 */
+.gs2 .gs-amtbox input{text-align:left}
+.gs2 .gs-rng{-webkit-appearance:none;appearance:none;height:30px;background:transparent;margin:6px 0 4px;padding:0;--p:50%}
+.gs2 .gs-rng::-webkit-slider-runnable-track{height:10px;border-radius:5px;background:linear-gradient(90deg,#c6ff3d var(--p),rgba(255,255,255,.14) var(--p))}
+.gs2 .gs-rng::-moz-range-track{height:10px;border-radius:5px;background:rgba(255,255,255,.14)}
+.gs2 .gs-rng::-moz-range-progress{height:10px;border-radius:5px;background:#c6ff3d}
+.gs2 .gs-rng::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:30px;height:30px;margin-top:-10px;border-radius:50%;background:#fff;border:0;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.gs2 .gs-rng::-moz-range-thumb{width:30px;height:30px;border-radius:50%;background:#fff;border:0}
+.gs2 .gimgw,.gs2 .gimgw .fg{width:96px;height:96px}
+.gs2 .gimgw .fg{border-radius:18px}
+.gs2 .grow{padding:10px 12px;gap:12px}
+.gs2 .ginfo .gname{font-size:15px}
+.gs2 .ginfo small{white-space:normal;line-height:1.25}
+.gs2 .gton{color:var(--hint)!important;font-size:11px}
+.gs2 .gprice b{font-size:17px}
+.gs2 .gs-amtbox input::-webkit-outer-spin-button,.gs2 .gs-amtbox input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.gs2 .gs-amtbox input{-moz-appearance:textfield;appearance:textfield}
+.gs2 .ginfo .gname{white-space:normal;overflow:visible}
