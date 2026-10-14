@@ -60,7 +60,7 @@
       catch { box.innerHTML = `<img src="${g.image}" alt="">`; }
     } catch { info.innerHTML = '<b>Подарок не найден</b>'; }
   }
-  window.Market = { load, rates: () => rates, conv, line, giftCard, tonToStars };
+  window.Market = { load, rates: () => rates, conv, line, giftCard, tonToStars, loadLottie };
   load(); setInterval(load, 5 * 60_000);
   const q = new URLSearchParams(location.search).get('gift');           // ?gift=hexpot-10348 shows a gift card (handy for checks)
   if (q) { const d = document.createElement('div'); d.className = 'nftc-demo'; d.onclick = () => d.remove(); document.body.append(d); giftCard(q, d); }

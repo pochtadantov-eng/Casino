@@ -497,3 +497,8 @@ tg-star.stz{display:inline-block;margin:0;padding:0;border:0;font-size:inherit;l
 .gs2 .gs-foot{flex:none;padding-top:6px}
 .gs2 .gs-foot .plink{display:block;margin:6px auto 0}
 .gs2 .gs-head h3{font-size:19px;white-space:nowrap;margin:0}
+.fg{position:relative}
+.fg .lot{position:absolute;inset:0;display:block;background:radial-gradient(circle at 50% 40%,rgba(255,255,255,.22),rgba(var(--fgc),1) 70%)}
+.fg .lot svg{width:100%!important;height:100%!important;display:block}
+.gs2 .gimgw,.gs2 .gimgw .fg{width:68px;height:68px}
+.gs2 .gimgw .fg{border-radius:14px}

@@ -532,9 +532,9 @@ async function openGifts() {
     try {
       const j = await api('gifts', { amount }); if (my !== seq) return; list = j.gifts || []; if (sel && !list.find((g) => g.id === sel.id)) sel = null;
       stamp.innerHTML = j.at ? `Цены Fragment · проверено <b>${fmt(j.at)}</b> · комиссия 10% уже в цене` : '';
-      grid.innerHTML = list.length ? list.map((g) => `<div class="grow" data-id="${g.id}"><span class="gimgw">${g.img ? `<span class="fg" style="--fgc:${(g.rgb || [90, 90, 120]).join(',')}"><img src="${g.img}" alt="" draggable="false"></span>` : gimg(g.id, g.emoji, g.fg)}</span><span class="ginfo"><b class="gname">${g.name || ''}</b><small>${[g.model, g.backdrop, g.symbol].filter(Boolean).join(' · ')}</small>${g.url ? `<a class="gfr" href="${g.url}" target="_blank" rel="noopener">на Fragment ↗ · ${g.ton} TON</a>` : ''}</span><span class="gprice"><b>${g.price} ⭐</b></span></div>`).join('') : '<p class="hint">Под такую сумму подарков нет — увеличьте сумму</p>';
+      grid.innerHTML = list.length ? list.map((g) => `<div class="grow" data-id="${g.id}"><span class="gimgw">${g.img ? `<span class="fg" data-slug="${g.slug}" data-n="${g.n}" style="--fgc:${(g.rgb || [90, 90, 120]).join(',')}"><img src="${g.img}" alt="" draggable="false"></span>` : gimg(g.id, g.emoji, g.fg)}</span><span class="ginfo"><b class="gname">${g.name || ''}</b><small>${[g.model, g.backdrop, g.symbol].filter(Boolean).join(' · ')}</small>${g.url ? `<a class="gfr" href="${g.url}" target="_blank" rel="noopener">на Fragment ↗ · ${g.ton} TON</a>` : ''}</span><span class="gprice"><b>${g.price} ⭐</b></span></div>`).join('') : '<p class="hint">Под такую сумму подарков нет — увеличьте сумму</p>';
       grid.querySelectorAll('.grow').forEach((c) => c.onclick = (e) => { if (e.target.closest('.gfr')) return; sel = list.find((g) => g.id === c.dataset.id); err.textContent = ''; paint(); });
-      paint();
+      paint(); window.FG && window.FG.upgrade && window.FG.upgrade(grid);
     } catch (e) { err.textContent = e.message; }
   };
   const later = () => { clearTimeout(tm); tm = setTimeout(find, 180); };
