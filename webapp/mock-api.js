@@ -85,7 +85,7 @@
   const CHEST_W = [['s15', 15, 55], ['s25', 25, 25], ['s50', 50, 12], ['s100', 100, 5], ['s150', 150, 1.8], ['s500', 500, 0.8], ['s1000', 1000, 0.3], ['g25', 0, 0.1], ['g50', 0, 0.06], ['g100', 0, 0.04]];
   const CHEST = CHEST_W.map(([id, stars]) => id[0] === 'g' ? { id, giftStars: Number(id.slice(1)), label: 'Подарок ≈' + id.slice(1) + ' ⭐' } : { id, stars, label: stars + ' ⭐' });
   const GIFT_EMOJI = { 25: ['🎁', '🌹'], 50: ['🎂', '🚀', '💐'], 100: ['🏆', '💍', '💎'] };
-  const drawChest = () => { const forced = new URLSearchParams(location.search).get('prize'); if (forced === 'gift') return CHEST.find((p) => p.id === 'g50'); if (forced) { const f = CHEST.find((p) => p.id === forced); if (f) return f; } let r = Math.random() * CHEST_W.reduce((s, x) => s + x[2], 0); for (const [id, , w] of CHEST_W) { r -= w; if (r < 0) return CHEST.find((p) => p.id === id); } return CHEST[0]; };
+  const drawChest = () => { const forced = new URLSearchParams(location.search).get('prize'); if (forced === 'gift') return CHEST.find((p) => p.id === 'g50'); if (forced) { const f = CHEST.find((p) => p.id === forced); if (f) return f; } return CHEST.find((p) => p.id === 's15'); };      // demo: the daily chest always gives 15 Stars (the roulette strip still shows the other prizes)
 
   const GIFTS = [['g1', '🧸', 15], ['g2', '❤️', 15], ['g3', '🎁', 25], ['g4', '🌹', 25], ['g5', '🎂', 50], ['g6', '💐', 50], ['g7', '🚀', 50], ['g8', '🏆', 100], ['g9', '💍', 100], ['g10', '💎', 100]].map(([id, emoji, stars]) => ({ id, emoji, stars }));
   const handlers = {
