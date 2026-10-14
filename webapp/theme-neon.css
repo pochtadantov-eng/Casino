@@ -343,15 +343,15 @@ button.small.ghost,.small.ghost{background:var(--glass);color:var(--fg)}
 .lp-it b{font:800 13px Onest,sans-serif}.lp-it small{font:600 11px/1.25 Onest,sans-serif;color:var(--hint)}
 .lp-go{margin-top:14px;width:100%;height:52px;border:0;border-radius:18px;background:var(--lime);color:#0A1204;font:800 15px var(--disp)}
 
-/* water test tube loader */
+/* water capsule loader (horizontal tube) */
 #splash .sp-bar{display:none}
-#splash .sp-tube{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:18px}
-#splash .sp-tube svg{width:56px;height:164px;overflow:visible;filter:drop-shadow(0 0 14px rgba(198,255,61,.22))}
+#splash .sp-tube{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:22px}
+#splash .sp-tube svg{width:250px;height:58px;overflow:visible;filter:drop-shadow(0 0 14px rgba(198,255,61,.22))}
 #splash .sp-pct{font:800 13px var(--disp);color:var(--lime);letter-spacing:.5px}
-.tb-water{transform:translateY(160px);animation:tbFill linear forwards}
-.tb-wave{animation:tbWave 1.1s linear infinite}
+.tb-water{transform:translateX(-290px);animation:tbFill linear forwards}
+.tb-wave{animation:tbWave 1s linear infinite}
 .bb{fill:rgba(255,255,255,.75);animation:tbBub 1.7s ease-in infinite}
-.bb.b2{animation-duration:1.3s;animation-delay:.4s}.bb.b3{animation-duration:2.1s;animation-delay:.9s}.bb.b4{animation-duration:1.5s;animation-delay:.2s}
-@keyframes tbFill{to{transform:translateY(16px)}}
-@keyframes tbWave{to{transform:translateX(-60px)}}
-@keyframes tbBub{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(-120px);opacity:0}}
+.bb.b2{animation-duration:1.3s;animation-delay:.4s}.bb.b3{animation-duration:2.1s;animation-delay:.9s}.bb.b4{animation-duration:1.5s;animation-delay:.2s}.bb.b5{animation-duration:1.9s;animation-delay:.6s}
+@keyframes tbFill{to{transform:translateX(0)}}
+@keyframes tbWave{to{transform:translateY(-44px)}}
+@keyframes tbBub{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(-26px);opacity:0}}
