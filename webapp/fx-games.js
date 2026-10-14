@@ -156,7 +156,7 @@
   }
 
   // =========================================== SHAFT (dig) ===========================================
-  const DG = { L: 36, step: Math.log(1.15), W: 360, H: 430, raf: 0, poll: 0, off: 0, sc: null, COLS: 10, shaft: [3, 4, 5, 6] };
+  const DG = { L: 36, step: Math.log(1.03), W: 360, H: 430, raf: 0, poll: 0, off: 0, sc: null, COLS: 10, shaft: [3, 4, 5, 6] };
   const rh = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
   // ---- pixel-art tiles (16x16, generated once, drawn without smoothing) ----
   const TILE = {}, cvs = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
@@ -220,11 +220,40 @@
     DG.L = L; g.imageSmoothingEnabled = false;
     const ms = sc ? now - sc.startedAt : -1e9, layer = sc ? digLayerAt(ms) : 0, frac = sc ? ((DG.growth * Math.max(0, ms)) / DG.step) % 1 : 0;
     const lost = sc?.status === 'lost', crashLayer = lost ? Math.ceil(Math.log(Math.max(1.01, sc.crash)) / DG.step) : null;
-    const cur = lost ? Math.min(layer, crashLayer) : layer, boomT = lost ? (Date.now() - sc.lostAt) / 1000 : 0, groundY = H * 0.2, cam = Math.max(0, (cur + frac) * L - H * 0.34);
+    const cur = lost ? Math.min(layer, crashLayer) : layer, boomT = lost ? (Date.now() - sc.lostAt) / 1000 : 0, groundY = H * 0.2; let cam = 0;
     const ccx = (c) => c * L + L / 2, cellY = (ly) => Math.round(groundY + ly * L - cam);
+    // ---- the pick is a falling object: gravity, bounces off what it hits, breaks the blocks it touches ----
+    const pk = DG.pk || (DG.pk = { x: W / 2, y: -groundY - 60, vx: 1.2, vy: 0, a: 0.6, va: 0.2, t: Date.now() });
+    const tnow = Date.now(), dt = Math.min(3, (tnow - pk.t) / 16.7); pk.t = tnow;
+    const targetY = (cur + frac) * L, rad = L * 0.7;
+    if (sc && !(lost)) {
+      const steps = Math.max(1, Math.round(dt));
+      for (let k = 0; k < steps; k++) {
+        pk.vy += 0.32; pk.vx *= 0.995; pk.x += pk.vx; pk.y += pk.vy; pk.a += pk.va; pk.va *= 0.985;
+        if (pk.x < L + rad * 0.6) { pk.x = L + rad * 0.6; pk.vx = Math.abs(pk.vx) * 0.85 + 0.5; pk.va = 0.25; }
+        if (pk.x > W - L - rad * 0.6) { pk.x = W - L - rad * 0.6; pk.vx = -Math.abs(pk.vx) * 0.85 - 0.5; pk.va = -0.25; }
+        if (ms < 0) { if (pk.y > -L * 0.55) { pk.y = -L * 0.55; pk.vy = -Math.abs(pk.vy) * 0.35; } }
+        else {
+          if (pk.y < targetY - 2.5 * L) pk.vy += 0.5;                                // lagging behind the schedule: gets pulled down
+          if (pk.y > targetY + 1.4 * L) { pk.y = targetY + 1.4 * L; pk.vy = -Math.abs(pk.vy) * 0.6 - 1; }
+        }
+        if (ms >= 0 || pk.y > -L) {
+          let hit = 0, hx = 0, hy = 0;
+          const c0 = Math.floor((pk.x - rad) / L), c1 = Math.floor((pk.x + rad) / L), r0 = Math.floor((pk.y - rad) / L), r1 = Math.floor((pk.y + rad) / L);
+          for (let ly = Math.max(0, r0); ly <= r1 && hit < 3; ly++) for (let c = Math.max(1, c0); c <= Math.min(DG.COLS - 2, c1) && hit < 3; c++) {
+            if (DG.holes.has(ly * 16 + c)) continue;
+            const nx = Math.max(c * L, Math.min(pk.x, (c + 1) * L)), ny = Math.max(ly * L, Math.min(pk.y, (ly + 1) * L));
+            if ((pk.x - nx) ** 2 + (pk.y - ny) ** 2 > rad * rad) continue;
+            DG.holes.add(ly * 16 + c); hit++; hx += pk.x - (c + 0.5) * L; hy += pk.y - (ly + 0.5) * L; (DG.todo = DG.todo || []).push([ly, c]);
+          }
+          if (hit) { const m = Math.hypot(hx, hy) || 1; pk.vx = pk.vx * 0.4 + (hx / m) * (1.6 + Math.random() * 2.2) + (Math.random() - 0.5) * 2.5; pk.vy = Math.max(-5.5, pk.vy * -0.35 + (hy / m) * 2.2 - Math.random() * 1.5); pk.va = (Math.random() - 0.5) * 0.7; }
+        }
+      }
+    }
+    if (lost) { pk.vx = 0; pk.vy = 0; }
+    cam = Math.max(0, groundY + pk.y - H * 0.4);
     g.save(); if (DG.shake > 0) { g.translate((Math.random() - 0.5) * DG.shake, (Math.random() - 0.5) * DG.shake); DG.shake *= 0.9; if (DG.shake < 0.3) DG.shake = 0; }
     g.drawImage(backdrop(W, H), 0, 0);
-    const broken = sc && ms > 0 ? (lost ? Math.min(crashLayer, cur + (frac > 0.5 ? 1 : 0)) : cur + (frac > 0.5 ? 1 : 0)) : 0;
     for (let ly = 0; ly < 90; ly++) {
       const y = cellY(ly); if (y > H || y < -L) continue;
       for (let c = 0; c < DG.COLS; c++) {
@@ -232,43 +261,30 @@
         const [t, sd] = tileAt(ly, c); g.drawImage(getTile(t, sd), Math.round(c * L), y, Math.ceil(L), Math.ceil(L));
       }
     }
-    // the pick works in the middle of an open cavity and breaks everything around itself
-    const depthT = cur + frac;
-    let px = pickX(depthT, L), py = groundY + (cur + Math.min(1, frac)) * L - cam - L * 0.1, ang;
+    let px = pk.x, py = groundY + pk.y - cam, ang = pk.a;
     if (!sc) { px = W / 2; py = groundY - L * 0.4; ang = 0.2; }
-    else if (ms < 0) { const f = Math.min(1, 1 - -ms / 1500); px = pickX(0, L); py = -50 + (groundY - 8 + 50) * f * f; ang = 1.2 - f * 1.4; }
-    else { ang = -0.6 + Math.sin(depthT * 7) * 0.7; if (lost) { px = pickX(crashLayer, L) + (boomT < 0.7 ? (Math.random() - 0.5) * 3 : 0); py = groundY + crashLayer * L - cam; ang = 0.2 + Math.min(1, boomT) * 0.5; } }
-    if (lost) DG.hp = Math.max(0, Math.round((DG.hp0 || DG.hp) * (1 - Math.min(1, boomT / 0.7))));
+    if (lost) ang += Math.min(1, boomT) * 0.5;
+    if (lost) DG.hp = Math.max(0, Math.round((DG.hp0 || DG.hp) * (1 - Math.min(1, boomT / 1.1))));
     if (lost && !DG.hp0) DG.hp0 = DG.hp;
-    if (!(lost && boomT >= 0.7)) drawPick(g, px, py, ang, DG.psize);
+    if (!(lost && boomT >= 1.1)) drawPick(g, px, py, ang, DG.psize);
     const mCur = sc ? (lost ? sc.crash : sc.status === 'won' ? sc.cashedAt : Math.max(1, Math.exp(DG.growth * Math.max(0, ms)))) : 1;
-    if (sc && ms > 0 && broken > (DG.lastLayer || 0)) {
-      for (let ly = (DG.lastLayer || 0); ly < broken; ly++) {
-        const pcx = pickX(ly + 0.5, L), cc = Math.min(DG.COLS - 2, Math.max(1, Math.round((pcx - L / 2) / L)));
-        const todo = [];
-        for (let dc = -2; dc <= 2; dc++) { if (Math.abs(dc) <= 1 || Math.random() < 0.6) todo.push([ly, cc + dc]); }
-        for (let dc = -1; dc <= 1; dc++) { if (dc === 0 || Math.random() < 0.7) todo.push([ly + 1, cc + dc]); }
-        let n = 0;
-        todo.forEach(([yy, c2]) => {
-          if (c2 < 1 || c2 > DG.COLS - 2 || DG.holes.has(yy * 16 + c2)) return;
-          const [tt] = tileAt(yy, c2), k = tt.replace('_d', ''), ore = OREN[k], tx = ccx(c2), tyy = cellY(yy) + L / 2;
-          DG.holes.add(yy * 16 + c2); n++;
-          const col = ore ? OREK[k] : tt === 'tnt' ? '#c83030' : '#8d8d8d';
-          for (let i = 0; i < (ore ? 14 : 6); i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * (ore ? 6 : 4), vy: -Math.random() * 4 - 1, c: i % 3 ? col : '#8d8d8d', t: 0 });
-          if (ore && state.round) { const gain = Math.max(1, Math.round(state.round.bet * (Math.exp(DG.step * (yy + 1)) - Math.exp(DG.step * yy)) * 1.2)); DG.nums.push({ x: Math.min(W - 46, Math.max(46, tx)), y: tyy - 6, txt: '+' + gain + ' ⭐ ' + ore, col, t: 0 }); DG.shake = Math.max(DG.shake || 0, 6); }
-          if (tt === 'up') { DG.hp = 100; DG.psize = Math.min(1.9, DG.psize + 0.3); DG.shake = 8; for (let i = 0; i < 20; i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 5 - 1, c: i % 2 ? '#ffd84a' : '#6ae6ff', t: 0 }); DG.nums.push({ x: W / 2, y: tyy - 6, txt: 'КИРКА УЛУЧШЕНА! ❤ 100', col: '#6ae6ff', t: 0 }); }
-          if (tt === 'tnt') {
-            const m = 4 + Math.floor(Math.random() * 7), cand = [];
-            for (let dl = -2; dl <= 2; dl++) for (let dc = -2; dc <= 2; dc++) { const y3 = yy + dl, c3 = c2 + dc; if (y3 < 1 || c3 < 1 || c3 > DG.COLS - 2 || (dl === 0 && dc === 0) || DG.holes.has(y3 * 16 + c3)) continue; cand.push([y3, c3]); }
-            cand.sort(() => Math.random() - 0.5).slice(0, m).forEach(([y3, c3]) => { DG.holes.add(y3 * 16 + c3); for (let i = 0; i < 6; i++) DG.parts.push({ x: ccx(c3), y: cellY(y3) + L / 2, vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 4 - 1, c: ['#ff9a1f', '#8d8d8d', '#555'][i % 3], t: 0 }); });
-            DG.booms.push({ x: tx, y: tyy, t: 0 }); DG.shake = 12; DG.nums.push({ x: Math.min(W - 40, Math.max(40, tx)), y: tyy - 6, txt: 'ТНТ! −' + Math.min(m, cand.length) + ' блоков', col: '#ff9a1f', t: 0 });
-          }
-        });
-        DG.shake = Math.max(DG.shake || 0, 2); DG.hp = Math.max(1, DG.hp - n);
+    const W8 = { coal: 1, iron: 2, gold: 4, red: 6, lapis: 9, dia: 14, em: 22 };
+    (DG.todo || []).splice(0).forEach(([yy, c2]) => {
+      const [tt] = tileAt(yy, c2), k = tt.replace('_d', ''), ore = OREN[k], tx = ccx(c2), tyy = cellY(yy) + L / 2;
+      const col = ore ? OREK[k] : tt === 'tnt' ? '#c83030' : '#8d8d8d';
+      for (let i = 0; i < (ore ? 14 : 6); i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * (ore ? 6 : 4), vy: -Math.random() * 4 - 1, c: i % 3 ? col : '#8d8d8d', t: 0 });
+      if (yy > 0) DG.hp = Math.max(1, DG.hp - 1);
+      DG.shake = Math.max(DG.shake || 0, ore ? 5 : 1.2);
+      if (ore && state.round) { const gain = Math.max(1, Math.round(state.round.bet * (Math.exp(DG.step * (cur + 1)) - Math.exp(DG.step * cur)) * 6 * W8[k])); DG.nums.push({ x: Math.min(W - 46, Math.max(46, tx)), y: tyy - 6, txt: '+' + gain + ' ⭐ ' + ore, col, t: 0 }); }
+      if (tt === 'up') { DG.hp = 100; DG.psize = Math.min(1.9, DG.psize + 0.3); DG.shake = 8; for (let i = 0; i < 20; i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 5 - 1, c: i % 2 ? '#ffd84a' : '#6ae6ff', t: 0 }); DG.nums.push({ x: W / 2, y: tyy - 6, txt: 'КИРКА УЛУЧШЕНА! ❤ 100', col: '#6ae6ff', t: 0 }); }
+      if (tt === 'tnt') {
+        const m = 4 + Math.floor(Math.random() * 7), cand = [];
+        for (let dl = -2; dl <= 2; dl++) for (let dc = -2; dc <= 2; dc++) { const y3 = yy + dl, c3 = c2 + dc; if (y3 < 1 || c3 < 1 || c3 > DG.COLS - 2 || (dl === 0 && dc === 0) || DG.holes.has(y3 * 16 + c3)) continue; cand.push([y3, c3]); }
+        cand.sort(() => Math.random() - 0.5).slice(0, m).forEach(([y3, c3]) => { DG.holes.add(y3 * 16 + c3); for (let i = 0; i < 6; i++) DG.parts.push({ x: ccx(c3), y: cellY(y3) + L / 2, vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 4 - 1, c: ['#ff9a1f', '#8d8d8d', '#555'][i % 3], t: 0 }); });
+        DG.booms.push({ x: tx, y: tyy, t: 0 }); DG.shake = 12; DG.nums.push({ x: Math.min(W - 40, Math.max(40, tx)), y: tyy - 6, txt: 'ТНТ! −' + Math.min(m, cand.length) + ' блоков', col: '#ff9a1f', t: 0 });
       }
-      DG.lastLayer = broken;
-    }
-    if (lost && boomT >= 0.7 && !DG.boomed) {
+    });
+    if (lost && boomT >= 1.1 && !DG.boomed) {
       DG.boomed = true; DG.shake = 9;
       for (let i = 0; i < 26; i++) DG.parts.push({ x: px, y: py, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 5 - 1, c: ['#c99a56', '#7a5326', '#6b4420', '#8d8d8d'][i % 4], t: 0 });
       DG.nums.push({ x: W / 2, y: py - 20, txt: 'КИРКА СЛОМАНА', col: '#ff6b6b', t: 0 });
@@ -302,7 +318,7 @@
       DG.growth = v.growth; DG.off = v.serverNow - Date.now() + (state.rtt || 0) / 2;
       const was = DG.sc;
       DG.sc = { startedAt: v.startedAt, status: round.status, crash: v.crash, cashedAt: v.cashedAt, lostAt: was?.lostAt || (round.status === 'lost' ? Date.now() : 0) };
-      if (!was || was.id !== round.id) { DG.lastLayer = 0; DG.seed = (Math.random() * 1e5) | 0; DG.path = null; DG.boomed = false; DG.booms = []; DG.holes = new Set(); DG.hp0 = 0; DG.hp = 100; DG.psize = 1; DG.parts = []; DG.sc.id = round.id; } else DG.sc.id = was.id;
+      if (!was || was.id !== round.id) { DG.lastLayer = 0; DG.seed = (Math.random() * 1e5) | 0; DG.path = null; DG.boomed = false; DG.booms = []; DG.holes = new Set(); DG.pk = null; DG.todo = []; DG.hp0 = 0; DG.hp = 100; DG.psize = 1; DG.parts = []; DG.sc.id = round.id; } else DG.sc.id = was.id;
     }
     cancelAnimationFrame(DG.raf); digDraw();
     if (round?.status === 'active') digPoll();
