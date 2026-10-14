@@ -33,7 +33,8 @@ async function api0(path, body) {
   return j;
 }
 
-const setBalance = (b) => { state.balance = b; $('#balance').textContent = b; const pb = $('#pbal'); if (pb) pb.textContent = b; };
+const shortNum = (n) => n >= 1e9 ? (n / 1e9).toFixed(2).replace(/\.?0+$/, '') + 'B' : n >= 1e6 ? (n / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M' : n >= 1e5 ? Math.round(n / 1e3) + 'K' : n;
+const setBalance = (b) => { state.balance = b; $('#balance').textContent = shortNum(b); const pb = $('#pbal'); if (pb) pb.textContent = b; };
 const say = (t, cls = '') => { const m = $('#msg'); m.textContent = t; m.className = cls; };
 const betValue = () => clampBet(Math.floor(Number($('#bet').value) || 0));
 const clampBet = (v) => Math.min(state.limits.maxBet, Math.max(state.limits.minBet, v));
