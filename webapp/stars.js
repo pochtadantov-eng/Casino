@@ -6,7 +6,7 @@
     if (node.nodeType === 3) {
       if (!RE.test(node.nodeValue) || skip(node)) return;
       const parts = node.nodeValue.split(/⭐️?/), f = document.createDocumentFragment();
-      parts.forEach((t, i) => { if (t) f.appendChild(document.createTextNode(t)); if (i < parts.length - 1) { const s = document.createElement('span'); s.className = 'stz'; s.setAttribute('aria-label', 'звёзд'); f.appendChild(s); } });
+      parts.forEach((t, i) => { if (t) f.appendChild(document.createTextNode(t)); if (i < parts.length - 1) { const s = document.createElement('tg-star'); s.className = 'stz'; s.setAttribute('aria-label', 'звёзд'); f.appendChild(s); } });
       node.parentNode.replaceChild(f, node);
     } else if (node.nodeType === 1 && !/^(SCRIPT|STYLE)$/.test(node.nodeName)) {
       const w = document.createTreeWalker(node, NodeFilter.SHOW_TEXT), list = [];

@@ -400,3 +400,9 @@ button.small.ghost,.small.ghost{background:var(--glass);color:var(--fg)}
 .fgmeta{display:block;margin-top:4px;color:#cfd6ea;font:600 12px/1.35 Onest,sans-serif}
 .rcard.gift b{font-size:11px}
 #inv-sub{white-space:nowrap}
+
+/* star icon is a custom element so no generic span/i/em rules touch it */
+tg-star.stz{display:inline-block;margin:0;padding:0;border:0;font-size:inherit;line-height:1;white-space:nowrap}
+.rcard .rico{line-height:0}
+.rcard .rico tg-star.stz{width:48px;height:48px;vertical-align:top;margin-bottom:2px}
+.rcard b{margin-top:2px}
