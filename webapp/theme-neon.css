@@ -289,3 +289,14 @@ button.small.ghost,.small.ghost{background:var(--glass);color:var(--fg)}
 .pbox .primary.alt{background:var(--glass);color:var(--fg);border:1px solid var(--line);box-shadow:none}
 .plink{color:var(--hint)}
 .pp-chip.on,.pp-chip.on b{color:var(--fg)}
+
+/* profile action tiles */
+.pacts{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:10px;margin-top:14px}
+.pact{display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:14px;min-height:84px;padding:12px 12px 13px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--fg);font:700 13px/1.1 Onest,system-ui,sans-serif;text-align:left;cursor:pointer;transition:transform .12s}
+.pact:active{transform:scale(.96)}
+.pact i{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.08)}
+.pact i svg{width:18px;height:18px}
+.pact.main{background:var(--lime);border-color:transparent;color:#0A1204;box-shadow:0 0 28px rgba(198,255,61,.3)}
+.pact.main i{background:rgba(10,18,4,.14)}
+.pact span{font-family:var(--disp);font-size:12px;letter-spacing:.2px}
+#btn-luck{display:none!important}

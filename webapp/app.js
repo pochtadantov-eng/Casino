@@ -501,7 +501,7 @@ function openLuck() {
   save.onclick = async () => { save.disabled = true; try { const j = await api('admin/luck', { luck: Number(r.value) }); state.luck = j.luck; syncLuckBtn(); toast('Удача сохранена: ' + luckName(j.luck), 'ok'); close(); } catch (e) { d.querySelector('#l-err').textContent = e.message; save.disabled = false; } };
   paint();
 }
-$('#btn-luck').onclick = openLuck;
+if ($('#btn-luck')) $('#btn-luck').onclick = openLuck;
 
 
 // ---------- withdraw as a Telegram gift: pick a gift, the bot drops it into the chat with the bot ----------
