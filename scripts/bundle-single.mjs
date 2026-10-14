@@ -7,7 +7,7 @@ const MIME = { '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg',
 const uri = (f) => `data:${MIME[extname(f)]};base64,${readFileSync(f).toString('base64')}`;
 const walk = (d, base = '') => readdirSync(d).flatMap((n) => { const p = join(d, n), r = base ? `${base}/${n}` : n; return statSync(p).isDirectory() ? walk(p, r) : [[r, p]]; });
 const assets = walk(dir).filter(([r]) => MIME[extname(r)] && /^(img|fonts)\//.test(r)).sort((a, b) => b[0].length - a[0].length);
-const inlineAssets = (text) => { for (const [r, p] of assets) if (text.includes(r)) text = text.split(r).join(uri(p)); return text; };
+const inlineAssets = (text) => { text = text.replace(/((?:img|fonts)\/[\w./-]+|rocket\.svg)\?v=\w+/g, '$1'); for (const [r, p] of assets) if (text.includes(r)) text = text.split(r).join(uri(p)); return text; };
 const strip = (u) => u.replace(/\?v=[^"']*$/, '');
 let html = readFileSync(join(dir, 'index.html'), 'utf8');
 html = html.replace('<head>', `<head><script>window.ROCKET_SRC="${uri(join(dir, 'rocket.svg'))}";</script>`);
