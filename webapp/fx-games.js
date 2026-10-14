@@ -178,6 +178,7 @@
     const OREC = { coal: ['#23232a', '#4a4a55'], iron: ['#d8a88a', '#f3d4bf'], gold: ['#f0a53a', '#ffe08a'], red: ['#d23a3a', '#ff8a7a'], lapis: ['#2a4fd0', '#6f93ff'], dia: ['#35d6e6', '#d8fbff'], em: ['#22b955', '#9cf5b6'] };
     if (OREC[t]) { for (let q = 0; q < 3; q++) dots(g, OREC[t][0], seed + 1 + t.length + q * 7, 6, OREC[t][1]); if (t === 'dia' || t === 'em') dots(g, OREC[t][0], seed + 9, 3, OREC[t][1]); }
     else if (t === 'tnt') { g.fillStyle = '#c83030'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#e8e4d8'; g.fillRect(0, 5, 16, 6); g.fillStyle = '#222'; g.font = 'bold 6px monospace'; g.textAlign = 'center'; g.fillText('TNT', 8, 10.4); g.fillStyle = 'rgba(0,0,0,.3)'; g.fillRect(0, 15, 16, 1); for (let x = 3; x < 16; x += 5) g.fillRect(x, 0, 1, 5); }
+    else if (t === 'up') { g.fillStyle = '#2a2140'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#ffd84a'; g.fillRect(0, 0, 16, 1); g.fillRect(0, 15, 16, 1); g.fillRect(0, 0, 1, 16); g.fillRect(15, 0, 1, 16); g.fillStyle = '#7a4a1e'; g.fillRect(7, 5, 2, 9); g.fillStyle = '#6ae6ff'; g.fillRect(3, 3, 10, 3); g.fillRect(2, 5, 2, 2); g.fillRect(12, 5, 2, 2); g.fillStyle = '#4dff8a'; g.fillRect(12, 9, 1, 4); g.fillRect(11, 10, 3, 1); }
     else if (t === 'arrow') { g.fillStyle = '#e8932a'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#ffc25a'; g.fillRect(1, 1, 14, 14); g.fillStyle = '#2fbf4a'; g.fillRect(7, 6, 2, 8); g.fillRect(5, 8, 6, 1); g.fillRect(6, 7, 4, 1); g.fillRect(4, 9, 8, 1); g.fillStyle = '#18892f'; g.fillRect(8, 6, 1, 8); }
     return c;
   }
@@ -192,6 +193,8 @@
     let acc = 0; for (let i = ORES.length - 1; i >= 0; i--) { const [k, p, from] = ORES[i]; if (ly < from) continue; acc += p; if (one < acc) return [deep ? k + '_d' : k, sd]; }
     return [deep ? 'deep' : 'cobble', sd];
   };
+  const special = (ly) => (ly >= 3 && rh(ly + (DG.seed || 0), 123) < 0.08 ? 'tnt' : ly >= 8 && rh(ly + (DG.seed || 0), 321) < 0.06 ? 'up' : null);
+  const pathTile = (ly) => { const sp = special(ly); return sp ? [sp, 0] : tileAt(ly, pathCol(ly)); };
   const isOre = (t) => !!OREN[t.replace('_d', '')];
   const pathCol = (ly) => {
     const P = DG.path || (DG.path = [5]);
@@ -204,8 +207,8 @@
   };
   // ---- wooden pickaxe sprite (12x12), roughly one block in size ----
   const PICK = ['....cccc....', '..ccBBBBcc..', '.cBB....BBc.', 'cBB..hh..BBc', 'cB..hhh...Bc', 'c...hh.....c', '....hh......', '....hh......', '...hh.......', '...hh.......', '..hh........', '..hh........'];
-  function drawPick(g, x, y, ang) {
-    g.save(); g.translate(x, y); g.rotate(ang); g.imageSmoothingEnabled = false; const u = 3.1, pal = { c: '#7a5326', B: '#c99a56', h: '#6b4420' };
+  function drawPick(g, x, y, ang, sz) {
+    g.save(); g.translate(x, y); g.rotate(ang); g.imageSmoothingEnabled = false; const u = 3.1 * (sz || 1), pal = { c: '#7a5326', B: '#c99a56', h: '#6b4420' };
     PICK.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '.') return; g.fillStyle = pal[ch]; g.fillRect((i - 6) * u, (j - 9) * u, u + 0.6, u + 0.6); })); g.restore();
   }
   OPTS.dig = () => '';
@@ -229,7 +232,8 @@
         const x = Math.round(c * L), w = Math.ceil(L);
         if (lost && boomT >= 0.4 && Math.abs(ly - crashLayer) <= 1 && Math.abs(c - tc) <= 1) { g.fillStyle = '#100f16'; g.fillRect(x, y, w, w); continue; }
         if (c === pc && ly < broken) { g.fillStyle = '#1d1b26'; g.fillRect(x, y, w, w); g.fillStyle = 'rgba(255,255,255,.04)'; g.fillRect(x, y, w, 3); continue; }
-        const [t, sd] = (lost && ly === crashLayer && c === tc) ? ['tnt', 0] : tileAt(ly, c);
+        if (DG.holes.has(ly * 16 + c)) { g.fillStyle = '#100f16'; g.fillRect(x, y, w, w); continue; }
+        const [t, sd] = (lost && ly === crashLayer && c === tc) ? ['tnt', 0] : (c === pc ? pathTile(ly) : tileAt(ly, c));
         g.drawImage(getTile(t, sd), x, y, w, w);
         if (lost && ly === crashLayer && c === tc && boomT < 0.4 && Math.floor((now - sc.lostAt) / 90) % 2) { g.fillStyle = 'rgba(255,255,255,.8)'; g.fillRect(x, y, w, w); }
         if (sc && ms > 0 && c === pc && ly === cur && !lost) { const k = Math.min(1, frac / 0.55); g.strokeStyle = 'rgba(0,0,0,.65)'; g.lineWidth = 2; g.beginPath(); const n = Math.ceil(k * 5), seg = [[0.5, 0.5, 0.2, 0.25], [0.5, 0.5, 0.8, 0.3], [0.5, 0.5, 0.3, 0.85], [0.2, 0.25, 0.05, 0.3], [0.8, 0.3, 0.95, 0.15]]; for (let i = 0; i < n; i++) { g.moveTo(x + seg[i][0] * w, y + seg[i][1] * w); g.lineTo(x + seg[i][2] * w, y + seg[i][3] * w); } g.stroke(); }
@@ -246,14 +250,23 @@
       ang = frac < 0.55 ? -0.95 + 1.9 * kk * kk : 0.95 - 1.9 * ((frac - 0.55) / 0.45);
       if (lost) { px = ccx(pathCol(Math.max(0, crashLayer - 1))) + (tc - pathCol(Math.max(0, crashLayer - 1))) * 0; px = ccx(tc); py = ty(crashLayer) - 2; ang = 0.2; }
     }
-    if (!(lost && boomT >= 0.4)) drawPick(g, px, py, ang);
+    if (!(lost && boomT >= 0.4)) drawPick(g, px, py, ang, DG.psize);
     const mCur = sc ? (lost ? sc.crash : sc.status === 'won' ? sc.cashedAt : Math.max(1, Math.exp(DG.growth * Math.max(0, ms)))) : 1;
     if (sc && ms > 0 && broken > (DG.lastLayer || 0)) {
       for (let ly = (DG.lastLayer || 0); ly < broken; ly++) {
-        const pc = pathCol(ly), [tt] = tileAt(ly, pc), k = tt.replace('_d', ''), ore = OREN[k], tx = ccx(pc), tyy = cellY(ly) + L / 2;
+        const pc = pathCol(ly), [tt] = pathTile(ly), k = tt.replace('_d', ''), ore = OREN[k], tx = ccx(pc), tyy = cellY(ly) + L / 2;
         const col = ore ? OREK[k] : '#8d8d8d';
         for (let i = 0; i < (ore ? 16 : 7); i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * (ore ? 6 : 4), vy: -Math.random() * 4 - 1, c: i % 3 ? col : '#8d8d8d', t: 0 });
         DG.shake = Math.max(DG.shake || 0, ore ? 6 : 1.5);
+        if (ly > 0) DG.hp = Math.max(1, DG.hp - 1);
+        if (tt === 'up') { DG.hp = 100; DG.psize = Math.min(1.9, DG.psize + 0.3); DG.shake = 8; for (let i = 0; i < 20; i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 5 - 1, c: i % 2 ? '#ffd84a' : '#6ae6ff', t: 0 }); DG.nums.push({ x: W / 2, y: tyy - 6, txt: 'КИРКА УЛУЧШЕНА! ❤ 100', col: '#6ae6ff', t: 0 }); }
+        if (tt === 'tnt' && !(lost && ly === crashLayer)) {
+          const n = 4 + Math.floor(Math.random() * 7), cand = [];
+          for (let dl = -2; dl <= 2; dl++) for (let dc = -2; dc <= 2; dc++) { const yy = ly + dl, cc = pc + dc; if (yy < 1 || cc < 0 || cc >= DG.COLS || (dl === 0 && dc === 0) || DG.holes.has(yy * 16 + cc) || cc === pathCol(yy)) continue; cand.push([yy, cc]); }
+          cand.sort(() => Math.random() - 0.5).slice(0, n).forEach(([yy, cc]) => { DG.holes.add(yy * 16 + cc); for (let i = 0; i < 6; i++) DG.parts.push({ x: ccx(cc), y: cellY(yy) + L / 2, vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 4 - 1, c: ['#ff9a1f', '#8d8d8d', '#555'][i % 3], t: 0 }); });
+          DG.booms.push({ x: tx, y: tyy, t: 0 }); DG.shake = 12;
+          DG.nums.push({ x: Math.min(W - 40, Math.max(40, tx)), y: tyy - 6, txt: 'ТНТ! −' + Math.min(n, cand.length) + ' блоков', col: '#ff9a1f', t: 0 });
+        }
         if (ore && state.round) { const gain = Math.max(1, Math.round(state.round.bet * (Math.exp(DG.step * (ly + 1)) - Math.exp(DG.step * ly)))); DG.nums.push({ x: Math.min(W - 46, Math.max(46, tx)), y: tyy - 6, txt: '+' + gain + ' ⭐ ' + ore, col, t: 0 }); }
       }
       DG.lastLayer = broken;
@@ -261,10 +274,9 @@
     if (lost && boomT >= 0.4 && !DG.boomed) {
       DG.boomed = true; DG.shake = 20; const bx = ccx(tc), by = cellY(crashLayer) + L / 2;
       for (let i = 0; i < 60; i++) { const a = Math.random() * 6.283, v = 2 + Math.random() * 7; DG.parts.push({ x: bx, y: by, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2, c: ['#ff9a1f', '#ffd84a', '#c83030', '#555', '#ffffff'][i % 5], t: 0 }); }
-      DG.boom = { x: bx, y: by, t: 0 };
+      DG.booms.push({ x: bx, y: by, t: 0 });
     }
-    if (DG.boom) { const bm = DG.boom; bm.t++; const r = bm.t * 6, al = Math.max(0, 1 - bm.t / 22);
-      if (al > 0) { const gr = g.createRadialGradient(bm.x, bm.y, 0, bm.x, bm.y, Math.max(1, r)); gr.addColorStop(0, 'rgba(255,255,220,' + al + ')'); gr.addColorStop(0.4, 'rgba(255,170,40,' + al * 0.9 + ')'); gr.addColorStop(1, 'rgba(200,40,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(bm.x, bm.y, r, 0, 7); g.fill(); } else DG.boom = null; }
+    DG.booms = DG.booms.filter((bm) => { bm.t++; const r = bm.t * 6, al = Math.max(0, 1 - bm.t / 22); if (al <= 0) return false; const gr = g.createRadialGradient(bm.x, bm.y, 0, bm.x, bm.y, Math.max(1, r)); gr.addColorStop(0, 'rgba(255,255,220,' + al + ')'); gr.addColorStop(0.4, 'rgba(255,170,40,' + al * 0.9 + ')'); gr.addColorStop(1, 'rgba(200,40,0,0)'); g.fillStyle = gr; g.beginPath(); g.arc(bm.x, bm.y, r, 0, 7); g.fill(); return true; });
     DG.parts = DG.parts.filter((p) => { p.t++; p.x += p.vx; p.y += p.vy; p.vy += 0.25; g.fillStyle = p.c; g.fillRect(p.x, p.y, 4, 4); return p.t < 40; });
     g.textAlign = 'center';
     DG.nums = DG.nums.filter((n) => { n.t++; g.font = '900 13px monospace'; g.globalAlpha = Math.max(0, 1 - n.t / 55); g.fillStyle = 'rgba(0,0,0,.7)'; g.fillText(n.txt, n.x + 1, n.y - n.t * 0.8 + 1); g.fillStyle = n.col; g.fillText(n.txt, n.x, n.y - n.t * 0.8); g.globalAlpha = 1; return n.t < 55; });
@@ -273,6 +285,7 @@
     g.fillStyle = '#2f4a2c'; g.fillRect(bx - 4, by - 4, bw + 8, 46); g.fillStyle = '#4b3a28'; g.fillRect(bx, by, bw, 38);
     g.fillStyle = '#f5c518'; g.beginPath(); g.arc(bx + 20, by + 19, 12, 0, 7); g.fill(); g.fillStyle = '#7a4a1e'; g.beginPath(); g.arc(bx + 20, by + 19, 5, 0, 7); g.fill();
     const col = lost ? '#ff6b6b' : sc?.status === 'won' ? '#6dffb0' : '#ffd84a'; g.textAlign = 'left'; g.font = '900 24px monospace'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText('x' + (Math.floor(mCur * 100) / 100).toFixed(2), bx + 42, by + 29); g.fillStyle = col; g.fillText('x' + (Math.floor(mCur * 100) / 100).toFixed(2), bx + 40, by + 27);
+    const hp = DG.hp || 100; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(bx, by + 44, bw, 12); g.fillStyle = hp > 50 ? '#3fd16a' : hp > 20 ? '#f0a53a' : '#e04a4a'; g.fillRect(bx + 1, by + 45, (bw - 2) * hp / 100, 10); g.fillStyle = '#fff'; g.font = '700 10px monospace'; g.textAlign = 'center'; g.fillText('❤ ' + hp + '/100', W / 2, by + 54);
     g.textAlign = 'center'; g.font = '700 11px monospace'; g.fillStyle = '#fff'; g.fillText('глубина ' + cur + ' м', W / 2, H - 8);
     if (sc?.status === 'active' && state.game === 'dig') { const c = $('#cash'); c.disabled = ms < 0; c.textContent = ms < 0 ? 'Ставка принята' : 'Забрать ' + Math.floor(state.round.bet * mCur) + ' ⭐'; }
     if (state.game === 'dig' && $('#view-game').classList.contains('on')) DG.raf = requestAnimationFrame(digDraw);
@@ -285,13 +298,14 @@
   R.dig = (round) => {
     const st = $('#stage'); st.className = 'xstage digstage'; goText('Копать'); $('#opts').innerHTML = '';
     if (!DG.ctx || !st.querySelector('canvas')) { DG.W = Math.min(400, st.clientWidth - 8 || 360); DG.H = Math.max(380, Math.min(560, (st.clientHeight || 430) - 8)); DG.ctx = canvasIn(st, DG.W, DG.H); DG.parts = []; DG.nums = []; }
+    DG.booms = DG.booms || []; DG.holes = DG.holes || new Set(); DG.hp = DG.hp || 100; DG.psize = DG.psize || 1;
     const v = round?.view;
     if (!round) DG.sc = null;
     else {
       DG.growth = v.growth; DG.off = v.serverNow - Date.now() + (state.rtt || 0) / 2;
       const was = DG.sc;
       DG.sc = { startedAt: v.startedAt, status: round.status, crash: v.crash, cashedAt: v.cashedAt, lostAt: was?.lostAt || (round.status === 'lost' ? Date.now() : 0) };
-      if (!was || was.id !== round.id) { DG.lastLayer = 0; DG.seed = (Math.random() * 1e5) | 0; DG.path = null; DG.boomed = false; DG.boom = null; DG.parts = []; DG.sc.id = round.id; } else DG.sc.id = was.id;
+      if (!was || was.id !== round.id) { DG.lastLayer = 0; DG.seed = (Math.random() * 1e5) | 0; DG.path = null; DG.boomed = false; DG.booms = []; DG.holes = new Set(); DG.hp = 100; DG.psize = 1; DG.parts = []; DG.sc.id = round.id; } else DG.sc.id = was.id;
     }
     cancelAnimationFrame(DG.raf); digDraw();
     if (round?.status === 'active') digPoll();
