@@ -5,7 +5,8 @@ let sharp = null; try { sharp = (await import('sharp')).default; } catch (e) { c
 const out = process.argv[2] || '_gc'; mkdirSync(out + '/samples', { recursive: true });
 const COLL = (process.env.COLLS || 'lolpop,deskcalendar,genielamp,libertyfigure,chillflame,eternalcandle,hangingstar,lightsword,lovecandle,spicedwine').split(',');
 const UA = { 'user-agent': 'Mozilla/5.0' };
-const getJ = async (slug, n) => { try { const r = await fetch(`https://nft.fragment.com/gift/${slug}-${n}.json`, { headers: UA, signal: AbortSignal.timeout(7000) }); if (!r.ok) return null; return await r.json(); } catch { return null; } };
+let dbg = 0;
+const getJ = async (slug, n) => { try { const r = await fetch(`https://nft.fragment.com/gift/${slug}-${n}.json`, { headers: UA, signal: AbortSignal.timeout(7000) }); if (dbg++ < 12) console.log('getJ', slug, n, r.status); if (!r.ok) return null; return await r.json(); } catch (e) { if (dbg++ < 12) console.log('getJ err', slug, n, String(e).slice(0, 100)); return null; } };
 const attr = (j, t) => (j.attributes || []).find((a) => a.trait_type === t)?.value || '';
 const pool = async (items, fn, k = 12) => { const res = []; let i = 0; await Promise.all(Array.from({ length: k }, async () => { while (i < items.length) { const x = items[i++]; res.push(await fn(x)); } })); return res; };
 const catalog = {}; const T0 = Date.now(), BUDGET = 8 * 60e3, left = () => BUDGET - (Date.now() - T0);
