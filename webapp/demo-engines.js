@@ -223,7 +223,7 @@ var __extra = (() => {
     },
     view(state, status, now) {
       const base = { seg: DIG_SEG, startedAt: state.startedAt, serverNow: now }, el = now - state.startedAt;
-      return status === "active" ? { ...base, ups: state.ups.filter((u) => u <= el + 3e3), ore: state.ore.filter((e) => e.t <= el + 2500) } : { ...base, ups: state.ups, ore: state.ore, endAt: state.endAt, cashedAt: state.cashedAt ?? null };
+      return status === "active" ? { ...base, ups: state.ups.filter((u) => u <= el + 15e3), ore: state.ore.filter((e) => e.t <= el + 15e3) } : { ...base, ups: state.ups, ore: state.ore, endAt: state.endAt, cashedAt: state.cashedAt ?? null };
     },
     debug(state, now) {
       return { endAt: state.endAt, total: digMultAt(state, state.endAt), ore: state.ore.length };

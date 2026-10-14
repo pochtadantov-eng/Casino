@@ -248,16 +248,25 @@
       }
     }
     // ---- ore and upgrade blocks arrive exactly when the server says: they appear in front of the pick ----
-    const dropBlock = (key, info) => {
-      let c = Math.min(DG.COLS - 2, Math.max(1, Math.floor(pk.x / L))), r = Math.max(1, Math.floor((pk.y + rad * 0.8) / L) + 1);
-      for (let i = 0; i < 8 && (DG.holes.has(r * 16 + c) || DG.oreAt[r * 16 + c]); i++) { if (i % 2) r++; else c = Math.min(DG.COLS - 2, Math.max(1, c + (Math.random() < 0.5 ? -1 : 1))); }
-      DG.oreAt[r * 16 + c] = { ...info, due: Date.now() + 1500 }; DG.sp.add(key);
+    const place = (key, info, t) => {
+      let r = Math.max(2, Math.round(t / 450) + 2), c = 1 + Math.floor(rh(key.length * 7 + (+key.slice(1)) * 13 + (DG.seed || 0), 91) * (DG.COLS - 2));
+      for (let i = 0; i < 12 && (DG.oreAt[r * 16 + c] || tileAt(r, c)[0] === 'tnt'); i++) { c = c % (DG.COLS - 2) + 1; if (i % 3 === 2) r++; }
+      DG.oreAt[r * 16 + c] = { ...info, t, due: t + 2600 }; DG.sp.add(key);
     };
-    if (sc && ms >= 0 && !(done && !autoEnd)) {
-      (sc.ore || []).forEach((e, i) => { if (e.t <= ms && !DG.sp.has('o' + i)) dropBlock('o' + i, { k: e.k, inc: e.inc }); });
-      (sc.ups || []).forEach((u, i) => { if (u <= ms && !DG.sp.has('u' + i)) { dropBlock('u' + i, { k: 'up' }); DG.hp0 = 0; } });
+    if (sc && !(done && !autoEnd)) {
+      (sc.ore || []).forEach((e, i) => { if (!DG.sp.has('o' + i)) place('o' + i, { k: e.k, inc: e.inc }, e.t); });
+      (sc.ups || []).forEach((u, i) => { if (!DG.sp.has('u' + i)) place('u' + i, { k: 'up' }, u); });
     }
-    for (const key in DG.oreAt) if (DG.oreAt[key].due < Date.now() && !DG.holes.has(+key)) { DG.holes.add(+key); DG.todo.push([Math.floor(+key / 16), +key % 16]); }
+    if (sc && !done && ms >= 0) {
+      // the pick is drawn towards the next valuable block that is just below it, and shoved away from walls and corners
+      let best = null, bd = 1e9; for (const key in DG.oreAt) { const ry = Math.floor(+key / 16), cx = (+key % 16) * L + L / 2, dd = ry * L - pk.y; if (dd > -L && dd < 5 * L && dd < bd) { bd = dd; best = cx; } }
+      if (best != null) pk.vx += Math.max(-0.2, Math.min(0.2, (best - pk.x) * 0.006));
+      pk.vx += (Math.random() - 0.5) * 0.25;
+      if (pk.x < L * 2.3) pk.vx += 0.12; if (pk.x > W - L * 2.3) pk.vx -= 0.12;
+      pk.sx = (pk.sx || pk.x); pk.sn = (pk.sn || 0) + 1;
+      if (pk.sn > 45) { if (Math.abs(pk.x - pk.sx) < L * 0.8) pk.vx += (pk.x < W / 2 ? 1 : -1) * (2.5 + Math.random() * 2); pk.sx = pk.x; pk.sn = 0; }
+    }
+    for (const key in DG.oreAt) if (ms >= DG.oreAt[key].due && !DG.holes.has(+key)) { DG.holes.add(+key); DG.todo.push([Math.floor(+key / 16), +key % 16]); }
     cam = Math.max(0, groundY + pk.y - H * 0.4);
     DG.depth = Math.max(DG.depth || 0, Math.floor(Math.max(0, pk.y) / L));
     // hit points follow the schedule: 100 -> 0 over the segment, an upgrade refills them
@@ -272,6 +281,7 @@
       for (let c = 0; c < DG.COLS; c++) {
         if (DG.holes.has(ly * 16 + c)) continue;
         const o = DG.oreAt[ly * 16 + c], [t, sd] = o ? [o.k, 0] : tileAt(ly, c); g.drawImage(getTile(t, sd), Math.round(c * L), y, Math.ceil(L), Math.ceil(L));
+        if (o || t === 'tnt') { g.strokeStyle = o ? (o.k === 'up' ? '#6ae6ff' : OREK[o.k]) : '#ff6a4a'; g.globalAlpha = 0.55 + 0.35 * Math.sin(Date.now() / 220 + c); g.lineWidth = 2; g.strokeRect(Math.round(c * L) + 1, y + 1, Math.ceil(L) - 2, Math.ceil(L) - 2); g.globalAlpha = 1; }
       }
     }
     let px = pk.x, py = groundY + pk.y - cam, ang = pk.a;
