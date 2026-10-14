@@ -15,12 +15,14 @@ for (const slug of COLL) {
   if (left() < 0) break;
   const c = { slug, ok: false, items: [] };
   catalog[slug] = c;
-  if (!(await getJ(slug, 1))) { c.err = 'no #1'; continue; }
-  let hi = 1; for (const k of [10, 100, 1000, 10000, 100000, 1000000]) { if (await getJ(slug, k)) hi = k; else break; }
-  let lo = hi, top = hi * 10; while (top - lo > Math.max(1, hi / 50)) { const mid = Math.floor((lo + top) / 2); if (await getJ(slug, mid)) lo = mid; else top = mid; }
-  c.max = lo; c.ok = true;
-  const seen = new Set(), picks = [];
-  while (picks.length < 45 && seen.size < 200) { const n = 1 + Math.floor(Math.random() * lo); if (!seen.has(n)) { seen.add(n); picks.push(n); } }
+  const nums = new Set();
+  for (const q of ['?sort=price_asc&filter=sale', '?sort=price_desc&filter=sale', '?sort=listed&filter=sale', '?filter=sold', '?sort=ending&filter=auction', '']) {
+    try { const r = await fetch(`https://fragment.com/gifts/${slug}${q}`, { headers: UA, signal: AbortSignal.timeout(15000) }); const t = await r.text(); for (const m of t.matchAll(new RegExp(`/gift/${slug}-(\\d+)`, 'g'))) nums.add(+m[1]); console.log(slug, q, r.status, nums.size); } catch (e) { console.log(slug, q, 'err', String(e).slice(0, 80)); }
+  }
+  c.listed = nums.size; c.max = Math.max(0, ...nums);
+  if (!nums.size) { c.err = 'no listing'; continue; }
+  c.ok = true;
+  const picks = [...nums].sort(() => Math.random() - 0.5).slice(0, 48);
   const got = await pool(picks, async (n) => {
     if (left() < 0) return null;
     const j = await getJ(slug, n); if (!j) return null;
