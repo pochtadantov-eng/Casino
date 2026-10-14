@@ -377,3 +377,5 @@ button.small.ghost,.small.ghost{background:var(--glass);color:var(--fg)}
 #topbar .user{padding:4px 8px 4px 4px;gap:5px}
 #topbar .user span{max-width:48px;font-size:12px}
 @media (max-width:385px){#topbar .user span{display:none}}
+#topbar .logobtn small{font-size:9.5px;letter-spacing:.3px;text-transform:none;color:#A9A4D0;font-weight:700}
+#topbar .logobtn svg.wm{height:30px}
