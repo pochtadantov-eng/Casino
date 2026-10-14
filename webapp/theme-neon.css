@@ -577,3 +577,4 @@ tg-star.stz{display:inline-block;margin:0;padding:0;border:0;font-size:inherit;l
 .gp-bar .pay{display:flex!important;width:100%}
 .gp-bal tg-star,.gp-bar .pay tg-star{position:static!important;display:inline-block!important;flex:none}
 .gp-bar .pay{flex-direction:row!important;flex-wrap:nowrap!important;line-height:1!important}.gp-bar .pay>*{margin:0!important}
+.gp-more{grid-column:1/-1;height:4px}
