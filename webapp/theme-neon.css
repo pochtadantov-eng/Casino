@@ -361,3 +361,19 @@ button.small.ghost,.small.ghost{background:var(--glass);color:var(--fg)}
 #topbar .logobtn svg.wm{height:36px;width:auto;display:block}
 #topbar .sndbtn{margin-left:auto}
 #topbar .balchip{margin-left:0}
+
+/* wordmark + tagline in topbar */
+#topbar .logobtn{flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;height:auto;padding:0;text-align:left}
+#topbar .logobtn .lw{display:block;line-height:0}
+#topbar .logobtn svg.wm{height:32px}
+#topbar .logobtn small{font:700 7.5px/1 Onest,sans-serif;letter-spacing:.9px;color:var(--hint);text-transform:uppercase;white-space:nowrap}
+#topbar .user span{max-width:56px}
+
+#topbar{gap:6px}
+#topbar .logobtn svg.wm{height:28px}
+#topbar .logobtn small{font-size:6.6px;letter-spacing:.55px}
+#topbar .sndbtn{width:38px;min-width:38px;padding:0}
+#topbar .balchip{padding:5px 5px 5px 10px;font-size:14px;gap:4px}
+#topbar .user{padding:4px 8px 4px 4px;gap:5px}
+#topbar .user span{max-width:48px;font-size:12px}
+@media (max-width:385px){#topbar .user span{display:none}}

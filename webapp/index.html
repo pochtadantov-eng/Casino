@@ -10,7 +10,7 @@
 </head>
 <body>
 <header id="topbar">
-  <button class="logobtn" id="btn-logo" aria-label="Логотип" data-wm></button>
+  <button class="logobtn" id="btn-logo" aria-label="Логотип"><span class="lw" data-wm></span><small>играй · поднимайся</small></button>
   <button class="sndbtn" id="btn-sound" aria-label="Громкость музыки"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path id="snd-w1" d="M15 9.2a4 4 0 0 1 0 5.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path id="snd-w2" d="M17.4 6.8a7.4 7.4 0 0 1 0 10.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
   <button class="balchip" id="btn-deposit"><span id="balance">0</span><span class="star">⭐</span><i>+</i></button>
   <div class="user"><div class="ava" id="ava"></div><span id="uname">Гость</span></div>
@@ -18,11 +18,7 @@
 
 <!-- ============ ИГРАТЬ ============ -->
 <section id="view-play" class="view on">
-  <div class="brandrow">
-    <svg viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="tuG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2ee6c8"/><stop offset="1" stop-color="#5b8cff"/></linearGradient></defs>
-      <path d="M24 3 42 13.5v21L24 45 6 34.5v-21z" fill="url(#tuG)"/><path d="M24 12.5 33.5 22h-6.2v13h-6.6V22h-6.2z" fill="#071423"/><path d="M14 38.4h20" stroke="#071423" stroke-width="3" stroke-linecap="round" opacity=".55"/></svg>
-    <div><b>Ton<i>Up</i></b><small>играй · поднимайся</small></div>
-  </div>
+  
   <div class="card c-daily wide" data-go="bonus" data-media="bonus" style="--c:198,255,61">
     <div class="txt"><h3>Ежедневный сундук</h3><p>Крути рулетку каждый день!</p></div>
     <div class="chestbox"><img class="chest" src="img/chest.webp" alt=""><i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i></div>
