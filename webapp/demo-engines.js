@@ -180,10 +180,10 @@ var __extra = (() => {
       return status === "active" ? base : { ...base, idx: state.idx, mult: state.mult };
     }
   };
-  var DIG_INTRO = 1800;
+  var DIG_INTRO = 5200;
   var DIG_SEG = 28e3;
-  var DIG_RATE = 0.9 / 1e3;
-  var DIG_TIERS = [["coal", 0.55, 0.01], ["iron", 0.25, 0.02], ["gold", 0.12, 0.04], ["red", 0.05, 0.06], ["lapis", 0.02, 0.1], ["dia", 8e-3, 0.2], ["em", 2e-3, 0.4]];
+  var DIG_RATE = 2.45 / 1e3;
+  var DIG_TIERS = [["coal", 0.55, 4e-3], ["iron", 0.25, 8e-3], ["gold", 0.12, 0.014], ["red", 0.05, 0.02], ["lapis", 0.02, 0.035], ["dia", 8e-3, 0.07], ["em", 2e-3, 0.14]];
   var digMultAt = (s, el) => floor2(s.ore.reduce((a, e) => e.t <= el ? a + e.inc : a, 0));
   function digSettle(s, now) {
     const el = now - s.startedAt;

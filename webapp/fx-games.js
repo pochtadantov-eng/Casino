@@ -206,9 +206,35 @@
   }
   // ---- wooden pickaxe sprite (12x12), roughly one block in size ----
   const PICK = ['....cccc....', '..ccBBBBcc..', '.cBB....BBc.', 'cBB..hh..BBc', 'cB..hhh...Bc', 'c...hh.....c', '....hh......', '....hh......', '...hh.......', '...hh.......', '..hh........', '..hh........'];
-  function drawPick(g, x, y, ang, sz) {
-    g.save(); g.translate(x, y); g.rotate(ang); g.imageSmoothingEnabled = false; const u = 4.4 * (sz || 1), pal = { c: '#7a5326', B: '#c99a56', h: '#6b4420' };
-    PICK.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '.') return; g.fillStyle = pal[ch]; g.fillRect((i - 6) * u, (j - 9) * u, u + 0.6, u + 0.6); })); g.restore();
+  const PT = ['wood', 'iron', 'gold', 'diamond', 'netherite'];
+  const PTN = { wood: 'Деревянная кирка', iron: 'Железная кирка', gold: 'Золотая кирка', diamond: 'Алмазная кирка', netherite: 'Незеритовая кирка' };
+  const PPAL = { wood: ['#7a5326', '#c99a56'], iron: ['#8c8f96', '#e9ecf0'], gold: ['#b8861b', '#ffd24a'], diamond: ['#1aa7b8', '#6ff3ff'], netherite: ['#3a2f38', '#85707e'] };
+  const tierOf = (bet) => (bet <= 500 ? 'wood' : bet <= 1000 ? 'iron' : bet <= 2000 ? 'gold' : bet <= 10000 ? 'diamond' : 'netherite');
+  function drawPick(g, x, y, ang, sz, tier) {
+    g.save(); g.translate(x, y); g.rotate(ang); g.imageSmoothingEnabled = false; const u = 3.4 * (sz || 1), pp = PPAL[tier || DG.tier || 'wood'], pal = { c: pp[0], B: pp[1], h: '#6b4420' };
+    PICK.forEach((row, j) => [...row].forEach((ch, i) => { if (ch === '.') return; g.fillStyle = pal[ch]; g.fillRect((i - 6) * u, (j - 6) * u, u + 0.6, u + 0.6); })); g.restore();
+  }
+  const INTRO = 5200;
+  function drawRoulette(g, W, H, tms) {
+    const target = PT.indexOf(DG.tier || 'wood'), CW = 86, CH = 104, T = 32;
+    if (!DG.rl) { DG.rl = []; for (let i = 0; i < 40; i++) DG.rl.push(i === T ? target : Math.floor(rh(i + 3, DG.seed || 1) * 5)); }
+    const fade = tms > 4300 ? Math.max(0, 1 - (tms - 4300) / 500) : 1; if (fade <= 0) return;
+    g.save(); g.globalAlpha = fade; const bgG = g.createLinearGradient(0, 0, 0, H); bgG.addColorStop(0, '#1b1030'); bgG.addColorStop(1, '#0c0818'); g.fillStyle = bgG; g.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H * 0.24, open = Math.min(1, Math.max(0, (tms - 250) / 650));
+    if (open > 0) { const gl = g.createRadialGradient(cx, cy, 4, cx, cy, 130); gl.addColorStop(0, 'rgba(255,214,90,' + 0.85 * open + ')'); gl.addColorStop(1, 'rgba(255,214,90,0)'); g.fillStyle = gl; g.fillRect(0, 0, W, H * 0.5); }
+    const sh = tms < 250 ? Math.sin(tms / 18) * 2 : 0; g.save(); g.translate(cx + sh, cy);
+    g.fillStyle = '#8a5a2b'; g.fillRect(-36, 0, 72, 40); g.fillStyle = '#5b3a1a'; g.fillRect(-36, 0, 72, 5); g.fillRect(-36, 34, 72, 6); g.fillRect(-36, 0, 6, 40); g.fillRect(30, 0, 6, 40); g.fillStyle = '#c99a4a'; g.fillRect(-4, 8, 8, 12);
+    g.save(); g.translate(-36, 0); g.rotate(-open * 1.25); g.fillStyle = '#9a6a35'; g.fillRect(0, -22, 72, 22); g.fillStyle = '#5b3a1a'; g.fillRect(0, -22, 72, 5); g.fillRect(0, -5, 72, 5); g.fillRect(0, -22, 6, 22); g.fillRect(66, -22, 6, 22); g.restore(); g.restore();
+    const p = Math.min(1, Math.max(0, (tms - 900) / 2900)), e = 1 - Math.pow(1 - p, 3.4), jit = (rh(DG.seed || 1, 5) - 0.5) * CW * 0.5, scroll = (T * CW + CW / 2 - W / 2 + jit) * e, y0 = H * 0.46;
+    g.fillStyle = 'rgba(255,255,255,.05)'; g.fillRect(0, y0 - 6, W, CH + 12);
+    for (let i = 0; i < DG.rl.length; i++) {
+      const x = i * CW - scroll; if (x < -CW || x > W) continue; const tr = PT[DG.rl[i]], win = tms > 3800 && i === T;
+      g.fillStyle = win ? '#2a1f4a' : '#1d1530'; g.fillRect(x + 4, y0, CW - 8, CH); g.strokeStyle = PPAL[tr][1]; g.globalAlpha = fade * (win ? 1 : 0.55); g.lineWidth = win ? 3 : 2; g.strokeRect(x + 5, y0 + 1, CW - 10, CH - 2); g.globalAlpha = fade;
+      drawPick(g, x + CW / 2, y0 + CH / 2, -0.8, 1.5, tr);
+    }
+    g.fillStyle = '#ff4fd8'; g.beginPath(); g.moveTo(W / 2 - 10, y0 - 16); g.lineTo(W / 2 + 10, y0 - 16); g.lineTo(W / 2, y0 - 2); g.fill(); g.fillRect(W / 2 - 1, y0, 2, CH);
+    if (tms > 3800) { g.textAlign = 'center'; g.font = '900 20px monospace'; g.fillStyle = PPAL[DG.tier || 'wood'][1]; g.fillText(PTN[DG.tier || 'wood'], W / 2, y0 + CH + 40); }
+    g.restore();
   }
   OPTS.dig = () => '';
   const W8 = { coal: 'УГОЛЬ', iron: 'ЖЕЛЕЗО', gold: 'ЗОЛОТО', red: 'РЕДСТОУН', lapis: 'ЛАПИС', dia: 'АЛМАЗ', em: 'ИЗУМРУД' };
@@ -221,10 +247,11 @@
     const boomT = autoEnd ? (Date.now() - sc.lostAt) / 1000 : 0, groundY = H * 0.2; let cam = 0;
     const ccx = (c) => c * L + L / 2, cellY = (ly) => Math.round(groundY + ly * L - cam);
     // ---- the pick is a falling object: gravity, bounces off what it hits, breaks the blocks it touches ----
+    if (sc && ms < -900) DG.pk = null;
     const pk = DG.pk || (DG.pk = { x: W / 2, y: -groundY - 60, vx: 1.2, vy: 0, a: 0.6, va: 0.2, t: Date.now() });
     const tnow = Date.now(), dt = Math.min(3, (tnow - pk.t) / 16.7); pk.t = tnow;
-    const targetY = Math.max(0, ms) / 450 * L, rad = L * 0.7;
-    if (sc && !done) {
+    const targetY = Math.max(0, ms) / 450 * L, rad = 17 * (DG.psize || 1);
+    if (sc && !done && ms >= -900) {
       const steps = Math.max(1, Math.round(dt));
       for (let k = 0; k < steps; k++) {
         pk.vy += 0.32; pk.vx *= 0.995; pk.x += pk.vx; pk.y += pk.vy; pk.a += pk.va; pk.va *= 0.985;
@@ -269,7 +296,7 @@
       pk.sx = (pk.sx || pk.x); pk.sn = (pk.sn || 0) + 1;
       if (pk.sn > 45) { if (Math.abs(pk.x - pk.sx) < L * 0.8) pk.vx += (pk.x < W / 2 ? 1 : -1) * (2.5 + Math.random() * 2); pk.sx = pk.x; pk.sn = 0; }
     }
-    for (const key in DG.oreAt) if (ms >= DG.oreAt[key].due && !DG.holes.has(+key)) { DG.holes.add(+key); DG.todo.push([Math.floor(+key / 16), +key % 16]); }
+    for (const key in DG.oreAt) if (ms >= DG.oreAt[key].due && !DG.holes.has(+key)) { DG.todo.push([Math.floor(+key / 16), +key % 16, true]); }
     cam = Math.max(0, groundY + pk.y - H * 0.4);
     DG.depth = Math.max(DG.depth || 0, Math.floor(Math.max(0, pk.y) / L));
     // hit points follow the schedule: 100 -> 0 over the segment, an upgrade refills them
@@ -279,8 +306,8 @@
 
     g.save(); if (DG.shake > 0) { g.translate((Math.random() - 0.5) * DG.shake, (Math.random() - 0.5) * DG.shake); DG.shake *= 0.9; if (DG.shake < 0.3) DG.shake = 0; }
     g.drawImage(backdrop(W, H), 0, 0);
-    for (let ly = 0; ly < 140; ly++) {
-      const y = cellY(ly); if (y > H || y < -L) continue;
+    for (let ly = Math.max(0, Math.floor((cam - groundY) / L) - 1); ly < 700; ly++) {
+      const y = cellY(ly); if (y > H) break; if (y < -L) continue;
       for (let c = 0; c < DG.COLS; c++) {
         if (DG.holes.has(ly * 16 + c)) continue;
         const o = DG.oreAt[ly * 16 + c] || (isDecoy(ly, c) ? { k: 'up' } : null), [t, sd] = o ? [o.k, 0] : tileAt(ly, c); g.drawImage(getTile(t, sd), Math.round(c * L), y, Math.ceil(L), Math.ceil(L));
@@ -290,15 +317,17 @@
     let px = pk.x, py = groundY + pk.y - cam, ang = pk.a;
     if (!sc) { px = W / 2; py = groundY - L * 0.4; ang = 0.2; }
     if (autoEnd) ang += Math.min(1, boomT) * 0.5;
-    if (!(autoEnd && boomT >= 0.6)) drawPick(g, px, py, ang, DG.psize);
-    DG.todo.splice(0).forEach(([yy, c2]) => {
+    if (!(autoEnd && boomT >= 0.6) && !(sc && ms < -900)) drawPick(g, px, py, ang, DG.psize);
+    if (sc && ms < -400) drawRoulette(g, W, H, ms + INTRO);
+    DG.todo.splice(0).forEach(([yy, c2, soft]) => {
       const key = yy * 16 + c2, o = DG.oreAt[key]; delete DG.oreAt[key];
       const tt = o ? o.k : tileAt(yy, c2)[0], ore = W8[tt], tx = ccx(c2), tyy = cellY(yy) + L / 2;
       const col = ore ? OREK[tt] : tt === 'tnt' ? '#c83030' : '#8d8d8d';
+      if (soft) { if (ore && state.round) { const v = state.round.bet * o.inc; DG.nums.push({ x: Math.min(W - 46, Math.max(46, tx)), y: tyy - 6, txt: '+' + (v < 10 ? v.toFixed(1) : Math.round(v)) + ' ⭐ ' + ore, col, t: 0 }); for (let i = 0; i < 6; i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 3 - 1, c: col, t: 0 }); } return; }
       for (let i = 0; i < (ore ? 14 : 6); i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * (ore ? 6 : 4), vy: -Math.random() * 4 - 1, c: i % 3 ? col : '#8d8d8d', t: 0 });
       DG.shake = Math.max(DG.shake || 0, ore ? 5 : 1.2);
-      if (ore && state.round) DG.nums.push({ x: Math.min(W - 46, Math.max(46, tx)), y: tyy - 6, txt: '+' + Math.max(1, Math.round(state.round.bet * o.inc)) + ' ⭐ ' + ore, col, t: 0 });
-      if (tt === 'up') { DG.psize = Math.min(1.9, DG.psize + 0.3); DG.shake = 8; for (let i = 0; i < 20; i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 5 - 1, c: i % 2 ? '#ffd84a' : '#6ae6ff', t: 0 }); DG.nums.push({ x: W / 2, y: tyy - 6, txt: 'КИРКА УЛУЧШЕНА! ❤ 100', col: '#6ae6ff', t: 0 }); }
+      if (ore && state.round) DG.nums.push({ x: Math.min(W - 46, Math.max(46, tx)), y: tyy - 6, txt: '+' + ((state.round.bet * o.inc) < 10 ? (state.round.bet * o.inc).toFixed(1) : Math.round(state.round.bet * o.inc)) + ' ⭐ ' + ore, col, t: 0 });
+      if (tt === 'up') { DG.psize = Math.min(1.5, DG.psize + 0.15); DG.shake = 8; for (let i = 0; i < 20; i++) DG.parts.push({ x: tx, y: tyy, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 5 - 1, c: i % 2 ? '#ffd84a' : '#6ae6ff', t: 0 }); DG.nums.push({ x: W / 2, y: tyy - 6, txt: 'КИРКА УЛУЧШЕНА! ❤ 100', col: '#6ae6ff', t: 0 }); }
       if (tt === 'tnt') {
         const m = 4 + Math.floor(Math.random() * 7), cand = [];
         for (let dl = -2; dl <= 2; dl++) for (let dc = -2; dc <= 2; dc++) { const y3 = yy + dl, c3 = c2 + dc; if (y3 < 1 || c3 < 1 || c3 > DG.COLS - 2 || (dl === 0 && dc === 0) || DG.holes.has(y3 * 16 + c3) || DG.oreAt[y3 * 16 + c3]) continue; cand.push([y3, c3]); }
@@ -340,7 +369,7 @@
       DG.off = v.serverNow - Date.now() + (state.rtt || 0) / 2;
       const was = DG.sc, done = round.status !== 'active';
       DG.sc = { startedAt: v.startedAt, status: round.status, seg: v.seg, ore: v.ore, ups: v.ups, endAt: v.endAt, cashedAt: v.cashedAt, final: done ? round.multiplier : null, lostAt: was?.lostAt || (done ? Date.now() : 0), frozenMs: was?.frozenMs };
-      if (!was || was.id !== round.id) { DG.seed = (Math.random() * 1e5) | 0; DG.boomed = false; DG.booms = []; DG.holes = new Set(); DG.oreAt = {}; DG.sp = new Set(); DG.pk = null; DG.todo = []; DG.depth = 0; DG.psize = 1; DG.parts = []; DG.nums = []; DG.sc.id = round.id; DG.sc.frozenMs = null; DG.sc.lostAt = done ? Date.now() : 0; } else DG.sc.id = was.id;
+      if (!was || was.id !== round.id) { DG.seed = (Math.random() * 1e5) | 0; DG.boomed = false; DG.booms = []; DG.holes = new Set(); DG.oreAt = {}; DG.sp = new Set(); DG.pk = null; DG.todo = []; DG.depth = 0; DG.psize = 1; DG.parts = []; DG.nums = []; DG.rl = null; DG.tier = tierOf(round.bet); DG.sc.id = round.id; DG.sc.frozenMs = null; DG.sc.lostAt = done ? Date.now() : 0; } else DG.sc.id = was.id;
     }
     cancelAnimationFrame(DG.raf); digDraw();
     if (round?.status === 'active') digPoll();
