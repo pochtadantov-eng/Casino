@@ -17,7 +17,7 @@ function ruError(m) {
   return m;
 }
 /** Real picture of a Telegram gift (falls back to its emoji when the server has none, e.g. in the demo). */
-const gimg = (id, emoji) => id ? `<img class="gimg" src="/gift-img/${id}" alt="" onerror="this.replaceWith(document.createTextNode('${emoji || '🎁'}'))">` : (emoji || '🎁');
+const gimg = (id, emoji, fg) => fg && window.FG && window.FG.html(fg) ? window.FG.html(fg) : id ? `<img class="gimg" src="/gift-img/${id}" alt="" onerror="this.replaceWith(document.createTextNode('${emoji || '🎁'}'))">` : (emoji || '🎁');
 async function api(path, body) {
   const t0 = performance.now();
   try { return await api0(path, body); } finally { const d = performance.now() - t0; state.rtt = state.rtt ? state.rtt * 0.7 + d * 0.3 : d; }

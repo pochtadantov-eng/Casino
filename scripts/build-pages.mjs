@@ -4,7 +4,7 @@ import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } fro
 const out = process.argv[2] || 'pages';
 const src = (f) => new URL('../webapp/' + f, import.meta.url);
 mkdirSync(out, { recursive: true });
-for (const f of ['style.css', 'theme-neon.css', 'card-media.js', 'market.js', 'logo.js', 'stars.js', 'app.js', 'shell.js', 'mock-api.js', 'demo-engines.js', 'fx-rocket.js', 'fx-rocket-feed.js', 'fx-cards.js', 'fx-tower.js', 'fx-games.js', 'fx-snow.js', 'fx-props.js', 'rocket.svg']) copyFileSync(src(f), `${out}/${f}`);
+for (const f of ['style.css', 'theme-neon.css', 'card-media.js', 'market.js', 'logo.js', 'stars.js', 'gift-catalog.js', 'fgift.js', 'app.js', 'shell.js', 'mock-api.js', 'demo-engines.js', 'fx-rocket.js', 'fx-rocket-feed.js', 'fx-cards.js', 'fx-tower.js', 'fx-games.js', 'fx-snow.js', 'fx-props.js', 'rocket.svg']) copyFileSync(src(f), `${out}/${f}`);
 mkdirSync(`${out}/img`, { recursive: true });  mkdirSync(`${out}/fonts`, { recursive: true });
 for (const f of readdirSync(new URL('../webapp/fonts/', import.meta.url))) copyFileSync(src('fonts/' + f), `${out}/fonts/${f}`);
 for (const f of readdirSync(new URL('../webapp/img/', import.meta.url), { withFileTypes: true })) if (f.isFile()) copyFileSync(src('img/' + f.name), `${out}/img/${f.name}`);

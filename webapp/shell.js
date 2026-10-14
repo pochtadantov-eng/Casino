@@ -108,7 +108,7 @@ async function loadBonus() {
 
 // ---------- the chest roulette: the server draws the prize, the strip below only shows it ----------
 const RARITY = (p) => (p.giftStars ? 'gift' : p.stars >= 1000 ? 'r6' : p.stars >= 500 ? 'r5' : p.stars >= 150 ? 'r4' : p.stars >= 100 ? 'r3' : p.stars >= 50 ? 'r2' : p.stars >= 25 ? 'r1' : 'r0');
-const cardHtml = (p) => `<div class="rcard ${RARITY(p)}"><div class="rico">${p.giftStars ? gimg(p.giftId, p.emoji) : '⭐'}</div><b>${p.giftStars ? 'Подарок' : p.stars}</b><span>${p.giftStars ? '≈' + p.giftStars + ' ⭐' : 'звёзд'}</span></div>`;
+const cardHtml = (p) => `<div class="rcard ${RARITY(p)}"><div class="rico">${p.giftStars ? gimg(p.giftId, p.emoji, p.fg) : '⭐'}</div><b>${p.giftStars ? ((window.FG && window.FG.get(p.fg) || {}).name || 'Подарок') : p.stars}</b><span>${p.giftStars ? '≈' + p.giftStars + ' ⭐' : 'звёзд'}</span></div>`;
 function openChestRoulette() {
   if (document.querySelector('.chestmodal')) return;
   const prizes = chestPrizes.length ? chestPrizes : [{ id: 's15', stars: 15, label: '15 ⭐' }];
@@ -130,7 +130,7 @@ function openChestRoulette() {
     if (out.error) { m.querySelector('#cm-res').innerHTML = `<p class="cm-err">${out.error}</p>`; const ok = m.querySelector('#cm-ok'); ok.hidden = false; ok.textContent = 'Закрыть'; return; }
     const prize = out.prize, T = 54, N = 64, W = 98, G = 8;
     const strip = m.querySelector('#cm-strip'), pool = prizes.flatMap((p) => Array(p.giftStars ? 1 : p.stars >= 500 ? 1 : p.stars >= 100 ? 2 : 4).fill(p));
-    const items = Array.from({ length: N }, (_, i) => (i === T ? { ...(prizes.find((p) => p.id === prize.id) || prize), emoji: prize.gift?.emoji, giftId: prize.gift?.giftId } : pool[Math.floor(Math.random() * pool.length)]));
+    const items = Array.from({ length: N }, (_, i) => (i === T ? { ...(prizes.find((p) => p.id === prize.id) || prize), emoji: prize.gift?.emoji, giftId: prize.gift?.giftId, fg: prize.gift?.fg } : (() => { const q = pool[Math.floor(Math.random() * pool.length)]; return q.giftStars && window.FG && window.FG.has() ? { ...q, fg: window.FG.pick() } : q; })()));
     strip.innerHTML = items.map(cardHtml).join('');
     m.classList.add('spin'); await wait(450);                         // the chest opens, the roulette appears
     const view = m.querySelector('#cm-roul').clientWidth, jitter = (Math.random() - 0.5) * W * 0.6;
@@ -139,7 +139,8 @@ function openChestRoulette() {
     let last = -1; const tick = setInterval(() => { const cur = new DOMMatrix(getComputedStyle(strip).transform).m41, idx = Math.floor((view / 2 - cur) / (W + G)); if (idx !== last) { last = idx; hap('s'); } }, 60);
     await wait(5600); clearInterval(tick);
     strip.children[T].classList.add('win'); m.classList.add('done'); setBalance(out.balance); hap('success');
-    m.querySelector('#cm-res').innerHTML = prize.gift ? `<b>${gimg(prize.gift.giftId, prize.gift.emoji)} Вам выпал подарок!</b><span>Он в вашем Инвентаре (Профиль): продай за звёзды или выведи в чат 🎁</span>` : `<b>Вы выиграли ${prize.stars} ⭐</b><span>Уже на вашем балансе</span>`;
+    const fgi = prize.gift?.fg && window.FG ? window.FG.get(prize.gift.fg) : null;
+    m.querySelector('#cm-res').innerHTML = prize.gift ? (fgi ? `<div class="fgres">${window.FG.html(prize.gift.fg)}<div><b>${fgi.name} #${fgi.n}</b><span class="fgmeta">Модель: ${fgi.model}<br>Фон: ${fgi.backdrop} · Узор: ${fgi.symbol}</span></div></div><span>Он в вашем Инвентаре (Профиль): продай за звёзды или выведи в чат</span>` : `<b>${gimg(prize.gift.giftId, prize.gift.emoji)} Вам выпал подарок!</b><span>Он в вашем Инвентаре (Профиль): продай за звёзды или выведи в чат 🎁</span>`) : `<b>Вы выиграли ${prize.stars} ⭐</b><span>Уже на вашем балансе</span>`;
     for (let i = 0; i < 26; i++) { const s = document.createElement('i'); s.className = 'cm-conf'; const a = Math.random() * 6.283, d = 90 + Math.random() * 150; s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d - 40 + 'px'); s.style.background = ['#ffd84a', '#ff8a4a', '#6fd6a5', '#6aa8ff', '#e879f9'][i % 5]; s.style.animationDelay = Math.random() * 0.2 + 's'; m.querySelector('.cm-box').append(s); setTimeout(() => s.remove(), 1700); }
     const ok = m.querySelector('#cm-ok'); ok.hidden = false;
   })();
@@ -190,11 +191,11 @@ async function loadInventory() {
     $('#inv-row').querySelectorAll('.icard').forEach((c) => c.onclick = () => openItem(invItems.find((g) => g.id === Number(c.dataset.id))));
   } catch (e) { box.hidden = true; }
 }
-const giftCardHtml = (g) => `<button class="icard" data-id="${g.id}"><span class="iem">${gimg(g.giftId, g.emoji)}</span><b>${g.stars} ⭐</b><small>${window.Market ? '$' + window.Market.conv(g.stars).usd.toFixed(2) : ''}</small></button>`;
+const giftCardHtml = (g) => `<button class="icard" data-id="${g.id}"><span class="iem">${gimg(g.giftId, g.emoji, g.fg)}</span><b>${g.stars} ⭐</b><small>${window.Market ? '$' + window.Market.conv(g.stars).usd.toFixed(2) : ''}</small></button>`;
 function openItem(g) {
   if (!g || document.querySelector('.itemsheet')) return;
   const d = document.createElement('div'); d.className = 'paysheet itemsheet';
-  d.innerHTML = `<div class="pbox"><i class="grab"></i><div class="ibig">${gimg(g.giftId, g.emoji)}</div><h3 style="text-align:center">Подарок · ${g.stars} ⭐</h3><p class="psub" style="text-align:center">Продай за звёзды или выведи подарок в чат с ботом.</p><p class="mx-line" style="text-align:center">${window.Market ? window.Market.line(g.stars) : ''}</p>
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><div class="ibig">${gimg(g.giftId, g.emoji, g.fg)}</div><h3 style="text-align:center">${(window.FG && window.FG.get(g.fg)) ? window.FG.get(g.fg).name + ' #' + window.FG.get(g.fg).n : 'Подарок'} · ${g.stars} ⭐</h3>${(window.FG && window.FG.get(g.fg)) ? '<p class="fgmeta" style="text-align:center">Модель: ' + window.FG.get(g.fg).model + '<br>Фон: ' + window.FG.get(g.fg).backdrop + ' · Узор: ' + window.FG.get(g.fg).symbol + '</p>' : ''}<p class="psub" style="text-align:center">Продай за звёзды или выведи подарок в чат с ботом.</p><p class="mx-line" style="text-align:center">${window.Market ? window.Market.line(g.stars) : ''}</p>
     <p class="perr" id="i-err" style="text-align:center"></p>
     <button class="primary" id="i-sell">Продать за ${g.sell} ⭐</button><button class="primary alt" id="i-wd">Вывести в чат</button><button class="plink" id="i-no">Закрыть</button></div>`;
   document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
