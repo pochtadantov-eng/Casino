@@ -166,7 +166,7 @@ async function loadCash() {
   } catch (e) { box.innerHTML = `<p class="hint">${e.message}</p>`; }
 }
 async function loadProfile() {
-  paintUser(); loadCash(); loadInventory();
+  paintUser(); loadCash(); loadInventory(); if (typeof syncChanceBtn === 'function') syncChanceBtn();
   const box = $('#history');
   try {
     const rows = await api('history');

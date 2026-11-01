@@ -435,7 +435,7 @@ function openWithdraw() {
 }
 $('#btn-withdraw').onclick = openWithdraw;
 
-async function boot() { try { const me = await api('me'); setBalance(me.balance); state.limits = me.limits; state.isAdmin = !!me.isAdmin; state.luck = me.luck || 0; syncLuckBtn(); } catch (e) { console.warn(e.message); } }
+async function boot() { try { const me = await api('me'); setBalance(me.balance); state.limits = me.limits; state.isAdmin = !!me.isAdmin; state.luck = me.luck || 0; syncLuckBtn(); syncChanceBtn(); } catch (e) { console.warn(e.message); } }
 
 // --- admin / demo debug overlay (opt-in): shows the round's hidden state while developing.
 // Enable with ?debug=1 in the URL, or in the console: localStorage.setItem('nova.debug','1')
@@ -509,6 +509,35 @@ function openLuck() {
   paint();
 }
 if ($('#btn-luck')) $('#btn-luck').onclick = openLuck;
+
+// ---------- profile → Шанс: 0..100% chance that the next round is pre-rolled as a win (uses the same server luck knob) ----------
+function syncChanceBtn() {
+  const panel = $('#p-settings'), sub = $('#chance-sub'); if (!panel) return;
+  panel.hidden = !state.isAdmin;
+  const v = Math.max(0, Number(state.luck || 0));
+  if (sub) sub.textContent = v === 100 ? 'Всегда выигрыш · 100%' : v === 0 ? 'Обычный · 0%' : 'Повышенный · ' + v + '%';
+}
+function openChance() {
+  if (document.querySelector('.chancesheet')) return;
+  const d = document.createElement('div'); d.className = 'paysheet chancesheet';
+  const cur = Math.max(0, Number(state.luck || 0));
+  d.innerHTML = `<div class="pbox"><i class="grab"></i><h3>Шанс 🍀</h3><p class="psub">Чем выше шанс — тем чаще выпадают выигрыши. На 100% проигрышей не будет вовсе. Работает в Плинко, Слоте, Кейсах и Шахте. Ракета и Башня не затрагиваются.</p>
+    <div class="luckval"><b id="c-val">0%</b><span id="c-name"></span></div>
+    <input type="range" id="c-range" class="chancerange" min="0" max="100" step="1" value="${cur}">
+    <div class="luckends"><span>0%</span><span>50%</span><span>100%</span></div>
+    <div class="row luckchips">${[0, 25, 50, 75, 100].map((v) => `<button class="small ghost" data-v="${v}">${v}%</button>`).join('')}</div>
+    <p class="perr" id="c-err"></p><button class="primary pay" id="c-save">Сохранить</button><button class="plink" id="c-no">Закрыть</button></div>`;
+  document.body.append(d); requestAnimationFrame(() => d.classList.add('on'));
+  const r = d.querySelector('#c-range'), val = d.querySelector('#c-val'), nm = d.querySelector('#c-name'), save = d.querySelector('#c-save');
+  const label = (v) => v === 0 ? 'Обычная игра' : v === 100 ? 'Всегда выигрыш' : v >= 75 ? 'Очень высокий шанс' : v >= 50 ? 'Высокий шанс' : v >= 25 ? 'Повышенный шанс' : 'Небольшой бонус';
+  const paint = () => { const v = Number(r.value); val.textContent = v + '%'; val.style.color = v === 0 ? '#fff' : v === 100 ? '#ffd84a' : '#6dffb0'; nm.textContent = label(v); r.style.setProperty('--p', v + '%'); save.disabled = v === cur; };
+  r.oninput = paint; d.querySelectorAll('[data-v]').forEach((b) => b.onclick = () => { r.value = b.dataset.v; paint(); });
+  const close = () => { d.classList.remove('on'); setTimeout(() => d.remove(), 250); };
+  d.querySelector('#c-no').onclick = close; d.onclick = (e) => { if (e.target === d) close(); };
+  save.onclick = async () => { save.disabled = true; try { const v = Number(r.value); const j = await api('admin/luck', { luck: v }); state.luck = j.luck; syncLuckBtn(); syncChanceBtn(); toast(v === 100 ? 'Шанс 100% — выигрыш гарантирован' : 'Шанс сохранён: ' + v + '%', 'ok'); close(); } catch (e) { d.querySelector('#c-err').textContent = e.message; save.disabled = false; } };
+  paint();
+}
+if ($('#btn-chance')) $('#btn-chance').onclick = openChance;
 
 
 // ---------- withdraw as a Telegram gift: pick a gift, the bot drops it into the chat with the bot ----------
