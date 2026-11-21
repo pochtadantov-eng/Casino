@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 400" width="200" height="400">
+<defs>
+  <linearGradient id="tank" x1="0" x2="1"><stop offset="0" stop-color="#7a2f0c"/><stop offset=".22" stop-color="#d9651f"/><stop offset=".5" stop-color="#ffa257"/><stop offset=".78" stop-color="#d4601e"/><stop offset="1" stop-color="#6e2a0a"/></linearGradient>
+  <linearGradient id="white" x1="0" x2="1"><stop offset="0" stop-color="#8e9ab0"/><stop offset=".28" stop-color="#eef2f8"/><stop offset=".55" stop-color="#ffffff"/><stop offset="1" stop-color="#7d8aa1"/></linearGradient>
+  <linearGradient id="steel" x1="0" x2="1"><stop offset="0" stop-color="#262b39"/><stop offset=".45" stop-color="#9aa3b7"/><stop offset="1" stop-color="#232837"/></linearGradient>
+  <linearGradient id="wing" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9aa6bb"/><stop offset=".6" stop-color="#f1f4f9"/><stop offset="1" stop-color="#cfd7e4"/></linearGradient>
+  <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82d6"/><stop offset="1" stop-color="#08162e"/></linearGradient>
+  <linearGradient id="band" x1="0" x2="1"><stop offset="0" stop-color="#8f1d1d"/><stop offset=".5" stop-color="#ef4444"/><stop offset="1" stop-color="#7f1717"/></linearGradient>
+  <g id="srb">
+    <path d="M58 92 C66 110 71 124 71 142 L71 362 L45 362 L45 142 C45 124 50 110 58 92 Z" fill="url(#white)"/>
+    <path d="M58 92 C62 100 65 106 67 112 L49 112 C51 106 54 100 58 92 Z" fill="url(#band)"/>
+    <rect x="45" y="296" width="26" height="9" fill="url(#band)"/>
+    <path d="M45 142 H71 M45 220 H71" stroke="#000" stroke-opacity=".10" stroke-width="1.2"/>
+    <path d="M47 362 H69 L75 394 H41 Z" fill="url(#steel)"/>
+    <path d="M44 362 H72" stroke="#1d2230" stroke-width="3"/>
+  </g>
+</defs>
+
+<!-- external tank -->
+<path d="M100 4 C119 30 127 58 127 92 L127 340 L73 340 L73 92 C73 58 81 30 100 4 Z" fill="url(#tank)"/>
+<path d="M100 4 C119 30 127 52 127 72 L73 72 C73 52 81 30 100 4 Z" fill="url(#white)"/>
+<path d="M73 72 H127" stroke="#5a2308" stroke-opacity=".55" stroke-width="2"/>
+<path d="M73 150 H127 M73 215 H127" stroke="#000" stroke-opacity=".14" stroke-width="1.4"/>
+<path d="M88 20 C84 40 82 60 82 90 L82 330" stroke="#fff" stroke-opacity=".28" stroke-width="3" fill="none" stroke-linecap="round"/>
+
+<!-- boosters -->
+<use href="#srb"/>
+<use href="#srb" transform="translate(84 0)"/>
+
+<!-- orbiter wings -->
+<path d="M82 262 L18 362 L24 382 L82 376 Z" fill="url(#wing)"/>
+<path d="M82 262 L18 362" stroke="#222836" stroke-width="3.2" stroke-linecap="round"/>
+<path d="M24 382 L82 376" stroke="#b3bccb" stroke-width="2"/>
+<path d="M118 262 L182 362 L176 382 L118 376 Z" fill="url(#wing)"/>
+<path d="M118 262 L182 362" stroke="#222836" stroke-width="3.2" stroke-linecap="round"/>
+<path d="M176 382 L118 376" stroke="#b3bccb" stroke-width="2"/>
+<path d="M60 318 L26 366 M140 318 L174 366" stroke="#000" stroke-opacity=".12" stroke-width="1.4"/>
+
+<!-- orbiter fuselage -->
+<path d="M100 142 C111 156 121 180 121 214 L121 376 L79 376 L79 214 C79 180 89 156 100 142 Z" fill="url(#white)"/>
+<path d="M100 142 C105 147 108 152 110 158 L90 158 C92 152 95 147 100 142 Z" fill="#171a24"/>
+<path d="M88 176 L112 176 L110 194 L90 194 Z" fill="url(#glass)"/>
+<path d="M91 179 L99 179 L97.5 188 L92 188 Z" fill="#fff" fill-opacity=".35"/>
+<path d="M100 200 V372" stroke="#000" stroke-opacity=".13" stroke-width="1.4"/>
+<path d="M79 240 H121 M79 300 H121" stroke="#000" stroke-opacity=".10" stroke-width="1.2"/>
+<path d="M84 190 C82 230 82 300 83 370" stroke="#fff" stroke-opacity=".55" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<path d="M100 286 L104.5 374 L95.5 374 Z" fill="#c9d1de"/>
+<path d="M100 286 V374" stroke="#222836" stroke-width="1.2"/>
+
+<!-- main engines -->
+<path d="M84 374 H116" stroke="#1d2230" stroke-width="4"/>
+<path d="M85 374 h10 l2 20 h-14 Z" fill="url(#steel)"/>
+<path d="M95 374 h10 l2 20 h-14 Z" fill="url(#steel)"/>
+<path d="M105 374 h10 l2 20 h-14 Z" fill="url(#steel)"/>
+</svg>
